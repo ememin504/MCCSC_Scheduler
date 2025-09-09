@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178 d17.12
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCCSC_Scheduler", "MCCSC_Scheduler\MCCSC_Scheduler.csproj", "{ED14CE40-3E01-426C-9DE8-9C5029FF4ED3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ED14CE40-3E01-426C-9DE8-9C5029FF4ED3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED14CE40-3E01-426C-9DE8-9C5029FF4ED3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED14CE40-3E01-426C-9DE8-9C5029FF4ED3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED14CE40-3E01-426C-9DE8-9C5029FF4ED3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
