@@ -67,6 +67,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Homepage.aspx" />
     <Content Include="Images\494814716_588640820918268_3466504227378786476_n.jpg" />
     <Content Include="lib\bootstrap\5.3.6\css\bootstrap-grid.css" />
     <Content Include="lib\bootstrap\5.3.6\css\bootstrap-grid.min.css" />
@@ -2186,10 +2187,19 @@
     <Content Include="lib\fontawesome\6.7.2\svgs\solid\yen-sign.svg" />
     <Content Include="lib\fontawesome\6.7.2\svgs\solid\yin-yang.svg" />
     <Content Include="lib\fontawesome\6.7.2\svgs\solid\z.svg" />
+    <Content Include="Scripts\css\default.css" />
+    <Content Include="Scripts\js\default.js" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Database\DBContext.cs" />
+    <Compile Include="Homepage.aspx.cs">
+      <DependentUpon>Homepage.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Homepage.aspx.designer.cs">
+      <DependentUpon>Homepage.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Model\MCCSC_Scheduler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -2280,8 +2290,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DTO\" />
-    <Folder Include="Scripts\css\" />
-    <Folder Include="Scripts\js\" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
