@@ -7,10 +7,11 @@ using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
+using MCCSC_Scheduler.DTO;
 
 namespace MCCSC_Scheduler
 {
-    public partial class Homepage : System.Web.UI.Page
+    public partial class Default : System.Web.UI.Page
     {
         private static DBContext dbContext;
         protected void Page_Load(object sender, EventArgs e)
@@ -34,6 +35,25 @@ namespace MCCSC_Scheduler
             }
 
             return status;
+        }
+
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+        public static string AuthenticationResult(UserDTO userDTO )
+        {
+            string message = "Unable to verify username and password!";
+            try
+            {
+                if (dbContext.AuthenticateUser(userDTO))
+                    message = "User Login Successful!";
+            }
+
+            catch (Exception ex)
+            {
+                message = "Connection error: " + ex.Message;
+            }
+
+            return message;
         }
     }
 }

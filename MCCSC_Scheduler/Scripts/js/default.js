@@ -2,10 +2,45 @@
 document.addEventListener("DOMContentLoaded", function () {
     //initialize alert modal
     //inject alert modal after the confirmation modal form
-    const alertModalDiv = document.getElementById('form1');
+    const alertModalDiv = document.getElementById('logIn');
     if (alertModalDiv)
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
 });
+function authenticateUser() {
+    let username = document.getElementById('username').value;
+    let password = document.getElementById('password').value;
+    console.log(username, password);
+    let userData = {
+        UserName : username,
+        Password : password
+    }
+    let submitUrl = 'Default.aspx/AuthenticationResult';
+    let options = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userDTO : userData })
+    };
+        fetch(submitUrl, options)
+        .then(response => {         //response contains the server response
+            //get server response
+            console.log('Server response: ', response);
+            //parse the response to JSON format
+            return response.json();
+        })
+        .then(data => {             //data contains the parsed JSON data
+            var operationStatus = data.d;
+            console.log('Operation status: ', operationStatus);
+            openAlertModal('App Info', operationStatus);
+                
+        })
+        .catch(error => {           //handle the error response
+            //log error
+            console.log('Error: ', error);
+            openAlertModal('App Info', 'Error: ' + error.d);
+        }); 
+}
 
 function connectDB() {
     console.log('connecting to DB...');

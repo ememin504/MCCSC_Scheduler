@@ -11,7 +11,7 @@ namespace MCCSC_Scheduler
 {
 
 
-    public partial class Homepage
+    public partial class Default
     {
 
         /// <summary>
@@ -22,6 +22,15 @@ namespace MCCSC_Scheduler
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.HtmlControls.HtmlForm LogIn;
+
+        /// <summary>
+        /// btnLogIn control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnLogIn;
 
         /// <summary>
         /// btnTestConnect control.

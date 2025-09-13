@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="MCCSC_Scheduler.Homepage" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="MCCSC_Scheduler.Default" %>
 
 <!DOCTYPE html>
 
@@ -14,7 +14,7 @@
         <input type="text" id="username" name="username"/><br/><br/>
         <label for="password">Password:</label>
         <input type="text" id="password" name="password"/><br/><br/>
-        <button onclick="connectDB(); return false;">Log-in</button>
+        <asp:Button ID="btnLogIn" runat="server" class="btn btn-primary" Text="Log-in" OnClientClick="authenticateUser(); return false;" />
         <asp:Button ID="btnTestConnect" runat="server" class="btn btn-primary" Text="Connect DB" OnClientClick="connectDB();return false;" />
     </form>
 </body>

@@ -1,7 +1,9 @@
 ﻿using MCCSC_Scheduler.Model;
+using MCCSC_Scheduler.DTO;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Runtime.InteropServices;
 using System.Security;
 
 namespace MCCSC_Scheduler.Database
@@ -30,7 +32,8 @@ namespace MCCSC_Scheduler.Database
         {
             //setup connection string
             //Data Source=.\\SQLEXPRESS;Initial Catalog=xxxxxxx;Integrated Security=True; (Windows Authentication)
-            connectionString = "Data Source=" + dbServerName + ";Initial Catalog=" + dbName + ";Integrated Security=True;";
+            connectionString = "Data Source=" + dbServerName + ";Initial Catalog=" + dbName +";Integrated Security=True;";
+
         }
 
         //DB connection
@@ -56,5 +59,37 @@ namespace MCCSC_Scheduler.Database
                 throw new Exception(ex.Message);
             }
         }
+        public bool AuthenticateUser(UserDTO userDTO)
+        {
+            try
+            {
+                /*if (conn == null || conn.State != System.Data.ConnectionState.Open)
+                {
+                    throw new InvalidOperationException("Database connection is not established.");
+                }*/
+
+                string query = "SELECT COUNT(*) FROM Users WHERE username = @UserName AND hashed_password = @Password";
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
+                        cmd.Parameters.AddWithValue("@Password", userDTO.Password);
+
+                        int count = (int)cmd.ExecuteScalar();
+                        return count > 0;
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error in AuthenticateUser: " + ex.Message, ex);
+            }
+        }
+
+
     }
 }
