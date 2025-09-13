@@ -67,7 +67,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Homepage.aspx" />
+    <Content Include="Default.aspx" />
     <Content Include="Images\494814716_588640820918268_3466504227378786476_n.jpg" />
     <Content Include="lib\bootstrap\5.3.6\css\bootstrap-grid.css" />
     <Content Include="lib\bootstrap\5.3.6\css\bootstrap-grid.min.css" />
@@ -2193,12 +2193,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Database\DBContext.cs" />
-    <Compile Include="Homepage.aspx.cs">
-      <DependentUpon>Homepage.aspx</DependentUpon>
+    <Compile Include="Default.aspx.cs">
+      <DependentUpon>Default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
-    <Compile Include="Homepage.aspx.designer.cs">
-      <DependentUpon>Homepage.aspx</DependentUpon>
+    <Compile Include="Default.aspx.designer.cs">
+      <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
     <Compile Include="Model\MCCSC_Scheduler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

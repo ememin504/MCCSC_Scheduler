@@ -34,7 +34,7 @@ namespace MCCSC_Scheduler.Database
         }
 
         //DB connection
-        public bool Connect()
+        public bool ConnectDB()
         {
             if (string.IsNullOrEmpty(connectionString))
             {
