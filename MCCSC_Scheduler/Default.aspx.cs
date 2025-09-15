@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Web;
 using System.Web.Script.Services;
 using System.Web.Services;
@@ -39,15 +40,29 @@ namespace MCCSC_Scheduler
 
         [WebMethod]
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
-        public static string AuthenticationResult(UserDTO userDTO )
+        public static string AuthenticationResult(UserDTO userDTO)
         {
             string message = "Unable to verify username and password!";
             try
             {
                 if (dbContext.AuthenticateUser(userDTO))
-                    message = "User Login Successful!";
-            }
+                {
+                    string roleResult = dbContext.GetUserRole(userDTO);
 
+                    if (!string.IsNullOrEmpty(roleResult))
+                    {
+                        message = $"User Login Successful! Role: {roleResult}";
+                    }
+                    else
+                    {
+                        message = "User Login Successful! (Role not found)";
+                    }
+                }
+                else
+                {
+                    message = "Invalid Username or Password!";
+                }
+            }
             catch (Exception ex)
             {
                 message = "Connection error: " + ex.Message;
@@ -55,5 +70,6 @@ namespace MCCSC_Scheduler
 
             return message;
         }
+
     }
 }

@@ -15,30 +15,21 @@ namespace MCCSC_Scheduler
     {
 
         /// <summary>
-        /// LogIn control.
+        /// aspForm control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.HtmlControls.HtmlForm LogIn;
+        protected global::System.Web.UI.HtmlControls.HtmlForm aspForm;
 
         /// <summary>
-        /// btnLogIn control.
+        /// Button1 control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnLogIn;
-
-        /// <summary>
-        /// btnTestConnect control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnTestConnect;
+        protected global::System.Web.UI.WebControls.Button Button1;
     }
 }

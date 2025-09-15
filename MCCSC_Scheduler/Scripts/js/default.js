@@ -1,46 +1,57 @@
 ﻿//page load event
 document.addEventListener("DOMContentLoaded", function () {
-    //initialize alert modal
-    //inject alert modal after the confirmation modal form
-    const alertModalDiv = document.getElementById('logIn');
-    if (alertModalDiv)
+    // inject alert modal
+    const alertModalDiv = document.getElementById('form1');
+    if (alertModalDiv) {
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
+        alertModalDiv.insertAdjacentHTML('afterend', otpModalEl); // inject OTP modal too
+    }
 });
+
 function authenticateUser() {
     let username = document.getElementById('username').value;
     let password = document.getElementById('password').value;
-    console.log(username, password);
+
     let userData = {
-        UserName : username,
-        Password : password
-    }
+        UserName: username,
+        Password: password
+    };
+
     let submitUrl = 'Default.aspx/AuthenticationResult';
     let options = {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ userDTO : userData })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userDTO: userData })
     };
-        fetch(submitUrl, options)
-        .then(response => {         //response contains the server response
-            //get server response
-            console.log('Server response: ', response);
-            //parse the response to JSON format
-            return response.json();
+
+    fetch(submitUrl, options)
+        .then(response => response.json())
+        .then(data => {
+            let result = data.d; // This is the string returned from C#
+            console.log("Auth result:", result);
+
+            if (result.includes("User Login Successful")) {
+                if (result.includes("Client")) {
+                    sessionStorage.setItem("redirectAfterOtp", "ClientDashboard.aspx");
+                    openOtpModal();
+                } else if (result.includes("Admin")) {
+                    sessionStorage.setItem("redirectAfterOtp", "AdminDashboard.aspx");
+                    openOtpModal();
+                } else {
+                    openAlertModal("App Info", result);
+                }
+
+            } else {
+                // for "Invalid Username or Password!" or error messages
+                openAlertModal("App Info", result);
+            }
         })
-        .then(data => {             //data contains the parsed JSON data
-            var operationStatus = data.d;
-            console.log('Operation status: ', operationStatus);
-            openAlertModal('App Info', operationStatus);
-                
-        })
-        .catch(error => {           //handle the error response
-            //log error
-            console.log('Error: ', error);
-            openAlertModal('App Info', 'Error: ' + error.d);
-        }); 
+        .catch(error => {
+            console.error("Error:", error);
+            openAlertModal("App Info", "Error: " + error);
+        });
 }
+
 
 function connectDB() {
     console.log('connecting to DB...');

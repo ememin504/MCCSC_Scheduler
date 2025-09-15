@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Web.UI.WebControls;
+using System.Runtime.Remoting.Messaging;
 
 namespace MCCSC_Scheduler.Database
 {
@@ -18,7 +20,6 @@ namespace MCCSC_Scheduler.Database
         {
             conn = null;    
         }
-
         //overloaded/parameterized constructor
         public DBContext(string dbServerName, string userID, string password, string dbName)
         {
@@ -35,7 +36,6 @@ namespace MCCSC_Scheduler.Database
             connectionString = "Data Source=" + dbServerName + ";Initial Catalog=" + dbName +";Integrated Security=True;";
 
         }
-
         //DB connection
         public bool ConnectDB()
         {
@@ -80,6 +80,7 @@ namespace MCCSC_Scheduler.Database
 
                         int count = (int)cmd.ExecuteScalar();
                         return count > 0;
+                       
                     }
                 }
 
@@ -88,6 +89,47 @@ namespace MCCSC_Scheduler.Database
             {
                 throw new Exception("Error in AuthenticateUser: " + ex.Message, ex);
             }
+        }
+        public string GetUserRole(UserDTO userDTO)
+        {
+            try
+            {
+                string query = "SELECT role_id FROM Users WHERE username = @UserName";
+                string roleQuery = "SELECT role_description FROM Roles WHERE role_id = @role_id";
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    // First, get role_id
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
+
+                        object roleIdObj = cmd.ExecuteScalar();
+                        if (roleIdObj != null && int.TryParse(roleIdObj.ToString(), out int role_id))
+                        {
+                            // Now, get role_description based on role_id
+                            using (SqlCommand roleCmd = new SqlCommand(roleQuery, conn))
+                            {
+                                roleCmd.Parameters.AddWithValue("@role_id", role_id);
+
+                                object roleResult = roleCmd.ExecuteScalar();
+                                if (roleResult != null)
+                                {
+                                    return roleResult.ToString();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error in GetUserRole: " + ex.Message, ex);
+            }
+
+            return string.Empty; // return empty if no role found
         }
 
 
