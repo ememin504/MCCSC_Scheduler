@@ -149,30 +149,74 @@ namespace MCCSC_Scheduler.Database
             Random rnd = new Random();
             // Generate a random 6-digit OTP
             string otpCode = rnd.Next(100000, 999999).ToString();
-            
-            return otpCode;
-        }
-        public bool VerifyOtp(UserDTO userDTO)
-        {
-            string query = "SELECT COUNT(*) FROM MCCSC_SchedulerDB.dbo.UserOTP WHERE user_id = @UserID";
 
+            // Capture the return value of StoreOtp
+            string storeResult = StoreOtp(userID, otpCode);
+
+            // You now have both the OTP and the store status
+            return $"Generated OTP: {otpCode}, Store Result: {storeResult}";
+        }
+
+        public string StoreOtp(int userID, string otp)
+        {
+            string checkQuery = "SELECT COUNT(*) FROM UserOTP WHERE otp_code = @otp";
+            string insertQuery = "INSERT INTO UserOTP (user_id, otp_code, expiration_time) VALUES (@userID, @otp, @expire_time)";
+            string expire_time = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-dd HH:mm:ss"); // OTP valid for 5 minutes
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
-                    using (SqlCommand command = new SqlCommand(query, conn))
+
+                    // Step 1: Check if OTP already exists
+                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
                     {
-                        command.Parameters.AddWithValue("@UserID", userDTO.UserID);
-                        Console.WriteLine("UserID: " + userDTO.UserID);  // Debugging line
-                        int count = (int)command.ExecuteScalar();  // ✅ use command, not cmd
-                        return count > 0;
+                        checkCmd.Parameters.AddWithValue("@otp", otp);
+                        int count = (int)checkCmd.ExecuteScalar();
+
+                        if (count > 0)
+                        {
+                            return "Duplicate OTP detected. Please generate a new one.";
+                        }
+                    }
+
+                    // Step 2: Insert new OTP if not duplicate
+                    using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
+                    {
+                        insertCmd.Parameters.AddWithValue("@userID", userID);
+                        insertCmd.Parameters.AddWithValue("@otp", otp);
+                        insertCmd.Parameters.AddWithValue("@expire_time", expire_time);
+
+                        int rowsAffected = insertCmd.ExecuteNonQuery();
+
+                        return rowsAffected > 0 ? "OTP stored successfully." : "Failed to store OTP.";
                     }
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception("Error in VerifyOtp: " + ex.Message, ex);
+                return $"Error: {ex.Message}";
+            }
+        }
+        internal int ValidateOTP(OtpDTO otpDto)
+        {
+            string query = @"SELECT COUNT(*) 
+                     FROM MCCSC_SchedulerDB.dbo.UserOTP
+                     WHERE user_id = @userID
+                     AND otp_code = @otp
+                     AND expiration_time > GETDATE()";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@userID", otpDto.UserID);
+                    cmd.Parameters.AddWithValue("@otp", otpDto.OtpCode);
+
+                    object result = cmd.ExecuteScalar();
+                    return (result != null) ? Convert.ToInt32(result) : 0;
+                }
             }
         }
 

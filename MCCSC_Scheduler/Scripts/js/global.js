@@ -31,7 +31,7 @@ var otpModalEl =
     "</div>" +
     "<div class='modal-footer'>" +
     "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Cancel</button>" +
-    "<button type='button' class='btn btn-primary' onclick='verifyOtp()'>Verify</button>" +
+    "<button type='button' class='btn btn-primary' onclick='verifyOTP()'>Verify</button>" +
     "</div>" +
     "</div>" +
     "</div>" +
@@ -65,13 +65,11 @@ function openAlertModal(title, message) {
     var alertModalDiv = document.getElementsByClassName('alert-modal-content');
     alertModalDiv[0].textContent = message;
 }
-function openOtpModal(user_id) {
+function openOtpModal() {
     otpModal = new bootstrap.Modal(document.getElementById('otpModal'), {
         backdrop: 'static'
     });
     otpModal.show();
-    console.log(user_id);
+    
 }
-function verifyOtp() {
-
-}
+//Method to verify the user OTP input.

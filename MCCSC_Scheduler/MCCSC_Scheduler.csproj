@@ -2202,6 +2202,7 @@
     <Compile Include="Default.aspx.designer.cs">
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
+    <Compile Include="DTO\OtpDTO.cs" />
     <Compile Include="DTO\UserDTO.cs" />
     <Compile Include="Model\MCCSC_Scheduler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -79,11 +79,31 @@ namespace MCCSC_Scheduler
         }
         [WebMethod]
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+        
         public static string GetOtp(int userID)
         {
             string otp = dbContext.GenerateOTP(userID);
             string message = "OTP has been sent to your registered email address." + otp;
             return message;
+        }
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+        public static string SubmitOtp(OtpDTO otpDto)
+        {
+            try
+            {
+                int result = dbContext.ValidateOTP(otpDto);
+
+                if (result > 0)
+                    return "OTP Verified Successfully";
+                else
+                    return "Invalid OTP, please try again.";
+            }
+            catch (Exception ex)
+            {
+                // return the real error to JS for debugging
+                return "Error in SubmitOtp: " + ex.Message;
+            }
         }
     }
 }
