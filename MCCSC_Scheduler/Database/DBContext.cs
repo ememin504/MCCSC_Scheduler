@@ -64,7 +64,6 @@ namespace MCCSC_Scheduler.Database
             try
             {
                 /*if (conn == null || conn.State != System.Data.ConnectionState.Open)
-                {
                     throw new InvalidOperationException("Database connection is not established.");
                 }*/
 
@@ -80,7 +79,6 @@ namespace MCCSC_Scheduler.Database
 
                         int count = (int)cmd.ExecuteScalar();
                         return count > 0;
-                       
                     }
                 }
 
@@ -90,34 +88,48 @@ namespace MCCSC_Scheduler.Database
                 throw new Exception("Error in AuthenticateUser: " + ex.Message, ex);
             }
         }
-        public string GetUserRole(UserDTO userDTO)
+        public (string role, UserDTO user) GetUserInfo(UserDTO userDTO)
         {
             try
             {
-                string query = "SELECT role_id FROM Users WHERE username = @UserName";
+                string query = "SELECT user_id, username, role_id FROM Users WHERE username = @UserName";
                 string roleQuery = "SELECT role_description FROM Roles WHERE role_id = @role_id";
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
 
-                    // First, get role_id
+                    // First, get user record
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
 
-                        object roleIdObj = cmd.ExecuteScalar();
-                        if (roleIdObj != null && int.TryParse(roleIdObj.ToString(), out int role_id))
+                        using (SqlDataReader reader = cmd.ExecuteReader())
                         {
-                            // Now, get role_description based on role_id
-                            using (SqlCommand roleCmd = new SqlCommand(roleQuery, conn))
+                            if (reader.Read())
                             {
-                                roleCmd.Parameters.AddWithValue("@role_id", role_id);
+                                int role_id = reader.GetInt32(reader.GetOrdinal("role_id"));
 
-                                object roleResult = roleCmd.ExecuteScalar();
-                                if (roleResult != null)
+                                // Construct user object
+                                UserDTO user = new UserDTO
                                 {
-                                    return roleResult.ToString();
+                                    UserID = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                    UserName = reader.GetString(reader.GetOrdinal("username")),
+                                    RoleID = role_id
+                                };
+                                
+                                reader.Close();
+
+                                // Now get role_description
+                                using (SqlCommand roleCmd = new SqlCommand(roleQuery, conn))
+                                {
+                                    roleCmd.Parameters.AddWithValue("@role_id", role_id);
+
+                                    object roleResult = roleCmd.ExecuteScalar();
+                                    if (roleResult != null)
+                                    {
+                                        return (roleResult.ToString(), user);
+                                    }
                                 }
                             }
                         }
@@ -126,10 +138,42 @@ namespace MCCSC_Scheduler.Database
             }
             catch (Exception ex)
             {
-                throw new Exception("Error in GetUserRole: " + ex.Message, ex);
+                throw new Exception("Error in GetUserInfo: " + ex.Message, ex);
             }
 
-            return string.Empty; // return empty if no role found
+            return (string.Empty, null);
+        }
+
+        public string GenerateOTP(int userID)
+        {
+            Random rnd = new Random();
+            // Generate a random 6-digit OTP
+            string otpCode = rnd.Next(100000, 999999).ToString();
+            
+            return otpCode;
+        }
+        public bool VerifyOtp(UserDTO userDTO)
+        {
+            string query = "SELECT COUNT(*) FROM MCCSC_SchedulerDB.dbo.UserOTP WHERE user_id = @UserID";
+
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand command = new SqlCommand(query, conn))
+                    {
+                        command.Parameters.AddWithValue("@UserID", userDTO.UserID);
+                        Console.WriteLine("UserID: " + userDTO.UserID);  // Debugging line
+                        int count = (int)command.ExecuteScalar();  // ✅ use command, not cmd
+                        return count > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error in VerifyOtp: " + ex.Message, ex);
+            }
         }
 
 

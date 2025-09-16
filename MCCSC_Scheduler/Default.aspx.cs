@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
 using System.Security;
 using System.Web;
@@ -9,6 +10,7 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
 using MCCSC_Scheduler.DTO;
+using static System.Net.WebRequestMethods;
 
 namespace MCCSC_Scheduler
 {
@@ -47,15 +49,20 @@ namespace MCCSC_Scheduler
             {
                 if (dbContext.AuthenticateUser(userDTO))
                 {
-                    string roleResult = dbContext.GetUserRole(userDTO);
+                    (string role, UserDTO user) userInfo = dbContext.GetUserInfo(userDTO);
 
-                    if (!string.IsNullOrEmpty(roleResult))
+                    if (!string.IsNullOrEmpty(userInfo.role) && userInfo.user != null)
                     {
-                        message = $"User Login Successful! Role: {roleResult}";
+                        int userID = userInfo.user.UserID;
+
+                        // Get OTP message
+                        string otpMessage = GetOtp(userID);
+
+                        message = $"User Login Successful! ID: {userInfo.user.UserID}, Username: {userInfo.user.UserName}, Role: {userInfo.role}. {otpMessage}";
                     }
                     else
                     {
-                        message = "User Login Successful! (Role not found)";
+                        message = "User Login Successful! (Role not found or user missing)";
                     }
                 }
                 else
@@ -70,6 +77,13 @@ namespace MCCSC_Scheduler
 
             return message;
         }
-
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+        public static string GetOtp(int userID)
+        {
+            string otp = dbContext.GenerateOTP(userID);
+            string message = "OTP has been sent to your registered email address." + otp;
+            return message;
+        }
     }
 }

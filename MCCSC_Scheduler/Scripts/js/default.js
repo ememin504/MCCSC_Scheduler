@@ -29,14 +29,13 @@ function authenticateUser() {
         .then(data => {
             let result = data.d; // This is the string returned from C#
             console.log("Auth result:", result);
-
             if (result.includes("User Login Successful")) {
                 if (result.includes("Client")) {
                     sessionStorage.setItem("redirectAfterOtp", "ClientDashboard.aspx");
                     openOtpModal();
                 } else if (result.includes("Admin")) {
                     sessionStorage.setItem("redirectAfterOtp", "AdminDashboard.aspx");
-                    openOtpModal();
+                    openOtpModal(userData);
                 } else {
                     openAlertModal("App Info", result);
                 }
@@ -44,6 +43,35 @@ function authenticateUser() {
             } else {
                 // for "Invalid Username or Password!" or error messages
                 openAlertModal("App Info", result);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            openAlertModal("App Info", "Error: " + error);
+        });
+}
+function submitOTP() {
+    let otpCode = document.getElementById('otpCode').value;
+    let userData = {
+        OtpCode: otpCode
+    };
+    let submitUrl = 'Default.aspx/VerifyOtp';
+    let options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otpDTO: userData })
+    };
+    fetch(submitUrl, options)
+        .then(response => response.json())
+        .then(data => {
+            let result = data.d; // This is the string returned from C#
+            console.log("OTP verify result:", result);
+            if (result === "OTP Verified Successfully") {
+                let redirectUrl = sessionStorage.getItem("redirectAfterOtp") || "Default.aspx";
+                window.location.href = redirectUrl;
+            } else {
+                // for "Invalid OTP, please try again." or error messages
+                document.getElementById('otpMessage').classList.remove('d-none');
             }
         })
         .catch(error => {

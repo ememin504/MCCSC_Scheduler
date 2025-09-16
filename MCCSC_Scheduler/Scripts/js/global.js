@@ -65,9 +65,13 @@ function openAlertModal(title, message) {
     var alertModalDiv = document.getElementsByClassName('alert-modal-content');
     alertModalDiv[0].textContent = message;
 }
-function openOtpModal() {
+function openOtpModal(user_id) {
     otpModal = new bootstrap.Modal(document.getElementById('otpModal'), {
         backdrop: 'static'
     });
     otpModal.show();
+    console.log(user_id);
+}
+function verifyOtp() {
+
 }
