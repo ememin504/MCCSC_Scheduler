@@ -116,6 +116,7 @@ namespace MCCSC_Scheduler.Database
                                     UserID = reader.GetInt32(reader.GetOrdinal("user_id")),
                                     UserName = reader.GetString(reader.GetOrdinal("username")),
                                     RoleID = role_id
+
                                 };
                                 
                                 reader.Close();

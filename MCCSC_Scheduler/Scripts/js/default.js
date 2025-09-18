@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 
+let userInfo; // global variable to store user ID after login
 function authenticateUser() {
     let username = document.getElementById('username').value;
     let password = document.getElementById('password').value;
@@ -33,6 +34,7 @@ function authenticateUser() {
                 if (result.includes("Client")) {
                     sessionStorage.setItem("redirectAfterOtp", "ClientDashboard.aspx");
                     openOtpModal();
+                    getUserInfo(userData.UserName);
                 } else if (result.includes("Admin")) {
                     sessionStorage.setItem("redirectAfterOtp", "AdminDashboard.aspx");
                     openOtpModal();
@@ -50,20 +52,53 @@ function authenticateUser() {
             openAlertModal("App Info", "Error: " + error);
         });
 }
+let userID; // global variable
+
+function getUserInfo(UserName) {
+    let submitUrl = 'Default.aspx/GetUserInfoWeb';
+
+    // wrap it as object because C# expects a UserDTO
+    let userDTO = { UserName: UserName };
+
+    let options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ userDTO: userDTO })
+    };
+
+    return fetch(submitUrl, options)
+        .then(response => response.json())
+        .then(data => {
+            if (data.d) {
+                console.log("User info:", data.d);
+                userInfo = data.d;      // global
+                userID = data.d.UserID; // global
+                console.log("Extracted UserID:", userID);
+                return data.d;
+            } else {
+                console.warn("No user info returned");
+                return null;
+            }
+        })
+        .catch(error => {
+            console.error("Error fetching user info:", error);
+        });
+}
+
 function verifyOTP() {
     let otpCode = document.getElementById('otpCode').value;
-    let userID = sessionStorage.getItem("userID"); // store this earlier when logging in
-    
+
     let userData = {
         OtpCode: otpCode,
-        UserID: parseInt(userID)
+        UserID: parseInt(userID) // use the global userID set in getUserInfo()
     };
-    console.log(userData);
+    console.log("OTP Payload:", userData);
+
     let submitUrl = 'Default.aspx/SubmitOtp';
     let options = {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ otpDto: userData }) // must match parameter name
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ otpDto: userData })
     };
 
     fetch(submitUrl, options)
@@ -84,7 +119,6 @@ function verifyOTP() {
             openAlertModal("App Info", "Error: " + error);
         });
 }
-
 
 
 function connectDB() {

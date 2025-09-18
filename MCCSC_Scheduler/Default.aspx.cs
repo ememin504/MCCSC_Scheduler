@@ -6,6 +6,7 @@ using System.Security;
 using System.Web;
 using System.Web.Script.Services;
 using System.Web.Services;
+using System.Web.Services.Description;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
@@ -104,6 +105,32 @@ namespace MCCSC_Scheduler
                 // return the real error to JS for debugging
                 return "Error in SubmitOtp: " + ex.Message;
             }
+        }
+        
+        public class UserInfoResponse
+        {
+            public int UserID { get; set; }
+            public string UserName { get; set; }
+            public int RoleID { get; set; }
+            public string RoleDescription { get; set; }
+        }
+
+        [WebMethod]
+        public static UserInfoResponse GetUserInfoWeb(UserDTO userDTO)
+        {
+            (string role, UserDTO user) userInfo = dbContext.GetUserInfo(userDTO);
+
+            if (!string.IsNullOrEmpty(userInfo.role) && userInfo.user != null)
+            {
+                return new UserInfoResponse
+                {
+                    UserID = userInfo.user.UserID,
+                    UserName = userInfo.user.UserName,
+                    RoleID = userInfo.user.RoleID,
+                    RoleDescription = userInfo.role
+                };
+            }
+            return null;
         }
     }
 }
