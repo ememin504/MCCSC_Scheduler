@@ -57,7 +57,8 @@ namespace MCCSC_Scheduler
                         int userID = userInfo.user.UserID;
 
                         // Get OTP message
-                        string otpMessage = GetOtp(userID);
+                        string otpMessage = "";
+                            //GetOtp(userID);
 
                         message = $"User Login Successful! ID: {userInfo.user.UserID}, Username: {userInfo.user.UserName}, Role: {userInfo.role}. {otpMessage}";
                     }
@@ -85,6 +86,7 @@ namespace MCCSC_Scheduler
         {
             string otp = dbContext.GenerateOTP(userID);
             string message = "OTP has been sent to your registered email address." + otp;
+            SendOtpToClientEmail(userID, int.Parse(otp));
             return message;
         }
         [WebMethod]
@@ -131,6 +133,10 @@ namespace MCCSC_Scheduler
                 };
             }
             return null;
+        }
+        public static string SendOtpToClientEmail(int userID, int otp) { 
+            string result = dbContext.OTPtoEmail(userID, otp);
+            return result;
         }
     }
 }

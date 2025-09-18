@@ -9,49 +9,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 let userInfo; // global variable to store user ID after login
-function authenticateUser() {
-    let username = document.getElementById('username').value;
-    let password = document.getElementById('password').value;
-
-    let userData = {
-        UserName: username,
-        Password: password
-    };
-
-    let submitUrl = 'Default.aspx/AuthenticationResult';
-    let options = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userDTO: userData })
-    };
-
-    fetch(submitUrl, options)
-        .then(response => response.json())
-        .then(data => {
-            let result = data.d; // This is the string returned from C#
-            console.log("Auth result:", result);
-            if (result.includes("User Login Successful")) {
-                if (result.includes("Client")) {
-                    sessionStorage.setItem("redirectAfterOtp", "ClientDashboard.aspx");
-                    openOtpModal();
-                    getUserInfo(userData.UserName);
-                } else if (result.includes("Admin")) {
-                    sessionStorage.setItem("redirectAfterOtp", "AdminDashboard.aspx");
-                    openOtpModal();
-                } else {
-                    openAlertModal("App Info", result);
-                }
-
-            } else {
-                // for "Invalid Username or Password!" or error messages
-                openAlertModal("App Info", result);
-            }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            openAlertModal("App Info", "Error: " + error);
-        });
-}
 let userID; // global variable
 
 function getUserInfo(UserName) {
@@ -82,6 +39,50 @@ function getUserInfo(UserName) {
         })
         .catch(error => {
             console.error("Error fetching user info:", error);
+        });
+}
+function authenticateUser() {
+    let username = document.getElementById('username').value;
+    let password = document.getElementById('password').value;
+
+    let userData = {
+        UserName: username,
+        Password: password
+    };
+    console.log("Auth Payload:", userData);
+    let submitUrl = 'Default.aspx/AuthenticationResult';
+    let options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userDTO: userData })
+    };
+
+    fetch(submitUrl, options)
+        .then(response => response.json())
+        .then(data => {
+            let result = data.d; // This is the string returned from C#
+            console.log("Auth result:", result);
+            if (result.includes("User Login Successful")) {
+                if (result.includes("Client")) {
+                    sessionStorage.setItem("redirectAfterOtp", "ClientDashboard.aspx");
+                    openOtpModal();
+                    sendToClientEmail(userID);
+                    getUserInfo(userData.UserName);
+                } else if (result.includes("Admin")) {
+                    sessionStorage.setItem("redirectAfterOtp", "AdminDashboard.aspx");
+                    openOtpModal();
+                } else {
+                    openAlertModal("App Info", result);
+                }
+
+            } else {
+                // for "Invalid Username or Password!" or error messages
+                openAlertModal("App Info", result);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            openAlertModal("App Info", "Error: " + error);
         });
 }
 

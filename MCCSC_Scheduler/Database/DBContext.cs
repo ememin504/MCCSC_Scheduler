@@ -63,31 +63,29 @@ namespace MCCSC_Scheduler.Database
         {
             try
             {
-                /*if (conn == null || conn.State != System.Data.ConnectionState.Open)
+                // Use the class-level conn (from ConnectDB), not a new shadowed one
+                if (conn == null || conn.State != System.Data.ConnectionState.Open)
+                {
                     throw new InvalidOperationException("Database connection is not established.");
-                }*/
+                }
 
                 string query = "SELECT COUNT(*) FROM Users WHERE username = @UserName AND hashed_password = @Password";
 
-                using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand(query, conn)) // use existing conn
                 {
-                    conn.Open();
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
-                        cmd.Parameters.AddWithValue("@Password", userDTO.Password);
+                    cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
+                    cmd.Parameters.AddWithValue("@Password", userDTO.Password);
 
-                        int count = (int)cmd.ExecuteScalar();
-                        return count > 0;
-                    }
+                    int count = (int)cmd.ExecuteScalar();
+                    return count > 0;
                 }
-
             }
             catch (Exception ex)
             {
                 throw new Exception("Error in AuthenticateUser: " + ex.Message, ex);
             }
         }
+
         public (string role, UserDTO user) GetUserInfo(UserDTO userDTO)
         {
             try
@@ -148,15 +146,17 @@ namespace MCCSC_Scheduler.Database
         public string GenerateOTP(int userID)
         {
             Random rnd = new Random();
-            // Generate a random 6-digit OTP
             string otpCode = rnd.Next(100000, 999999).ToString();
 
-            // Capture the return value of StoreOtp
+            // Store OTP
             string storeResult = StoreOtp(userID, otpCode);
 
-            // You now have both the OTP and the store status
+            // Send OTP via email
+            
+
             return $"Generated OTP: {otpCode}, Store Result: {storeResult}";
         }
+
 
         public string StoreOtp(int userID, string otp)
         {
@@ -199,6 +199,43 @@ namespace MCCSC_Scheduler.Database
                 return $"Error: {ex.Message}";
             }
         }
+        public string OTPtoEmail(int UserID, int Otp) { 
+            string email = "";
+            string getEmailQuery = "SELECT email FROM Users WHERE user_id = @UserID";
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(getEmailQuery, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@UserID", UserID);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                email = reader.GetString(reader.GetOrdinal("email"));
+                            }
+                        }
+                    }
+                }
+                if (!string.IsNullOrEmpty(email))
+                {
+                    string subject = "Your OTP Code";
+                    string body = $"Your OTP code is: {Otp}. It is valid for 5 minutes.";
+                    string emailResult = EmailHelper.SendEmail(email, subject, body);
+                    return emailResult;
+                }
+                else
+                {
+                    return "Email address not found for the user.";
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"Error in OTPtoEmail: {ex.Message}";
+            }
+        }
         internal int ValidateOTP(OtpDTO otpDto)
         {
             string query = @"SELECT COUNT(*) 
@@ -220,7 +257,5 @@ namespace MCCSC_Scheduler.Database
                 }
             }
         }
-
-
     }
 }
