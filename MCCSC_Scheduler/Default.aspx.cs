@@ -21,6 +21,7 @@ namespace MCCSC_Scheduler
         protected void Page_Load(object sender, EventArgs e)
         {
             dbContext = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
+            ConnectDB();
         }
         [WebMethod(Description = "A web method that will check the DB connection")]
         [ScriptMethod(UseHttpGet = true)]
@@ -57,10 +58,11 @@ namespace MCCSC_Scheduler
                         int userID = userInfo.user.UserID;
 
                         // Get OTP message
-                        string otpMessage = "";
-                            //GetOtp(userID);
+                        //string otpMessage = "";
+                        string otp = GenerateOTP(userID);
 
-                        message = $"User Login Successful! ID: {userInfo.user.UserID}, Username: {userInfo.user.UserName}, Role: {userInfo.role}. {otpMessage}";
+                        message = $"User Login Successful! ID: {userInfo.user.UserID}, Username: {userInfo.user.UserName}, Password: {userInfo.user.Password} Role: {userInfo.role}, Message: {otp}"; 
+                        
                     }
                     else
                     {
@@ -82,15 +84,16 @@ namespace MCCSC_Scheduler
         [WebMethod]
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
         
-        public static string GetOtp(int userID)
+        public static string GenerateOTP(int userID)
         {
             string otp = dbContext.GenerateOTP(userID);
             string message = "OTP has been sent to your registered email address." + otp;
-            SendOtpToClientEmail(userID, int.Parse(otp));
+            
             return message;
         }
         [WebMethod]
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+
         public static string SubmitOtp(OtpDTO otpDto)
         {
             try
@@ -134,9 +137,6 @@ namespace MCCSC_Scheduler
             }
             return null;
         }
-        public static string SendOtpToClientEmail(int userID, int otp) { 
-            string result = dbContext.OTPtoEmail(userID, otp);
-            return result;
-        }
+       
     }
 }

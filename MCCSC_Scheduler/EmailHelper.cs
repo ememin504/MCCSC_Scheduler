@@ -8,14 +8,15 @@ public class EmailHelper
     {
         try
         {
-            using (SmtpClient client = new SmtpClient("smtp.yourmailserver.com", 587))
+            using (SmtpClient client = new SmtpClient("smtp-mail.outlook.com", 587))
             {
-                client.Credentials = new NetworkCredential("your-email@example.com", "your-password");
-                client.EnableSsl = true; // Needed for Gmail, Outlook, etc.
+                client.Credentials = new NetworkCredential("MCCSC_Scheduler@outlook.com", "8SKAT-4VGGM-M6YUL-7ZXQ5-638WT");
+                client.EnableSsl = true;
 
-                MailMessage mail = new MailMessage("your-email@example.com", toEmail, subject, body);
+                MailMessage mail = new MailMessage("MCCSC_Scheduler@outlook.com", toEmail, subject, body);
                 client.Send(mail);
             }
+
 
             return "Email sent successfully!";
         }

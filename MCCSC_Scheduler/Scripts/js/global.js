@@ -31,7 +31,7 @@ var otpModalEl =
     "</div>" +
     "<div class='modal-footer'>" +
     "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Cancel</button>" +
-    "<button type='button' class='btn btn-primary' onclick='verifyOTP()'>Verify</button>" +
+    "<button type='button' class='btn btn-primary' onclick='verifyOTP()'; return false;>Verify</button>" +
     "</div>" +
     "</div>" +
     "</div>" +
@@ -70,6 +70,5 @@ function openOtpModal() {
         backdrop: 'static'
     });
     otpModal.show();
-    
 }
 //Method to verify the user OTP input.

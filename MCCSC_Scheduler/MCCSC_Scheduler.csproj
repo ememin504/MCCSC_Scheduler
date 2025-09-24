@@ -67,6 +67,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="AdminDashboard.aspx" />
     <Content Include="ClientDashboard.aspx" />
     <Content Include="Default.aspx" />
     <Content Include="Images\494814716_588640820918268_3466504227378786476_n.jpg" />
@@ -2194,6 +2195,20 @@
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AdminDashboard.aspx.cs">
+      <DependentUpon>AdminDashboard.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AdminDashboard.aspx.designer.cs">
+      <DependentUpon>AdminDashboard.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="ClientDashboard.aspx.cs">
+      <DependentUpon>ClientDashboard.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="ClientDashboard.aspx.designer.cs">
+      <DependentUpon>ClientDashboard.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Database\DBContext.cs" />
     <Compile Include="Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>

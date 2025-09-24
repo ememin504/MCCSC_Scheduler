@@ -66,7 +66,6 @@ function authenticateUser() {
                 if (result.includes("Client")) {
                     sessionStorage.setItem("redirectAfterOtp", "ClientDashboard.aspx");
                     openOtpModal();
-                    sendToClientEmail(userID);
                     getUserInfo(userData.UserName);
                 } else if (result.includes("Admin")) {
                     sessionStorage.setItem("redirectAfterOtp", "AdminDashboard.aspx");
@@ -148,3 +147,6 @@ function connectDB() {
         openAlertModal('App Info', 'DB connection status: ' + response.d);
     };
 }
+
+
+           

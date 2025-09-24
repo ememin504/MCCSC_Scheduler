@@ -90,7 +90,7 @@ namespace MCCSC_Scheduler.Database
         {
             try
             {
-                string query = "SELECT user_id, username, role_id FROM Users WHERE username = @UserName";
+                string query = "SELECT user_id, username, role_id, hashed_password FROM Users WHERE username = @UserName";
                 string roleQuery = "SELECT role_description FROM Roles WHERE role_id = @role_id";
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
@@ -113,7 +113,8 @@ namespace MCCSC_Scheduler.Database
                                 {
                                     UserID = reader.GetInt32(reader.GetOrdinal("user_id")),
                                     UserName = reader.GetString(reader.GetOrdinal("username")),
-                                    RoleID = role_id
+                                    RoleID = role_id,
+                                    Password = reader.GetString(reader.GetOrdinal("hashed_password"))
 
                                 };
                                 
@@ -150,11 +151,11 @@ namespace MCCSC_Scheduler.Database
 
             // Store OTP
             string storeResult = StoreOtp(userID, otpCode);
-
             // Send OTP via email
-            
+            //string emailResult = OTPtoEmail(userID, otpCode);
 
             return $"Generated OTP: {otpCode}, Store Result: {storeResult}";
+            // Email Result: { emailResult}
         }
 
 
@@ -199,7 +200,7 @@ namespace MCCSC_Scheduler.Database
                 return $"Error: {ex.Message}";
             }
         }
-        public string OTPtoEmail(int UserID, int Otp) { 
+        public string OTPtoEmail(int UserID, string Otp) { 
             string email = "";
             string getEmailQuery = "SELECT email FROM Users WHERE user_id = @UserID";
             try
