@@ -1,91 +1,121 @@
-﻿using MCCSC_Scheduler.Model;
-using MCCSC_Scheduler.DTO;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Data.SqlClient;
-using System.Runtime.InteropServices;
-using System.Security;
-using System.Web.UI.WebControls;
-using System.Runtime.Remoting.Messaging;
+using MCCSC_Scheduler.DTO;
 
 namespace MCCSC_Scheduler.Database
 {
     public class DBContext
     {
-        private SqlConnection conn;         //SQL Server DB connection object
+        private SqlConnection conn;
         private string connectionString;
 
-        //default constructor
-        public DBContext() 
+        // Default constructor
+        public DBContext()
         {
-            conn = null;    
+            conn = null;
+            connectionString = string.Empty;
         }
-        //overloaded/parameterized constructor
+
+        // Overloaded constructor with SQL authentication
         public DBContext(string dbServerName, string userID, string password, string dbName)
         {
-            //setup connection string
-            //Data Source=.\\SQLEXPRESS;Initial Catalog=xxxxxxx;Integrated Security=True;User ID=xxxxx;Password=yyyyyy (SQL Server Authentication)
-            connectionString = "Data Source=" + dbServerName + ";Initial Catalog=" + dbName + ";Integrated Security=True;User ID=" + userID + ";Password=" + password;
+            connectionString = $"Data Source={dbServerName};Initial Catalog={dbName};User ID={userID};Password={password}";
         }
 
-        //overloaded/parameterized constructor
+        // Overloaded constructor with Windows authentication
         public DBContext(string dbServerName, string dbName)
         {
-            //setup connection string
-            //Data Source=.\\SQLEXPRESS;Initial Catalog=xxxxxxx;Integrated Security=True; (Windows Authentication)
-            connectionString = "Data Source=" + dbServerName + ";Initial Catalog=" + dbName +";Integrated Security=True;";
-
+            connectionString = $"Data Source={dbServerName};Initial Catalog={dbName};Integrated Security=True;";
         }
-        //DB connection
+
+        // Connect to DB
         public bool ConnectDB()
         {
             if (string.IsNullOrEmpty(connectionString))
-            {
                 throw new InvalidOperationException("Connection string is not initialized.");
-            }
 
             conn = new SqlConnection(connectionString);
+
             try
             {
                 conn.Open();
-                return (conn != null);
-            }
-            catch (SqlException ex)
-            {
-                throw new Exception(ex.Message);
+
+                // ✅ Log which DB and login you’re connected as
+                using (SqlCommand cmd = new SqlCommand("SELECT DB_NAME()", conn))
+                {
+                    string currentDb = (string)cmd.ExecuteScalar();
+                    System.Diagnostics.Debug.WriteLine(">>> Connected to DB: " + currentDb);
+                }
+
+                using (SqlCommand cmd = new SqlCommand("SELECT SUSER_SNAME()", conn))
+                {
+                    string currentLogin = (string)cmd.ExecuteScalar();
+                    System.Diagnostics.Debug.WriteLine(">>> Connected as Login: " + currentLogin);
+                }
+
+                return true;
             }
             catch (Exception ex)
             {
-                throw new Exception(ex.Message);
+                throw new Exception("Error in ConnectDB: " + ex.Message, ex);
             }
         }
-        public bool AuthenticateUser(UserDTO userDTO)
+
+        // Close connection safely
+        public void CloseDB()
+        {
+            if (conn != null && conn.State == System.Data.ConnectionState.Open)
+            {
+                conn.Close();
+                conn.Dispose();
+            }
+        }
+
+        // Authenticate User
+        public UserDTO AuthenticateUser(UserDTO userDTO)
         {
             try
             {
-                // Use the class-level conn (from ConnectDB), not a new shadowed one
                 if (conn == null || conn.State != System.Data.ConnectionState.Open)
-                {
                     throw new InvalidOperationException("Database connection is not established.");
-                }
 
-                string query = "SELECT COUNT(*) FROM Users WHERE username = @UserName AND hashed_password = @Password";
+                string query = "SELECT user_id, username, hashed_password FROM Users WHERE username = @UserName";
 
-                using (SqlCommand cmd = new SqlCommand(query, conn)) // use existing conn
+                using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
-                    cmd.Parameters.AddWithValue("@Password", userDTO.Password);
 
-                    int count = (int)cmd.ExecuteScalar();
-                    return count > 0;
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            string dbPassword = reader["hashed_password"].ToString();
+                            string inputPassword = userDTO.Password;
+
+                            // Debug logging
+                            System.Diagnostics.Debug.WriteLine($"DB Password (raw): [{dbPassword}]");
+                            System.Diagnostics.Debug.WriteLine($"Input Password:    [{inputPassword}]");
+
+                            if (dbPassword == inputPassword)
+                            {
+                                return new UserDTO
+                                {
+                                    UserID = Convert.ToInt32(reader["user_id"]),
+                                    UserName = reader["username"].ToString(),
+                                    Password = dbPassword // ⚠️ For testing only, remove in production
+                                };
+                            }
+                        }
+                    }
                 }
+
+                return null;
             }
             catch (Exception ex)
             {
                 throw new Exception("Error in AuthenticateUser: " + ex.Message, ex);
             }
-        }
-
+        }   
         public (string role, UserDTO user) GetUserInfo(UserDTO userDTO)
         {
             try
@@ -96,6 +126,8 @@ namespace MCCSC_Scheduler.Database
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
+
+                    UserDTO user = null;
 
                     // First, get user record
                     using (SqlCommand cmd = new SqlCommand(query, conn))
@@ -108,16 +140,14 @@ namespace MCCSC_Scheduler.Database
                             {
                                 int role_id = reader.GetInt32(reader.GetOrdinal("role_id"));
 
-                                // Construct user object
-                                UserDTO user = new UserDTO
+                                user = new UserDTO
                                 {
                                     UserID = reader.GetInt32(reader.GetOrdinal("user_id")),
                                     UserName = reader.GetString(reader.GetOrdinal("username")),
                                     RoleID = role_id,
-                                    Password = reader.GetString(reader.GetOrdinal("hashed_password"))
-
+                                    // don’t overwrite with DB password unless you need it
                                 };
-                                
+
                                 reader.Close();
 
                                 // Now get role_description

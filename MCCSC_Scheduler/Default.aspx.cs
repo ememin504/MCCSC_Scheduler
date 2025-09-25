@@ -49,20 +49,16 @@ namespace MCCSC_Scheduler
             string message = "Unable to verify username and password!";
             try
             {
-                if (dbContext.AuthenticateUser(userDTO))
+                if (dbContext.AuthenticateUser(userDTO) is UserDTO authenticatedUser)
                 {
-                    (string role, UserDTO user) userInfo = dbContext.GetUserInfo(userDTO);
+                    (string role, UserDTO user) userInfo = dbContext.GetUserInfo(authenticatedUser);
 
                     if (!string.IsNullOrEmpty(userInfo.role) && userInfo.user != null)
                     {
                         int userID = userInfo.user.UserID;
-
-                        // Get OTP message
-                        //string otpMessage = "";
                         string otp = GenerateOTP(userID);
 
-                        message = $"User Login Successful! ID: {userInfo.user.UserID}, Username: {userInfo.user.UserName}, Password: {userInfo.user.Password} Role: {userInfo.role}, Message: {otp}"; 
-                        
+                        message = $"User Login Successful! ID: {userInfo.user.UserID}, Username: {userInfo.user.UserName}, Password: {userInfo.user.Password}, Role: {userInfo.role}, Message: {otp}";
                     }
                     else
                     {
