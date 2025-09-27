@@ -2,6 +2,7 @@
 var alertModal;
 var otpModal;
 var reservationModal;
+var registrationModal;
 
 var alertModalEl = "<div class='modal fade' id='alertModal' role='dialog'>" +
     "<div class='modal-dialog'>" +
@@ -16,6 +17,72 @@ var alertModalEl = "<div class='modal fade' id='alertModal' role='dialog'>" +
     "<div class='modal-footer'>" +
     "<button type='button' class='btn btn-primary' data-bs-dismiss='modal'>OK</button>" +
     "</div></div></div></div>";
+
+var registrationModalEl =
+    "<div class='modal fade' id='registrationModal' tabindex='-1' role='dialog'>" +
+    "  <div class='modal-dialog'>" +
+    "    <div class='modal-content'>" +
+
+    "      <div class='modal-header'>" +
+    "        <h5 class='modal-title'>Account Registration</h5>" +
+    "        <button type='button' class='btn-close' data-bs-dismiss='modal'></button>" +
+    "      </div>" +
+
+    "      <div class='modal-body'>" +
+    "        <form id='registrationForm'>" +
+
+    "          <div class='mb-3'>" +
+    "            <label for='firstName' class='form-label'>First Name</label>" +
+    "            <input type='text' class='form-control' id='firstName' placeholder='Enter first name'>" +
+    "          </div>" +
+
+    "          <div class='mb-3'>" +
+    "            <label for='middleInitial' class='form-label'>Middle Initial</label>" +
+    "            <input type='text' class='form-control' id='middleInitial' maxlength='1' placeholder='M'>" +
+    "          </div>" +
+
+    "          <div class='mb-3'>" +
+    "            <label for='lastName' class='form-label'>Last Name</label>" +
+    "            <input type='text' class='form-control' id='lastName' placeholder='Enter last name'>" +
+    "          </div>" +
+
+    "          <div class='mb-3'>" +
+    "            <label for='username' class='form-label'>Username</label>" +
+    "            <input type='text' class='form-control' id='username' placeholder='Enter username'>" +
+    "          </div>" +
+
+    "          <div class='mb-3'>" +
+    "            <label for='password' class='form-label'>Password</label>" +
+    "            <input type='password' class='form-control' id='password' placeholder='Enter password'>" +
+    "          </div>" +
+
+    "          <div class='mb-3'>" +
+    "            <label for='comfirmPassword' class='form-label'>Confirm Password</label>" +
+    "            <input type='password' class='form-control' id='password' placeholder='Re-enter password'>" +
+    "          </div>" +
+
+    "          <div class='mb-3'>" +
+    "            <label for='email' class='form-label'>Email</label>" +
+    "            <input type='email' class='form-control' id='email' placeholder='Enter email'>" +
+    "          </div>" +
+
+    "          <div class='mb-3'>" +
+    "            <label for='organization' class='form-label'>Organization</label>" +
+    "            <input type='text' class='form-control' id='organization' placeholder='Enter organization'>" +
+    "          </div>" +
+
+    "        </form>" +
+    "      </div>" +
+
+    "      <div class='modal-footer'>" +
+    "        <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Cancel</button>" +
+    "        <button type='button' class='btn btn-primary' id='submitRegistration'>Register</button>" +
+    "      </div>" +
+
+    "    </div>" +
+    "  </div>" +
+    "</div>";
+
 
 var otpModalEl =
     "<div class='modal fade' id='otpModal' role='dialog'>" +
@@ -113,4 +180,11 @@ function openReservationModal() {
     });
     reservationModal.show();
 }
-//Method to verify the user OTP input.
+
+function openRegistrationModal() {
+    registrationModal = new bootstrap.Modal(document.getElementById('registrationModal'), {
+        backdrop: 'static'
+    });
+    registrationModal.show();
+}
+

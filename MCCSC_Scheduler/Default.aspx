@@ -12,17 +12,30 @@
     <title>Home Page</title>
 </head>
 <body>
-    <form id="aspForm" runat="server">
-        <div id="LogIn">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username"/><br/><br/>
-            <label for="password">Password:</label>
-            <input type="text" id="password" name="password"/><br/><br/>
-            <button id="btnLogIn" class="btn btn-primary" onclick="authenticateUser(); return false;" >Log-in</button>
-            
-        </div>
+
+    <form id="aspForm" runat="server">    
+            <div id="loginSection">
+                <h2>Log In</h2>
+                <div class="form-group">
+                    <label for="loginUsername">Username:</label>
+                    <input type="text" id="loginUsername" name="username" required />
+                </div>
+        
+                <div class="form-group">
+                    <label for="loginPassword">Password:</label>
+                    <input type="password" id="loginPassword" name="password" required />
+                </div>
+        
+                <div class="form-actions">
+                    <button type="submit" id="btnLogIn" class="btn btn-primary" 
+                            onclick="authenticateUser(); return false;">
+                        Log In
+                    </button>
+                </div>
+            </div>
         <div id="form1">
             <asp:Button ID="Button1" runat="server" class="btn btn-primary" Text="Connect DB" OnClientClick="connectDB();return false;" />
+            <asp:Button ID="Button2" runat="server" class="btn btn-primary" Text="Create an Account" OnClientClick="openRegistrationModal();return false;" />
         </div>
     </form>
 </body>

@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (alertModalDiv) {
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', otpModalEl); // inject OTP modal too
+        alertModalDiv.insertAdjacentHTML('afterend', registrationModalEl);
     }
 });
 
