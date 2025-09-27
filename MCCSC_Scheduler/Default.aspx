@@ -19,6 +19,7 @@
             <label for="password">Password:</label>
             <input type="text" id="password" name="password"/><br/><br/>
             <button id="btnLogIn" class="btn btn-primary" onclick="authenticateUser(); return false;" >Log-in</button>
+            
         </div>
         <div id="form1">
             <asp:Button ID="Button1" runat="server" class="btn btn-primary" Text="Connect DB" OnClientClick="connectDB();return false;" />

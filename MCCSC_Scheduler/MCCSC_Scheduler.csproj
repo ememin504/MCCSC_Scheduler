@@ -2190,6 +2190,7 @@
     <Content Include="lib\fontawesome\6.7.2\svgs\solid\yin-yang.svg" />
     <Content Include="lib\fontawesome\6.7.2\svgs\solid\z.svg" />
     <Content Include="Scripts\css\default.css" />
+    <Content Include="Scripts\js\ClientDashboard.js" />
     <Content Include="Scripts\js\default.js" />
     <Content Include="Scripts\js\global.js" />
     <Content Include="Web.config" />
