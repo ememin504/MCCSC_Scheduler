@@ -13,6 +13,7 @@ using MCCSC_Scheduler.Database;
 using MCCSC_Scheduler.DTO;
 using MCCSC_Scheduler.Model;
 using MCCSC_Scheduler.ViewModel;
+using System.Data.SqlClient;
 using static System.Net.WebRequestMethods;
 
 namespace MCCSC_Scheduler
@@ -59,6 +60,7 @@ namespace MCCSC_Scheduler
 
                 if (user != null)
                 {
+                    Convert.ToInt32(user.UserID);
                     GenerateOTP(user.UserID);
                     return $"Login Successful - Role: {user.RoleID} UserID: {user.UserID}";
                 }

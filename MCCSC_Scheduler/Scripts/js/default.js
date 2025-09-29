@@ -56,10 +56,11 @@ let userID; // global variable
             console.error("Error fetching user info:", error);
         });
 }*/
-var user_id;
+var user_id = 0;
+var role_id = 0;
 function authenticateUser() {
-    let username = document.getElementById("username").value;
-    let password = document.getElementById("password").value;
+    let username = document.getElementById("loginUsername").value;
+    let password = document.getElementById("loginPassword").value;
 
     if (!username || !password) {
         alert("Please enter both username and password.");
@@ -92,24 +93,42 @@ function authenticateUser() {
 
                 const roleID = roleMatch ? parseInt(roleMatch[1]) : null;
                 const userID = userMatch ? parseInt(userMatch[1]) : null;
-
+                parseInt(userID);
+                parseInt(roleID);
                 if (roleID && userID) {
-                    user_id = userID; // global assignment
-                    console.log("Extracted role:", roleID, "user:", user_id);
-                    openOtpModal(user_id);
+                    user_id = parseInt(userID); // global assignment
+                    role_id = parseInt(roleID);
+
+                    console.log("Extracted role:", roleID, "user:", user_id, typeof user_id);
+                    if (isNaN(user_id)) {
+                        console.log("Invalid user_id, defaulting to 0");
+                        user_id = 0;
+                         
+                    }
+                    else {
+                        openOtpModal(role_id, user_id);
+                        console.log(typeof user_id);
+                       
+                    }
+                        
                 } else {
                     console.error("Failed to parse role or userID:", msg);
+                    
+
                 }
             } else {
                 alert("Login failed: " + msg);
+               
             }
         })
         .catch(error => {
             console.error("Authentication error:", error);
             alert("An error occurred while logging in.");
+            
         });
 }
-function verifyOTP(user_id) {
+function verifyOTP(role_id ,user_id) {
+    parseInt(user_id);
     console.log(user_id);
     let otpCode = document.getElementById('otpCode').value;
 
@@ -133,8 +152,15 @@ function verifyOTP(user_id) {
             console.log("OTP verify result:", result);
 
             if (result === "OTP Verified Successfully") {
-                let redirectUrl = sessionStorage.getItem("redirectAfterOtp") || "ClientDashboard.aspx";
-                window.location.href = redirectUrl;
+                if (role_id === 1) {
+                    window.location.href = "ClientDashboard.aspx";
+                }
+                else if (role_id === 2) {
+                    window.location.href = "AdminDashboard.aspx";
+                }
+                else {
+                    console.log("User role is undefined");
+                }
             } else {
                 document.getElementById('otpMessage').classList.remove('d-none');
             }

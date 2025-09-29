@@ -12,6 +12,7 @@
     <title>Client Dashboard</title>
 </head>
 <body>
+
     <form id="aspForm" runat="server">
         <div id="form1">
             <asp:Button ID="Button1" runat="server" class="btn btn-primary" Text="Connect DB" OnClientClick="connectDB();return false;" />

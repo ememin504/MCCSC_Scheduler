@@ -2193,6 +2193,7 @@
     <Content Include="Scripts\js\ClientDashboard.js" />
     <Content Include="Scripts\js\default.js" />
     <Content Include="Scripts\js\global.js" />
+    <Content Include="Scripts\js\script.js" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
