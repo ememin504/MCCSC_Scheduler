@@ -168,12 +168,21 @@ function openAlertModal(title, message) {
     var alertModalDiv = document.getElementsByClassName('alert-modal-content');
     alertModalDiv[0].textContent = message;
 }
-function openOtpModal() {
-    otpModal = new bootstrap.Modal(document.getElementById('otpModal'), {
-        backdrop: 'static'
-    });
+function openOtpModal(userID) {
+    var modalEl = document.getElementById("otpModal");
+
+    if (!modalEl) {
+        console.error("otpModal not found in DOM!");
+        return;
+    }
+
+    // Optionally show userID inside modal
+    modalEl.setAttribute("data-userid", userID || "");
+
+    var otpModal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
     otpModal.show();
 }
+
 function openReservationModal() {
     reservationModal = new bootstrap.Modal(document.getElementById('reservationModal'), {
         backdrop: 'static'
@@ -185,6 +194,6 @@ function openRegistrationModal() {
     registrationModal = new bootstrap.Modal(document.getElementById('registrationModal'), {
         backdrop: 'static'
     });
-    registrationModal.show();
+    //registrationModal.show();
 }
 

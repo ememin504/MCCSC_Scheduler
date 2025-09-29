@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data.SqlClient;
 using MCCSC_Scheduler.DTO;
+using MCCSC_Scheduler.ViewModel;
 
 namespace MCCSC_Scheduler.Database
 {
@@ -70,109 +71,74 @@ namespace MCCSC_Scheduler.Database
                 conn.Dispose();
             }
         }
-
         // Authenticate User
-        public UserDTO AuthenticateUser(UserDTO userDTO)
+        // Authenticate User (instance method, not static)
+        public UserDTO AuthenticateUser(string username, string password)
         {
-            try
+            using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                if (conn == null || conn.State != System.Data.ConnectionState.Open)
-                    throw new InvalidOperationException("Database connection is not established.");
-
-                string query = "SELECT user_id, username, hashed_password FROM Users WHERE username = @UserName";
+                string query = @"SELECT user_id, username, role_id  
+                                FROM Users 
+                                WHERE username = @UserName AND hashed_password = @Password
+                                ";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
+                    cmd.Parameters.AddWithValue("@UserName", username);
+                    cmd.Parameters.AddWithValue("@Password", password);
+
+                    conn.Open();
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new UserDTO
+                            {
+                                UserID = Convert.ToInt32(reader["user_id"]),
+                                UserName = reader["username"].ToString(),
+                                RoleID = Convert.ToInt32(reader["role_id"]),
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+
+        public UserDTO GetUserInfo(int userId)
+        {
+            UserDTO user = null;
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                string query = "SELECT user_id, username, role_id, email FROM Users WHERE user_id = @userId";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@userId", userId);
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            string dbPassword = reader["hashed_password"].ToString();
-                            string inputPassword = userDTO.Password;
-
-                            // Debug logging
-                            System.Diagnostics.Debug.WriteLine($"DB Password (raw): [{dbPassword}]");
-                            System.Diagnostics.Debug.WriteLine($"Input Password:    [{inputPassword}]");
-
-                            if (dbPassword == inputPassword)
+                            user = new UserDTO
                             {
-                                return new UserDTO
-                                {
-                                    UserID = Convert.ToInt32(reader["user_id"]),
-                                    UserName = reader["username"].ToString(),
-                                    Password = dbPassword // ⚠️ For testing only, remove in production
-                                };
-                            }
-                        }
-                    }
-                }
-
-                return null;
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Error in AuthenticateUser: " + ex.Message, ex);
-            }
-        }   
-        public (string role, UserDTO user) GetUserInfo(UserDTO userDTO)
-        {
-            try
-            {
-                string query = "SELECT user_id, username, role_id, hashed_password FROM Users WHERE username = @UserName";
-                string roleQuery = "SELECT role_description FROM Roles WHERE role_id = @role_id";
-
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                {
-                    conn.Open();
-
-                    UserDTO user = null;
-
-                    // First, get user record
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
-
-                        using (SqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            if (reader.Read())
-                            {
-                                int role_id = reader.GetInt32(reader.GetOrdinal("role_id"));
-
-                                user = new UserDTO
-                                {
-                                    UserID = reader.GetInt32(reader.GetOrdinal("user_id")),
-                                    UserName = reader.GetString(reader.GetOrdinal("username")),
-                                    RoleID = role_id,
-                                    // don’t overwrite with DB password unless you need it
-                                };
-
-                                reader.Close();
-
-                                // Now get role_description
-                                using (SqlCommand roleCmd = new SqlCommand(roleQuery, conn))
-                                {
-                                    roleCmd.Parameters.AddWithValue("@role_id", role_id);
-
-                                    object roleResult = roleCmd.ExecuteScalar();
-                                    if (roleResult != null)
-                                    {
-                                        return (roleResult.ToString(), user);
-                                    }
-                                }
-                            }
+                                UserID = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                UserName = reader.GetString(reader.GetOrdinal("username")),
+                                RoleID = reader.GetInt32(reader.GetOrdinal("role_id")),
+                                Email = reader.GetString(reader.GetOrdinal("email"))
+                            };
                         }
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                throw new Exception("Error in GetUserInfo: " + ex.Message, ex);
-            }
 
-            return (string.Empty, null);
+            return user;
         }
+
+
 
         public string GenerateOTP(int userID)
         {

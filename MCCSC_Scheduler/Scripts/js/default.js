@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
 let userInfo; // global variable to store user ID after login
 let userID; // global variable
 
-function getUserInfo(UserName) {
+/*function getUserInfo(UserName) {
     let submitUrl = 'Default.aspx/GetUserInfoWeb';
 
     // wrap it as object because C# expects a UserDTO
@@ -31,7 +31,21 @@ function getUserInfo(UserName) {
                 console.log("User info:", data.d);
                 userInfo = data.d;      // global
                 userID = data.d.UserID; // global
+                roleID = data.d.RoleID; // <-- make sure casing matches your DTO
                 console.log("Extracted UserID:", userID);
+
+                if (roleID == 1) {
+                    window.location.href = "../../ClientDashboard.aspx";
+                    openOtpModal(userID);
+                }
+                else if (roleID == 2) {
+                    openOtpModal(userID);
+                    window.location.href = "../../AdminDashboard.aspx";
+                }
+                else {
+                    window.location.href = "AccessDenied.aspx"; // fallback
+                }
+
                 return data.d;
             } else {
                 console.warn("No user info returned");
@@ -41,57 +55,67 @@ function getUserInfo(UserName) {
         .catch(error => {
             console.error("Error fetching user info:", error);
         });
-}
+}*/
+var user_id;
 function authenticateUser() {
-    let username = document.getElementById('username').value;
-    let password = document.getElementById('password').value;
+    let username = document.getElementById("username").value;
+    let password = document.getElementById("password").value;
 
+    if (!username || !password) {
+        alert("Please enter both username and password.");
+        return;
+    }
     let userData = {
         UserName: username,
         Password: password
     };
-    console.log("Auth Payload:", userData);
-    let submitUrl = 'Default.aspx/AuthenticationResult';
-    let options = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userDTO: userData })
-    };
 
-    fetch(submitUrl, options)
+    fetch("Default.aspx/AuthenticationResult", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify({ loginVM: userData })
+    })
         .then(response => response.json())
         .then(data => {
-            let result = data.d; // This is the string returned from C#
-            console.log("Auth result:", result);
-            if (result.includes("User Login Successful")) {
-                if (result.includes("Client")) {
-                    sessionStorage.setItem("redirectAfterOtp", "ClientDashboard.aspx");
-                    openOtpModal();
-                    getUserInfo(userData.UserName);
-                } else if (result.includes("Admin")) {
-                    sessionStorage.setItem("redirectAfterOtp", "AdminDashboard.aspx");
-                    openOtpModal();
-                } else {
-                    openAlertModal("App Info", result);
-                }
+            if (!data || !data.d) {
+                alert("Invalid response from server!");
+                return;
+            }
 
+            // Example: "Login Successful - Role: 2 UserID: 1006"
+            const msg = data.d;
+            alert(msg); // keep alert if you want to debug
+
+            if (msg.startsWith("Login Successful")) {
+                const roleMatch = msg.match(/Role:\s*(\d+)/);
+                const userMatch = msg.match(/UserID:\s*(\d+)/);
+
+                const roleID = roleMatch ? parseInt(roleMatch[1]) : null;
+                const userID = userMatch ? parseInt(userMatch[1]) : null;
+
+                if (roleID && userID) {
+                    user_id = userID; // global assignment
+                    console.log("Extracted role:", roleID, "user:", user_id);
+                    openOtpModal(user_id);
+                } else {
+                    console.error("Failed to parse role or userID:", msg);
+                }
             } else {
-                // for "Invalid Username or Password!" or error messages
-                openAlertModal("App Info", result);
+                alert("Login failed: " + msg);
             }
         })
         .catch(error => {
-            console.error("Error:", error);
-            openAlertModal("App Info", "Error: " + error);
+            console.error("Authentication error:", error);
+            alert("An error occurred while logging in.");
         });
 }
-
-function verifyOTP() {
+function verifyOTP(user_id) {
+    console.log(user_id);
     let otpCode = document.getElementById('otpCode').value;
 
     let userData = {
         OtpCode: otpCode,
-        UserID: parseInt(userID) // use the global userID set in getUserInfo()
+        UserID: parseInt(user_id) // use the global userID set in getUserInfo()
     };
     console.log("OTP Payload:", userData);
 

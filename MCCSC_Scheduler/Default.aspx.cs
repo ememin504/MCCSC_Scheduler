@@ -11,6 +11,8 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
 using MCCSC_Scheduler.DTO;
+using MCCSC_Scheduler.Model;
+using MCCSC_Scheduler.ViewModel;
 using static System.Net.WebRequestMethods;
 
 namespace MCCSC_Scheduler
@@ -44,39 +46,32 @@ namespace MCCSC_Scheduler
 
         [WebMethod]
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
-        public static string AuthenticationResult(UserDTO userDTO)
+
+
+        public static string AuthenticationResult(LoginViewModel loginVM)
         {
-            string message = "Unable to verify username and password!";
             try
             {
-                if (dbContext.AuthenticateUser(userDTO) is UserDTO authenticatedUser)
+                // Example: Windows auth
+                var db = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
+
+                var user = db.AuthenticateUser(loginVM.UserName, loginVM.Password);
+
+                if (user != null)
                 {
-                    (string role, UserDTO user) userInfo = dbContext.GetUserInfo(authenticatedUser);
-
-                    if (!string.IsNullOrEmpty(userInfo.role) && userInfo.user != null)
-                    {
-                        int userID = userInfo.user.UserID;
-                        string otp = GenerateOTP(userID);
-
-                        message = $"User Login Successful! ID: {userInfo.user.UserID}, Username: {userInfo.user.UserName}, Password: {userInfo.user.Password}, Role: {userInfo.role}, Message: {otp}";
-                    }
-                    else
-                    {
-                        message = "User Login Successful! (Role not found or user missing)";
-                    }
+                    GenerateOTP(user.UserID);
+                    return $"Login Successful - Role: {user.RoleID} UserID: {user.UserID}";
                 }
                 else
-                {
-                    message = "Invalid Username or Password!";
-                }
+                    return "Invalid Username or Password!";
             }
             catch (Exception ex)
             {
-                message = "Connection error: " + ex.Message;
+                return "Authentication Error: " + ex.Message;
             }
-
-            return message;
         }
+
+
         [WebMethod]
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
         
@@ -114,24 +109,6 @@ namespace MCCSC_Scheduler
             public string UserName { get; set; }
             public int RoleID { get; set; }
             public string RoleDescription { get; set; }
-        }
-
-        [WebMethod]
-        public static UserInfoResponse GetUserInfoWeb(UserDTO userDTO)
-        {
-            (string role, UserDTO user) userInfo = dbContext.GetUserInfo(userDTO);
-
-            if (!string.IsNullOrEmpty(userInfo.role) && userInfo.user != null)
-            {
-                return new UserInfoResponse
-                {
-                    UserID = userInfo.user.UserID,
-                    UserName = userInfo.user.UserName,
-                    RoleID = userInfo.user.RoleID,
-                    RoleDescription = userInfo.role
-                };
-            }
-            return null;
         }
        
     }
