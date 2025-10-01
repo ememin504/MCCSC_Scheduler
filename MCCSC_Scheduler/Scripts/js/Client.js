@@ -11,12 +11,40 @@ const userId = sessionStorage.getItem("user_id");
 const userEmail = sessionStorage.getItem("user_email");
 
 console.log(roleId, userId, userEmail);
+getAsset();
+function getAsset() {
+    fetch("ClientDashboard.aspx/GetAssets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}"
+    })
+        .then(res => res.json())
+        .then(data => {
+            let assets = data.d;
+            let select = document.getElementById("asset");
+
+            if (!select) {
+                console.error("❌ Select element #asset not found inside modal.");
+                return;
+            }
+
+            // Reset options
+            select.innerHTML = "<option value=''>Asset</option>";
+
+            // Add DB records as options
+            assets.forEach(asset => {
+                select.innerHTML += `<option value="${asset.AssetId}">${asset.AssetName}</option>`;
+            });
+        })
+        .catch(err => console.error("Error fetching assets:", err));
+}
+
 
 function connectDB() {
     console.log('connecting to DB...');
     var xhr = new XMLHttpRequest();
     //initiate a request to the server asynchronously (AJAX)
-    xhr.open('GET', 'Default.aspx/ConnectDB', true);
+    xhr.open('GET', 'ClientDashboard.aspx/ConnectDB', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     //send the request
     xhr.send();

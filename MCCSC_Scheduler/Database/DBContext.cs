@@ -1,7 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using MCCSC_Scheduler.DTO;
+using MCCSC_Scheduler.Model;
 using MCCSC_Scheduler.ViewModel;
+using System.Web.Script.Serialization;
+
+
 
 namespace MCCSC_Scheduler.Database
 {
@@ -107,7 +112,7 @@ namespace MCCSC_Scheduler.Database
         }
 
 
-        public UserDTO GetUserInfo(int userId)
+        /*public UserDTO GetUserInfo(int userId)
         {
             UserDTO user = null;
 
@@ -137,7 +142,36 @@ namespace MCCSC_Scheduler.Database
             }
 
             return user;
+        }*/
+
+        public List<AssetDTO> GetAssets()
+        {
+            List<AssetDTO> assets = new List<AssetDTO>();
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                string query = "SELECT asset_id, asset_name, quantity_available, isActive FROM Assets";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        assets.Add(new AssetDTO
+                        {
+                            AssetId = reader.GetInt32(0),
+                            AssetName = reader.GetString(1),
+                            Quantity = reader.GetInt32(2),
+                            IsActive = reader.GetBoolean(3)
+                        });
+                    }
+                }
+            }
+
+            return assets; // ✅ returns List<AssetDTO>
         }
+
 
 
 

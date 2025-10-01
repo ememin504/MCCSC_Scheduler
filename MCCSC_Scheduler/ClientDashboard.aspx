@@ -20,12 +20,13 @@
         userEmail: '<%= Session["user_email"] %>'
     };
     </script>
-<script src="scripts/dashboard.js"></script>
 
     <form id="aspForm" runat="server">
         <div id="form1">
             <asp:Button ID="Button1" runat="server" class="btn btn-primary" Text="Connect DB" OnClientClick="connectDB();return false;" />
              <asp:Button ID="btnReserve" runat="server" class="btn btn-primary " OnClientClick="openReservationModal(); return false;" Text="Request +" />
+        </div>
+        <div id="assetTableBody">
         </div>
     </form>
 </body>

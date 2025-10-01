@@ -105,6 +105,7 @@ var otpModalEl =
     "</div>" +
     "</div>";
 
+// Modal template (already in your global.js)
 let reservationModalEl =
     "<div class='modal fade' id='reservationModal' tabindex='-1' role='dialog'>" +
     "<div class='modal-dialog'>" +
@@ -123,14 +124,13 @@ let reservationModalEl =
     "<input type='text' id='eventDescription' class='form-control' placeholder='Battle of the Bands'>" +
 
     "<label for='eventDate'>Date of Event</label>" +
-    "<select id='eventDate' class='form-select'>" +
-    "<option value=''>Date</option>" +
-    "</select>" +
+    "<input type='date' id='eventDate' class='form-control'>" +
 
     "<label for='asset'>Item you wish to borrow</label>" +
     "<select id='asset' class='form-select'>" +
     "<option value=''>Asset</option>" +
     "</select>" +
+
     "</div>" +
 
     "<div class='modal-footer'>" +
@@ -138,7 +138,10 @@ let reservationModalEl =
     "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Clear</button>" +
     "</div>" +
 
-    "</div></div></div>";
+    "</div>" +
+    "</div>" +
+    "</div>";
+
 
 function initializeTooltip() {
     //initialize tooltips

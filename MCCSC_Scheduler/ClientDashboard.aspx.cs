@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Web.Script.Services;
+using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
@@ -16,6 +18,9 @@ namespace MCCSC_Scheduler
             dbContext = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
             ConnectDB();
         }
+
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
         public static string ConnectDB()
         {
             string status = "Connected to DB successfully!";
@@ -31,6 +36,13 @@ namespace MCCSC_Scheduler
             }
 
             return status;
+        }
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+        public static List<AssetDTO> GetAssets()
+        {
+            dbContext = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
+            return dbContext.GetAssets();
         }
     }
 }
