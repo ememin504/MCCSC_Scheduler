@@ -77,7 +77,7 @@ namespace MCCSC_Scheduler.Database
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = @"SELECT user_id, username, role_id  
+                string query = @"SELECT user_id, username, role_id, email  
                                 FROM Users 
                                 WHERE username = @UserName AND hashed_password = @Password
                                 ";
@@ -97,6 +97,7 @@ namespace MCCSC_Scheduler.Database
                                 UserID = Convert.ToInt32(reader["user_id"]),
                                 UserName = reader["username"].ToString(),
                                 RoleID = Convert.ToInt32(reader["role_id"]),
+                                Email = reader["email"].ToString(),
                             };
                         }
                     }

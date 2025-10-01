@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="Scripts/css/default.css">
     <script src="Scripts/js/script.js"></script>
     <script src="Scripts/js/default.js"></script>
+
 </head>
 <body>
      <header>
@@ -49,10 +50,15 @@
 
                     <div class="registration-container">
                         <h3>Registration Form</h3>
-                        <form id="registrationForm" onsubmit="handleRegistration(event)">
+                        <form id="registrationForm">
                             <div class="form-group">
                                 <label for="firstName">First Name *</label>
                                 <input type="text" id="firstName" required>
+                            </div>
+
+                             <div class="form-group">
+                                <label for="firstName">First Name *</label>
+                                <input type="text" id="middleInitial" required>
                             </div>
 
                             <div class="form-group">
@@ -80,7 +86,7 @@
                                 <input type="password" id="password" required>
                             </div>
 
-                            <button type="submit" class="submit-btn">Register & Book</button>
+                            <button type="submit" class="submit-btn" onclick="submitRegistrationRequest()">Register & Book</button>
                         </form>
                     </div>
                 </div>

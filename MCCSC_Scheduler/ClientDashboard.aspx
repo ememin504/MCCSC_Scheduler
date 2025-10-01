@@ -8,10 +8,19 @@
      <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
      <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
      <script type="text/javascript" src="Scripts/js/global.js"></script>
-     <script type="text/javascript" src="Scripts/js/ClientDashboard.js"></script>
+     <script type="text/javascript" src="Scripts/js/Client.js"></script>
+     
     <title>Client Dashboard</title>
 </head>
 <body>
+    <script>
+    window.AppData = {
+        roleId: '<%= Session["role_id"] %>',
+        userId: '<%= Session["user_id"] %>',
+        userEmail: '<%= Session["user_email"] %>'
+    };
+    </script>
+<script src="scripts/dashboard.js"></script>
 
     <form id="aspForm" runat="server">
         <div id="form1">

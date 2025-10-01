@@ -99,7 +99,7 @@ var otpModalEl =
     "</div>" +
     "<div class='modal-footer'>" +
     "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Cancel</button>" +
-    "<button type='button' class='btn btn-primary' onclick='verifyOTP(role_id, user_id)'; return false;>Verify</button>" +
+    "<button type='button' class='btn btn-primary' onclick='verifyOTP(role_id, user_id, user_email)'; return false;>Verify</button>" +
     "</div>" +
     "</div>" +
     "</div>" +

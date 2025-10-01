@@ -62,7 +62,7 @@ namespace MCCSC_Scheduler
                 {
                     Convert.ToInt32(user.UserID);
                     GenerateOTP(user.UserID);
-                    return $"Login Successful - Role: {user.RoleID} UserID: {user.UserID}";
+                    return $"Login Successful - Role: {user.RoleID} UserID: {user.UserID} Email: {user.Email}";
                 }
                 else
                     return "Invalid Username or Password!";

@@ -6,3 +6,8 @@
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
 });
+const roleId = sessionStorage.getItem("role_id");
+const userId = sessionStorage.getItem("user_id");
+const userEmail = sessionStorage.getItem("user_email");
+
+console.log(roleId, userId, userEmail);
