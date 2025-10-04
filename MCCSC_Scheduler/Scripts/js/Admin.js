@@ -5,6 +5,7 @@
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
+    getRegistrationRequests();
 });
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
@@ -42,6 +43,65 @@ function connectDB() {
         openAlertModal('App Info', 'DB connection status: ' + response.d);
     };
 }
+function getRegistrationRequests() {
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/GetRegistrationRequests",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Raw response:", response);
+            console.log("Response.d:", response.d);
+
+            // Parse the string into a real array
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("registrationTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No registration requests found</td></tr>`;
+                return;
+            }
+
+            // Loop through the data and build table rows
+            data.forEach(req => {
+                let row = `
+                    <tr>
+                        <td>${req.RequestID}</td>
+                        <td>${req.FirstName}</td>
+                        <td>${req.MiddleInitial}</td>
+                        <td>${req.LastName}</td>
+                        <td>${req.Email}</td>
+                        <td>${req.Organization}</td>
+                        <td>${req.UserName}</td>
+                        <td>${req.Status}</td>
+                        <td>${new Date(req.DateRequested).toLocaleString()}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+
+
+
+
 
 
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using MCCSC_Scheduler.DTO;
+using Newtonsoft.Json;
 using MCCSC_Scheduler.Model;
 using MCCSC_Scheduler.ViewModel;
 using System.Web.Script.Serialization;
@@ -258,6 +259,47 @@ namespace MCCSC_Scheduler.Database
                 return $"Error in StoreRegistration: {ex.Message}";
             }
            
+        }
+        public string GetRegistrationRequests()
+        {
+            string query = "SELECT RequestID, FirstName, MiddleInitial, LastName, Email, Organization, UserName, Status, DateRequested FROM RegistrationRequests";
+            List<object> requests = new List<object>();
+
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                requests.Add(new
+                                {
+                                    RequestID = reader["RequestID"],
+                                    FirstName = reader["FirstName"],
+                                    MiddleInitial = reader["MiddleInitial"] == DBNull.Value ? "" : reader["MiddleInitial"].ToString(),
+                                    LastName = reader["LastName"],
+                                    Email = reader["Email"],
+                                    Organization = reader["Organization"],
+                                    UserName = reader["UserName"],
+                                    Status = reader["Status"],
+                                    DateRequested = reader["DateRequested"]
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Serialize to JSON for easy return to JS
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return $"Error in GetRegistrationRequests: {ex.Message}";
+            }
         }
         public string OTPtoEmail(int UserID, string Otp) { 
             string email = "";
