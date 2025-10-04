@@ -8,7 +8,6 @@ document.addEventListener("DOMContentLoaded", function () {
         alertModalDiv.insertAdjacentHTML('afterend', registrationModalEl);
     }
 });
-
 let userInfo; // global variable to store user ID after login
 let userID; // global variable
 
@@ -71,7 +70,7 @@ function authenticateUser() {
         UserName: username,
         Password: password
     };
-
+    
     fetch("Default.aspx/AuthenticationResult", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
@@ -182,8 +181,41 @@ function verifyOTP(role_id ,user_id, user_email) {
         });
 }
 
-function submitRegistrationRequest(){
-    console.log("sending request to Admin!");
+function submitRegistrationRequest() {
+    let firstName = document.getElementById("firstName").value;
+    let middle_initial = document.getElementById("middleInitial").value;
+    let lastName = document.getElementById("lastName").value;
+    let e_mail = document.getElementById("email").value;
+    let orgs = document.getElementById("organization").value;
+    let userName = document.getElementById("username").value;
+    let passWord = document.getElementById("password").value;
+
+    let userData = {
+        FirstName: firstName,
+        MiddleInitial: middle_initial,
+        LastName: lastName,
+        Email: e_mail,
+        Organization: orgs,
+        UserName: userName,
+        PassWord: passWord
+    };
+    let submitUrl = 'Default.aspx/registrationRequestResult';
+    let options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ userDTO: userData })
+    };
+    fetch(submitUrl, options)
+        .then(response => response.json())
+        .then(data => {
+            let result = data.d;
+            console.log(result);
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            openAlertModal("App Info", "Error: " + error);
+        });
+
 }
 
 

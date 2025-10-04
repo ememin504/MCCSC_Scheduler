@@ -231,6 +231,10 @@ namespace MCCSC_Scheduler.Database
                 return $"Error: {ex.Message}";
             }
         }
+        public string StoreRegistration(UserDTO userDTO) {
+            Console.WriteLine(userDTO);
+            return userDTO.ToString();
+        }
         public string OTPtoEmail(int UserID, string Otp) { 
             string email = "";
             string getEmailQuery = "SELECT email FROM Users WHERE user_id = @UserID";

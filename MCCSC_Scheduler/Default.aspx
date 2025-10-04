@@ -9,9 +9,8 @@
     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
     <script type="text/javascript" src="Scripts/js/global.js"></script>
     <link rel="stylesheet" href="Scripts/css/default.css">
-    <script src="Scripts/js/script.js"></script>
-    <script src="Scripts/js/default.js"></script>
-
+    <script type="text/javascript" src="Scripts/js/script.js"></script>
+    <script type="text/javascript" src="Scripts/js/default.js"></script>
 </head>
 <body>
      <header>
@@ -38,7 +37,6 @@
                     <h2>Welcome to MCCSC Scheduler</h2>
                     <p class="free-notice"> RESERVATION BOOKING </p>
                 </div>
-
                 <div class="content-grid">
                     <div class="calendar-container">
                         <h3>Select Your Date</h3>
@@ -47,7 +45,6 @@
                             <strong>Selected Date:</strong> <span id="displayDate">Please select a date</span>
                         </div>
                     </div>
-
                     <div class="registration-container">
                         <h3>Registration Form</h3>
                         <form id="registrationForm">
@@ -57,7 +54,7 @@
                             </div>
 
                              <div class="form-group">
-                                <label for="firstName">First Name *</label>
+                                <label for="middleInitial">Middle Initial *</label>
                                 <input type="text" id="middleInitial" required>
                             </div>
 
@@ -86,7 +83,7 @@
                                 <input type="password" id="password" required>
                             </div>
 
-                            <button type="submit" class="submit-btn" onclick="submitRegistrationRequest()">Register & Book</button>
+                            <button type="button" class="submit-btn" onclick="submitRegistrationRequest(); return false;">Register & Book</button>
                         </form>
                     </div>
                 </div>
@@ -119,7 +116,7 @@
                 <div class="login-box">
                     <h2>Login to Your Account</h2>
                     <form id="loginForm">
-                        <div class="form-group">
+                        <div class="form-group" >
                             <label for="loginUsername">Username</label>
                             <input type="text" id="loginUsername" required>
                         </div>
@@ -127,7 +124,7 @@
                             <label for="loginPassword">Password</label>
                             <input type="password" id="loginPassword" required>
                         </div>
-                        <button type="submit" class="submit-btn" onclick="authenticateUser(); return false;">Login</button>
+                        <button type="submit" class="submit-btn"  onclick="authenticateUser(); return false;" >Login</button>
                     </form>
                 </div>
             </div>

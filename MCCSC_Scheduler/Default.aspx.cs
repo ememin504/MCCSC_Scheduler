@@ -112,6 +112,16 @@ namespace MCCSC_Scheduler
             public int RoleID { get; set; }
             public string RoleDescription { get; set; }
         }
-       
+
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+        public static string registrationRequestResult(UserDTO userDTO) {
+            if (userDTO == null)
+            {
+                throw new ArgumentNullException("userDTO is null");
+            }
+            string register = dbContext.StoreRegistration(userDTO);
+            return register;
+        }
     }
 }
