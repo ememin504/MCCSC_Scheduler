@@ -233,7 +233,31 @@ namespace MCCSC_Scheduler.Database
         }
         public string StoreRegistration(UserDTO userDTO) {
             Console.WriteLine(userDTO);
-            return userDTO.ToString();
+            string query = @"INSERT INTO RegistrationRequests
+                    (FirstName, MiddleInitial, LastName, Email, Organization, UserName, PassWord)
+                    VALUES (@FirstName, @MiddleInitial, @LastName, @Email, @Organization, @UserName, @PassWord)";
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString)) {
+                    conn.Open() ;
+                    using (SqlCommand cmd = new SqlCommand(query, conn)) {
+                        cmd.Parameters.AddWithValue("@FirstName", userDTO.FirstName);
+                        cmd.Parameters.AddWithValue("@MiddleInitial", userDTO.MiddleInitial ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@LastName", userDTO.LastName);
+                        cmd.Parameters.AddWithValue("@Email", userDTO.Email);
+                        cmd.Parameters.AddWithValue("@Organization", userDTO.Organization ?? (object)DBNull.Value);
+                        cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
+                        cmd.Parameters.AddWithValue("@PassWord", userDTO.PassWord);
+                        int rows = cmd.ExecuteNonQuery();
+
+                        return rows > 0 ? "Registration request stored successfully!" : "Failed to store registration.";
+                    }
+                }
+            }
+            catch (Exception ex) {
+                return $"Error in StoreRegistration: {ex.Message}";
+            }
+           
         }
         public string OTPtoEmail(int UserID, string Otp) { 
             string email = "";

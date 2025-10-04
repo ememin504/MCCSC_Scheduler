@@ -15,7 +15,7 @@
         {
             return $"UserID: {UserID}, Name: {FirstName} {MiddleInitial} {LastName}, " +
                    $"RoleID: {RoleID}, Email: {Email}, Organization: {Organization}, " +
-                   $"Username: {UserName}";
+                   $"Username: {UserName}, Password: {PassWord}";
         }
     }
 }
