@@ -45,7 +45,7 @@ namespace MCCSC_Scheduler
         {
             try
             {
-                var requests = dbContext.GetRegistrationRequests(); // should return List<RegistrationRequest>
+                var requests = dbContext.GetRegistrationRequestDB(); // should return List<RegistrationRequest>
                 return requests;
             }
             catch (Exception ex)
@@ -53,5 +53,34 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+
+        [WebMethod]
+        public static string GetAssets() // ✅ MUST be static
+        {
+            try
+            {
+                var requests = dbContext.GetAssetRecords(); // should return List<RegistrationRequest>
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
+        [WebMethod]
+        public static string UpdateAsset(object assetData)
+        {
+            try
+            {
+                var requests = dbContext.UpdateAsset(assetData); // ✅ works now
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
     }
 }

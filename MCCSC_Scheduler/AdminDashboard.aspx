@@ -4,8 +4,7 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
-    <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
+   <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script type="text/javascript" src="Scripts/js/global.js"></script>
@@ -42,6 +41,20 @@
             </tr>
         </thead>
         <tbody id="registrationTableBody">
+        </tbody>
+    </table>
+    <h3>Assets</h3>
+    <table class="table table-striped table-bordered" id="assetTable">
+        <thead>
+            <tr>
+                <th>Asset ID</th>
+                <th>Asset Name</th>
+                <th>Quantity Available</th>
+                <th>IsActive</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="assetTableBody">
         </tbody>
     </table>
 </body>

@@ -6,6 +6,7 @@
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
     getRegistrationRequests();
+    getAssets();
 });
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
@@ -98,10 +99,105 @@ function getRegistrationRequests() {
         }
     });
 }
+function getAssets() {
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/GetAssets",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Raw response:", response);
+            console.log("Response.d:", response.d);
 
+            // Parse the string into a real array
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
 
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
 
+            console.log("Parsed data:", data);
 
+            let tbody = document.getElementById("assetTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Assets found</td></tr>`;
+                return;
+            }
+
+            // Loop through the data and build table rows
+            data.forEach(req => {
+                let row = `
+                    <tr>
+                        <td>${req.AssetId}</td>
+                        <td>${req.AssetName}</td>
+                        <td>${req.Quantity}</td>
+                        <td>${req.IsActive}</td>
+                        <td>
+                          <td>
+                           <button class="btn btn-primary btn-sm" onclick="editAsset(${req.AssetId}, '${req.AssetName}', ${req.Quantity})">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deactivateAsset(${req.AssetId})">Deactivate</button>
+                          </td>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+let assetID = 0;
+function editAsset(asset_id, asset_name, asset_quantity) {
+    console.log("Editing asset with ID:", asset_id, asset_name, asset_quantity);
+    openAssetEditorModal(asset_name, asset_quantity);
+    assetID = asset_id;
+}
+
+function saveAssetChanges() {
+    const asset_name = document.getElementById("editAssetName").value.trim();
+    const qty = document.getElementById("editQuantity").value;
+
+    // ✅ 1. Create your data object properly
+    let asset_data = {
+        AssetID: assetID,
+        AssetName: asset_name,
+        Quantity: qty
+    };
+    console.log(asset_data);
+    // ✅ 2. Send it correctly as JSON to your ASP.NET method
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/UpdateAsset", // <-- Use your update method here
+        data: JSON.stringify({ assetData: asset_data }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+
+        success: function (response) {
+            console.log("✅ Asset updated successfully:", response.d);
+            alert("Asset updated successfully!");
+
+            // Optional: close modal after success
+            const modalEl = document.getElementById("assetEditorModal");
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            modalInstance.hide();
+
+            // Optionally reload your asset table or update UI
+        },
+        error: function (xhr, status, error) {
+            console.error("❌ Error updating asset:", error);
+            alert("Failed to update asset. Please try again.");
+        }
+    });
+}
 
 
 

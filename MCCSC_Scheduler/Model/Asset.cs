@@ -1,13 +1,12 @@
 ﻿using System;
 
-namespace MCCSC_Scheduler.Model {
-    public class Asset
+namespace MCCSC_Scheduler.Model
+{
+    public class AssetModel
     {
-        public int AssetId { get; set; }
+        public int AssetID { get; set; }
         public string AssetName { get; set; }
         public int Quantity { get; set; }
-        public bool IsActive { get; set; }
-
     }
-
 }
+    

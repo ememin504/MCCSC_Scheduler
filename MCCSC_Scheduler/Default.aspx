@@ -5,10 +5,9 @@
 <head runat="server">
     <title>User Login</title>
     <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
-    <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
     <script type="text/javascript" src="Scripts/js/global.js"></script>
-    <link rel="stylesheet" href="Scripts/css/default.css">
+    <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
     <script type="text/javascript" src="Scripts/js/script.js"></script>
     <script type="text/javascript" src="Scripts/js/default.js"></script>
 </head>

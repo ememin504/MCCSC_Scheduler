@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.SqlClient;
+using System.Web.Script.Serialization;
 using MCCSC_Scheduler.DTO;
-using Newtonsoft.Json;
 using MCCSC_Scheduler.Model;
 using MCCSC_Scheduler.ViewModel;
-using System.Web.Script.Serialization;
+using Newtonsoft.Json;
 
 
 
@@ -260,7 +261,7 @@ namespace MCCSC_Scheduler.Database
             }
            
         }
-        public string GetRegistrationRequests()
+        public string GetRegistrationRequestDB()
         {
             string query = "SELECT RequestID, FirstName, MiddleInitial, LastName, Email, Organization, UserName, Status, DateRequested FROM RegistrationRequests";
             List<object> requests = new List<object>();
@@ -300,6 +301,68 @@ namespace MCCSC_Scheduler.Database
             {
                 return $"Error in GetRegistrationRequests: {ex.Message}";
             }
+        }
+        public string GetAssetRecords()
+        {
+            string query = "SELECT asset_id, asset_name, quantity_available, isActive FROM Assets";
+            List<object> requests = new List<object>();
+
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                requests.Add(new
+                                {
+                                    AssetId = reader["asset_id"],
+                                    AssetName = reader["asset_name"],
+                                    Quantity = reader["quantity_available"] == DBNull.Value ? "" : reader["quantity_available"].ToString(),
+                                    IsActive = reader["isActive"],
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // Serialize to JSON for easy return to JS
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return $"Error in GetRegistrationRequests: {ex.Message}";
+            }
+
+        }
+        public string UpdateAsset(object assetData)
+        {
+            string json = JsonConvert.SerializeObject(assetData);
+            var asset = JsonConvert.DeserializeObject<AssetModel>(json);
+
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                string query = @"UPDATE Assets 
+                         SET asset_name = @name, quantity_available = @qty 
+                         WHERE asset_id = @id";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", asset.AssetID);
+                    cmd.Parameters.AddWithValue("@name", asset.AssetName);
+                    cmd.Parameters.AddWithValue("@qty", asset.Quantity);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            return "Asset record updated successfully.";
         }
         public string OTPtoEmail(int UserID, string Otp) { 
             string email = "";
