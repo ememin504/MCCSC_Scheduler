@@ -44,6 +44,7 @@
         </tbody>
     </table>
     <h3>Assets</h3>
+    <button onclick="openCreateAssetModal(); return false">Add asset</button>
     <table class="table table-striped table-bordered" id="assetTable">
         <thead>
             <tr>

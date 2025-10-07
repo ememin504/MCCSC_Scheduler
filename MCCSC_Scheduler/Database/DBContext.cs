@@ -339,6 +339,35 @@ namespace MCCSC_Scheduler.Database
             }
 
         }
+        public string AddAsset(object assetData)
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(assetData);
+                var asset = JsonConvert.DeserializeObject<AssetModel>(json);
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    string query = @"INSERT INTO Assets (asset_name, quantity_available)
+                             VALUES (@name, @qty)";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@name", asset.AssetName);
+                        cmd.Parameters.AddWithValue("@qty", asset.Quantity);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                return "Asset record added successfully.";
+            }
+            catch (Exception ex)
+            {
+                return $"Error adding asset: {ex.Message}";
+            }
+        }
+
         public string UpdateAsset(object assetData)
         {
             string json = JsonConvert.SerializeObject(assetData);
@@ -364,6 +393,105 @@ namespace MCCSC_Scheduler.Database
 
             return "Asset record updated successfully.";
         }
+        public string ActivateAsset(object assetData)
+        {
+            try
+            {
+                // Convert the incoming object to your AssetModel
+                string json = JsonConvert.SerializeObject(assetData);
+                var asset = JsonConvert.DeserializeObject<AssetModel>(json);
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    string query = @"UPDATE Assets 
+                             SET isActive = 1 
+                             WHERE asset_id = @id";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", asset.AssetID);
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            return JsonConvert.SerializeObject(new
+                            {
+                                success = true,
+                                message = "Asset Activated successfully."
+                            });
+                        }
+                        else
+                        {
+                            return JsonConvert.SerializeObject(new
+                            {
+                                success = false,
+                                message = "No matching asset found."
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    message = $"Error: {ex.Message}"
+                });
+            }
+        }
+        public string DeactivateAsset(object assetData)
+        {
+            try
+            {
+                // Convert the incoming object to your AssetModel
+                string json = JsonConvert.SerializeObject(assetData);
+                var asset = JsonConvert.DeserializeObject<AssetModel>(json);
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    string query = @"UPDATE Assets 
+                             SET isActive = 0 
+                             WHERE asset_id = @id";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", asset.AssetID);
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            return JsonConvert.SerializeObject(new
+                            {
+                                success = true,
+                                message = "Asset deactivated successfully."
+                            });
+                        }
+                        else
+                        {
+                            return JsonConvert.SerializeObject(new
+                            {
+                                success = false,
+                                message = "No matching asset found."
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    message = $"Error: {ex.Message}"
+                });
+            }
+        }
+
         public string OTPtoEmail(int UserID, string Otp) { 
             string email = "";
             string getEmailQuery = "SELECT email FROM Users WHERE user_id = @UserID";

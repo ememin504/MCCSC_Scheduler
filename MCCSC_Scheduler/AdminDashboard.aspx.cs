@@ -73,7 +73,7 @@ namespace MCCSC_Scheduler
         {
             try
             {
-                var requests = dbContext.UpdateAsset(assetData); // ✅ works now
+                var requests = dbContext.UpdateAsset(assetData); 
                 return JsonConvert.SerializeObject(requests);
             }
             catch (Exception ex)
@@ -82,5 +82,41 @@ namespace MCCSC_Scheduler
             }
         }
 
+        [WebMethod]
+        public static string AddAsset(object assetData) {
+            try {
+                var requests = dbContext.AddAsset(assetData); 
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
+        [WebMethod]
+        public static string DeactivateAsset(object assetData) {
+            try
+            {
+                var requests = dbContext.DeactivateAsset(assetData);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string ActivateAsset(object assetData) {
+            try
+            {
+                var requests = dbContext.ActivateAsset(assetData);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
     }
 }

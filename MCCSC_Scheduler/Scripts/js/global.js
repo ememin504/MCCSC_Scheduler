@@ -4,6 +4,7 @@ var otpModal;
 var reservationModal;
 var registrationModal;
 var assetEditorModal;
+var createAssetModal;
 
 var alertModalEl = "<div class='modal fade' id='alertModal' role='dialog'>" +
     "<div class='modal-dialog'>" +
@@ -143,6 +144,40 @@ let reservationModalEl =
     "</div>" +
     "</div>";
 
+let creatAssetModalEl = `
+<div class="modal fade" id="createAssetModal" tabindex="-1" aria-labelledby="createAssetModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title" id="createAssetModalLabel">Edit Asset</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      
+      <div class="modal-body">
+        <form id="createAssetForm">
+          
+          <div class="mb-3">
+            <label for="createAssetName" class="form-label">Asset Name</label>
+            <input type="text" id="createAssetName" class="form-control" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="createQuantity" class="form-label">Quantity</label>
+            <input type="number" id="createQuantity" class="form-control" min="1" required>
+          </div>
+        </form>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="createAsset()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
 let assetEditorModalEl = `
 <div class="modal fade" id="assetEditorModal" tabindex="-1" aria-labelledby="assetEditorModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -234,6 +269,31 @@ function openRegistrationModal() {
     //registrationModal.show();
 }
 let assetModalInstance = null;
+function openCreateAssetModal() {
+    console.log("Opening create asset modal...");
+
+    // 1️⃣ Check if modal exists
+    let modalElement = document.getElementById('createAssetModal');
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', creatAssetModalEl);
+        modalElement = document.getElementById('createAssetModal');
+    }
+
+    // 2️⃣ Verify that insertion succeeded
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static'
+    });
+    modalInstance.show();
+
+    console.log("✅ Modal opened successfully.");
+}
 
 function openAssetEditorModal(asset_name, asset_quantity) {
     console.log("Opening asset editor modal...");
