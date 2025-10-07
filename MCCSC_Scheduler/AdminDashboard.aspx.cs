@@ -55,6 +55,33 @@ namespace MCCSC_Scheduler
         }
 
         [WebMethod]
+        public static string GetUser()
+        {
+            try
+            {
+                var requests = dbContext.GetUser();
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod] // ✅ REQUIRED
+        public static string ConfirmUser(object UserData)
+        {
+            try
+            {
+                var requests = dbContext.ConfirmUser(UserData); // should return List<RegistrationRequest>
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
+        [WebMethod]
         public static string GetAssets() // ✅ MUST be static
         {
             try

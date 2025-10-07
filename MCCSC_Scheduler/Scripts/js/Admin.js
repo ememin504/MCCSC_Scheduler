@@ -6,6 +6,7 @@
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
     getRegistrationRequests();
+    getUsers();
     getAssets();
 });
 const roleId = sessionStorage.getItem("role_id");
@@ -14,6 +15,59 @@ const userEmail = sessionStorage.getItem("user_email");
 
 console.log(roleId, userId, userEmail);
 
+function getUsers() {
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/GetUser",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Raw response:", response);
+            console.log("Response.d:", response.d);
+
+            // Parse the string into a real array
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("userTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No User found</td></tr>`;
+                return;
+            }
+
+            // Loop through the data and build table rows
+            data.forEach(req => {
+                let row = `
+                    <tr>
+                        <td>${req.UserID}</td>
+                        <td>${req.FirstName}</td>
+                        <td>${req.MiddleInitial}</td>
+                        <td>${req.LastName}</td>
+                        <td>${req.RoleID}</td>
+                        <td>${req.UserName}</td>
+                        <td>${req.Email}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
 function openReservationModal() {
     console.log(roleId, userId, userEmail);
 }
@@ -89,6 +143,9 @@ function getRegistrationRequests() {
                         <td>${req.UserName}</td>
                         <td>${req.Status}</td>
                         <td>${new Date(req.DateRequested).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm" onclick="UserConfirmation(${req.RequestID})">Confirm</button>
+                        </td>
                     </tr>
                 `;
                 tbody.innerHTML += row;
@@ -99,6 +156,29 @@ function getRegistrationRequests() {
         }
     });
 }
+function UserConfirmation(request_id) {
+    console.log("request to be confirmed", request_id);
+    let user_data = {
+        RequestID: request_id
+    };
+    console.log(user_data);
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/ConfirmUser",
+        data: JSON.stringify({ UserData: user_data }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("✅ User Confirmed successfully:", response.d);
+            alert("User Confirmed successfully!");
+            getRegistrationRequests();
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+
 function getAssets() {
     $.ajax({
         type: "POST",

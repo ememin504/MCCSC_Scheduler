@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
+using System.Drawing;
 using System.Web.Script.Serialization;
 using MCCSC_Scheduler.DTO;
 using MCCSC_Scheduler.Model;
@@ -263,7 +264,7 @@ namespace MCCSC_Scheduler.Database
         }
         public string GetRegistrationRequestDB()
         {
-            string query = "SELECT RequestID, FirstName, MiddleInitial, LastName, Email, Organization, UserName, Status, DateRequested FROM RegistrationRequests";
+            string query = "SELECT RequestID, FirstName, MiddleInitial, LastName, Email, Organization, UserName, Status, DateRequested FROM RegistrationRequests WHERE Status = 'Pending'";
             List<object> requests = new List<object>();
 
             try
@@ -302,6 +303,160 @@ namespace MCCSC_Scheduler.Database
                 return $"Error in GetRegistrationRequests: {ex.Message}";
             }
         }
+        public string GetUser()
+        {
+            string query = @"SELECT user_id, first_name, middle_initial, last_name, role_id, username, email FROM Users";
+            List<object> users = new List<object>();
+
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            users.Add(new
+                            {
+                                UserID = reader["user_id"],
+                                FirstName = reader["first_name"],
+                                MiddleInitial = reader["middle_initial"] == DBNull.Value ? "" : reader["middle_initial"].ToString(),
+                                LastName = reader["last_name"],
+                                RoleID = reader["role_id"],
+                                UserName = reader["username"],
+                                Email = reader["email"]
+                            });
+                        }
+                    }
+                }
+
+                return JsonConvert.SerializeObject(users);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = $"Error in GetUser: {ex.Message}" });
+            }
+        }
+
+        public string ConfirmUser(object UserData)
+        {
+            var dict = UserData as Dictionary<string, object>;
+            if (dict == null || !dict.ContainsKey("RequestID"))
+                throw new Exception("Invalid UserData: missing RequestID.");
+
+            int requestId = Convert.ToInt32(dict["RequestID"]);
+
+
+            string selectRequestQuery = @"SELECT * FROM RegistrationRequests WHERE RequestID = @id";
+            string selectOrgQuery = @"SELECT organization_id FROM Organization WHERE organization_name = @orgName";
+            string insertOrgQuery = @"INSERT INTO Organization (organization_name, organization_type)
+                              OUTPUT INSERTED.organization_id
+                              VALUES (@orgName, 'Unknown')";
+            string insertUserQuery = @"INSERT INTO Users (first_name, middle_initial, last_name, email, username, hashed_password)
+                               OUTPUT INSERTED.user_id
+                               VALUES (@FirstName, @MiddleInitial, @LastName, @Email, @UserName, @Password)";
+            string insertClientQuery = @"INSERT INTO Client (user_id, organization_id)
+                                 VALUES (@UserID, @OrganizationID)";
+            string updateStatusQuery = @"UPDATE RegistrationRequests SET Status = 'Confirmed' WHERE RequestID = @id";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                SqlTransaction transaction = conn.BeginTransaction();
+
+                try
+                {
+                    // 1️⃣ Get registration request data
+                    dynamic request = null;
+                    using (SqlCommand cmd = new SqlCommand(selectRequestQuery, conn, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@id", requestId);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                request = new
+                                {
+                                    FirstName = reader["FirstName"].ToString(),
+                                    MiddleInitial = reader["MiddleInitial"] == DBNull.Value ? "" : reader["MiddleInitial"].ToString(),
+                                    LastName = reader["LastName"].ToString(),
+                                    Email = reader["Email"].ToString(),
+                                    Organization = reader["Organization"].ToString(),
+                                    UserName = reader["UserName"].ToString(),
+                                    PassWord = reader["PassWord"].ToString()
+                                };
+                            }
+                        }
+                    }
+
+                    if (request == null)
+                        throw new Exception("Request record not found.");
+
+                    // 2️⃣ Check if organization exists or insert a new one
+                    int organizationId;
+                    using (SqlCommand checkOrgCmd = new SqlCommand(selectOrgQuery, conn, transaction))
+                    {
+                        checkOrgCmd.Parameters.AddWithValue("@orgName", request.Organization);
+                        object result = checkOrgCmd.ExecuteScalar();
+
+                        if (result != null)
+                        {
+                            organizationId = Convert.ToInt32(result);
+                        }
+                        else
+                        {
+                            using (SqlCommand insertOrgCmd = new SqlCommand(insertOrgQuery, conn, transaction))
+                            {
+                                insertOrgCmd.Parameters.AddWithValue("@orgName", request.Organization);
+                                organizationId = Convert.ToInt32(insertOrgCmd.ExecuteScalar());
+                            }
+                        }
+                    }
+
+                    // 3️⃣ Insert into Users (no password hashing yet)
+                    int userId;
+                    using (SqlCommand insertUserCmd = new SqlCommand(insertUserQuery, conn, transaction))
+                    {
+                        insertUserCmd.Parameters.AddWithValue("@FirstName", request.FirstName);
+                        insertUserCmd.Parameters.AddWithValue("@MiddleInitial", request.MiddleInitial);
+                        insertUserCmd.Parameters.AddWithValue("@LastName", request.LastName);
+                        insertUserCmd.Parameters.AddWithValue("@Email", request.Email);
+                        insertUserCmd.Parameters.AddWithValue("@UserName", request.UserName);
+                        insertUserCmd.Parameters.AddWithValue("@Password", request.PassWord); // temporary plain password
+
+                        object userResult = insertUserCmd.ExecuteScalar();
+                        userId = Convert.ToInt32(userResult);
+                    }
+
+                    // 4️⃣ Insert into Client
+                    using (SqlCommand insertClientCmd = new SqlCommand(insertClientQuery, conn, transaction))
+                    {
+                        insertClientCmd.Parameters.AddWithValue("@UserID", userId);
+                        insertClientCmd.Parameters.AddWithValue("@OrganizationID", organizationId);
+                        insertClientCmd.ExecuteNonQuery();
+                    }
+
+                    // 5️⃣ Update RegistrationRequests status
+                    using (SqlCommand updateStatusCmd = new SqlCommand(updateStatusQuery, conn, transaction))
+                    {
+                        updateStatusCmd.Parameters.AddWithValue("@id", requestId);
+                        updateStatusCmd.ExecuteNonQuery();
+                    }
+
+                    // ✅ Commit all changes
+                    transaction.Commit();
+                    return JsonConvert.SerializeObject(new { success = true, message = "User confirmed and distributed successfully." });
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
+                }
+            }
+        }
+
         public string GetAssetRecords()
         {
             string query = "SELECT asset_id, asset_name, quantity_available, isActive FROM Assets";

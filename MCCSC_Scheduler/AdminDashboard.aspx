@@ -38,9 +38,25 @@
                 <th>Username</th>
                 <th>Status</th>
                 <th>Date Requested</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody id="registrationTableBody">
+        </tbody>
+    </table>
+    <table class="table table-striped table-bordered" id="userTable">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>FirstName</th>
+                <th>Middle Initial</th>
+                <th>LastName</th>
+                <th>Role ID</th>
+                <th>Username</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody id="userTableBody">
         </tbody>
     </table>
     <h3>Assets</h3>
