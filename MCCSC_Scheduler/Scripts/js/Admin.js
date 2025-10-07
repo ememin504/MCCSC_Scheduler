@@ -172,6 +172,7 @@ function UserConfirmation(request_id) {
             console.log("✅ User Confirmed successfully:", response.d);
             alert("User Confirmed successfully!");
             getRegistrationRequests();
+            getUsers();
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
