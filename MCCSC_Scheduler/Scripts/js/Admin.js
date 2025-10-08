@@ -73,7 +73,7 @@ function openReservationModal() {
 }
 
 function connectDB() {
-    console.log('connecting to DB.....');
+    console.log('connecting to DB..');
     var xhr = new XMLHttpRequest();
     //initiate a request to the server asynchronously (AJAX)
     xhr.open('GET', 'Default.aspx/ConnectDB', true);
