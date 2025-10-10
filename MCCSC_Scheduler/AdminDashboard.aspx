@@ -59,6 +59,22 @@
         <tbody id="userTableBody">
         </tbody>
     </table>
+    <table class="table table-striped table-bordered" id="reservationTable">
+    <thead>
+        <tr>
+            <th>Reservation ID</th>
+            <th>Client ID</th>
+            <th>Status ID</th>
+            <th>Remarks</th>
+            <th>Asset ID</th>
+            <th>Asset Quantity</th>
+            <th>Event ID</th>
+            <th>Reference</th>
+        </tr>
+    </thead>
+    <tbody id="reservationTableBody">
+    </tbody>
+</table>
     <h3>Assets</h3>
     <button onclick="openCreateAssetModal(); return false">Add asset</button>
     <table class="table table-striped table-bordered" id="assetTable">

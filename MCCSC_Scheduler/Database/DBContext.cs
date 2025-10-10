@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Runtime.Remoting.Messaging;
 using System.Web.Script.Serialization;
 using MCCSC_Scheduler.DTO;
 using MCCSC_Scheduler.Model;
@@ -301,6 +302,24 @@ namespace MCCSC_Scheduler.Database
             catch (Exception ex)
             {
                 return $"Error in GetRegistrationRequests: {ex.Message}";
+            }
+        }
+        public string GetReservationRequest() {
+            string query = @"SELECT * FROM reservation WHERE status != 'Unregistered'";
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(query))
+                    {
+                        return query;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"Error in GetReservationRequest: {ex.Message}";
             }
         }
         public string GetUser()

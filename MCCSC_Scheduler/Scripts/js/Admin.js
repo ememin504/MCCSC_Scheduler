@@ -6,6 +6,7 @@
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
     getRegistrationRequests();
+    getReservationRequests();
     getUsers();
     getAssets();
 });
@@ -62,6 +63,22 @@ function getUsers() {
                 `;
                 tbody.innerHTML += row;
             });
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+function getReservationRequests() {
+    console.log("getting reservation requests!");
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/GetReservationRequest",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response);
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
