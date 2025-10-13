@@ -59,6 +59,7 @@
         <tbody id="userTableBody">
         </tbody>
     </table>
+    <h3>Reservation Requests</h3>
     <table class="table table-striped table-bordered" id="reservationTable">
     <thead>
         <tr>
@@ -70,6 +71,7 @@
             <th>Asset Quantity</th>
             <th>Event ID</th>
             <th>Reference</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody id="reservationTableBody">

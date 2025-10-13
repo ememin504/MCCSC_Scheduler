@@ -55,6 +55,47 @@ namespace MCCSC_Scheduler
         }
 
         [WebMethod]
+        public static string GetReservationRequest() {
+            try
+            {
+                var requests = dbContext.GetReservationRequest();
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string GetRequestInfo(object requestData)
+        {
+            try
+            {
+                // Deserialize incoming JSON to a strongly typed C# object
+                var jsonString = JsonConvert.SerializeObject(requestData);
+                var data = JsonConvert.DeserializeObject<RequestData>(jsonString);
+
+                string result = dbContext.GetRequestInfo(data.ClientID, data.StatusID, data.AssetID, data.EventID);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        public class RequestData
+        {
+            public int ClientID { get; set; }
+            public int StatusID { get; set; }
+            public string Remarks { get; set; }
+            public int AssetID { get; set; }
+            public int AssetQuantity { get; set; }
+            public int EventID { get; set; }
+            public string Reference { get; set; }
+        }
+
+        [WebMethod]
         public static string GetUser()
         {
             try

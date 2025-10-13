@@ -1,14 +1,13 @@
 ﻿using System;
-
-namespace MCCSC_Scheduler.DTO
+namespace MCCSC_Scheduler
 {
     public class ReservationDTO
     {
         public int ReservationID { get; set; }
         public int ClientID { get; set; }
-        public string StatusID { get; set; }
+        public int StatusID { get; set; }
         public string Remarks { get; set; }
-        public string AssetID { get; set; }
+        public int AssetID { get; set; }
         public int AssetQuantity { get; set; }
         public int EventID { get; set; }
         public string Reference { get; set; }

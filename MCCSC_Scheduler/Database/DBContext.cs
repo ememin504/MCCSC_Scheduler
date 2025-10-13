@@ -305,21 +305,134 @@ namespace MCCSC_Scheduler.Database
             }
         }
         public string GetReservationRequest() {
-            string query = @"SELECT * FROM reservation WHERE status != 'Unregistered'";
+            string query = @"SELECT * FROM reservation WHERE status_id != 1";
+            List<object> requests = new List<object>();
+
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
-                    using (SqlCommand cmd = new SqlCommand(query))
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
-                        return query;
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+
+                            while (reader.Read())
+                            {
+                                requests.Add(new
+                                {
+                                    ReservationID = reader["reservation_id"],
+                                    ClientID = reader["client_id"],
+                                    StatusID = reader["status_id"],
+                                    Remarks = reader["remarks"],
+                                    AssetID = reader["asset_id"],
+                                    AssetQuantity = reader["asset_quantity"],
+                                    EventID = reader["event_id"],
+                                    Reference = reader["hashed_reference"]
+                                });
+                            }
+                        }
                     }
                 }
+                return JsonConvert.SerializeObject(requests);
             }
             catch (Exception ex)
             {
                 return $"Error in GetReservationRequest: {ex.Message}";
+            }
+        }
+        public string GetRequestInfo(int clientID, int statusID, int assetID, int eventID)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                // 1️⃣ Get user_id using ClientID
+                string getUserIdQuery = @"SELECT user_id FROM Client WHERE client_id = @ClientID";
+                int userID;
+                using (SqlCommand cmd = new SqlCommand(getUserIdQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ClientID", clientID);
+                    userID = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // 2️⃣ Get client info using user_id
+                string firstName = "", middleInitial = "", lastName = "";
+                string getClientInfoQuery = @"SELECT first_name, middle_initial, last_name FROM Users WHERE user_id = @UserID";
+                using (SqlCommand cmd = new SqlCommand(getClientInfoQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", userID);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            firstName = reader["first_name"].ToString();
+                            middleInitial = reader["middle_initial"].ToString();
+                            lastName = reader["last_name"].ToString();
+                        }
+                    }
+                }
+
+                // 3️⃣ Get organization_id
+                int organizationID;
+                string getOrgIdQuery = @"SELECT organization_id FROM Client WHERE client_id = @ClientID";
+                using (SqlCommand cmd = new SqlCommand(getOrgIdQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ClientID", clientID);
+                    organizationID = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // 4️⃣ Get organization_name
+                string organizationName = "";
+                string getOrgNameQuery = @"SELECT organization_name FROM Organization WHERE organization_id = @OrganizationID";
+                using (SqlCommand cmd = new SqlCommand(getOrgNameQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@OrganizationID", organizationID);
+                    organizationName = cmd.ExecuteScalar()?.ToString() ?? "";
+                }
+
+                // 5️⃣ Get status_name
+                string statusName = "";
+                string getStatusNameQuery = @"SELECT status_name FROM reservation_status WHERE status_id = @StatusID";
+                using (SqlCommand cmd = new SqlCommand(getStatusNameQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@StatusID", statusID);
+                    statusName = cmd.ExecuteScalar()?.ToString() ?? "";
+                }
+
+                // 6️⃣ Get asset_name
+                string assetName = "";
+                string getAssetNameQuery = @"SELECT asset_name FROM Assets WHERE asset_id = @AssetID";
+                using (SqlCommand cmd = new SqlCommand(getAssetNameQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@AssetID", assetID);
+                    assetName = cmd.ExecuteScalar()?.ToString() ?? "";
+                }
+
+                string eventName = "";
+                string getEventNameQuery = @"SELECT title FROM Events WHERE event_id = @EventID";
+                using (SqlCommand cmd = new SqlCommand(getEventNameQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@EventID", eventID);
+                    eventName = cmd.ExecuteScalar()?.ToString() ?? "";
+                }
+                // ✅ Combine all data into JSON
+                var result = new
+                {
+                    Client = new
+                    {
+                        FirstName = firstName,
+                        MiddleInitial = middleInitial,
+                        LastName = lastName
+                    },
+                    Organization = organizationName,
+                    Status = statusName,
+                    Asset = assetName,
+                    Event = eventName
+                };
+
+                return JsonConvert.SerializeObject(result, Formatting.Indented);
             }
         }
         public string GetUser()

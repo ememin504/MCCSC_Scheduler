@@ -79,12 +79,91 @@ function getReservationRequests() {
         dataType: "json",
         success: function (response) {
             console.log(response);
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("reservationTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No User found</td></tr>`;
+                return;
+            }
+
+            // Loop through the data and build table rows
+            data.forEach(req => {
+                let row = `
+                    <tr>
+                        <td>${req.ReservationID}</td>
+                        <td>${req.ClientID}</td>
+                        <td>${req.StatusID}</td>
+                        <td>${req.Remarks}</td>
+                        <td>${req.AssetID}</td>
+                        <td>${req.AssetQuantity}</td>
+                        <td>${req.EventID}</td>
+                        <td>${req.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                            onclick="GetRequestInfo(
+                                ${req.ClientID}, 
+                                ${req.StatusID}, 
+                                '${req.Remarks}', 
+                                ${req.AssetID}, 
+                                ${req.AssetQuantity}, 
+                                ${req.EventID}, 
+                                '${req.Reference}'
+                            )">
+                            View
+                            </button>
+                        </td>
+
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
     });
 }
+function GetRequestInfo(clientID, statusID, remarks, assetID, assetQty, eventID, reference) {
+    let requestInfo = {
+        ClientID: clientID,
+        StatusID: statusID,
+        Remarks: remarks,
+        AssetID: assetID,
+        AssetQuantity: assetQty,
+        EventID: eventID,
+        Reference: reference
+    };
+
+    console.log(requestInfo);
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/GetRequestInfo",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Server Response:", response.d);
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+
 function openReservationModal() {
     console.log(roleId, userId, userEmail);
 }
