@@ -12,6 +12,13 @@ const userEmail = sessionStorage.getItem("user_email");
 
 console.log(roleId, userId, userEmail);
 getAsset();
+
+let selectedAssets = []; // use array in case multiple assets are checked
+let n = 0;
+
+console.log(roleId, userId, userEmail);
+getAsset();
+
 function getAsset() {
     fetch("ClientDashboard.aspx/GetAssets", {
         method: "POST",
@@ -21,24 +28,86 @@ function getAsset() {
         .then(res => res.json())
         .then(data => {
             let assets = data.d;
-            let select = document.getElementById("asset");
+            let container = document.getElementById("assetContainer");
 
-            if (!select) {
-                console.error("❌ Select element #asset not found inside modal.");
-                return;
-            }
+            // Hide and clear container
+            container.style.display = "none";
+            container.innerHTML = "";
 
-            // Reset options
-            select.innerHTML = "<option value=''>Asset</option>";
-
-            // Add DB records as options
+            // Populate with checkboxes
             assets.forEach(asset => {
-                select.innerHTML += `<option value="${asset.AssetId}">${asset.AssetName}</option>`;
+                container.innerHTML += `
+                <div class="form-check d-flex align-items-center mb-2">
+                    <input class="form-check-input me-2 asset-checkbox" 
+                           type="checkbox" 
+                           id="asset_${asset.AssetId}" 
+                           value="${asset.AssetId}">
+                    <label class="form-check-label me-3" for="asset_${asset.AssetId}">
+                        ${asset.AssetName}
+                    </label>
+                    <input type="number" class="form-control form-control-sm" 
+                           id="qty_${asset.AssetId}" placeholder="Qty" 
+                           min="1" max="${asset.Quantity}" 
+                           style="width: 80px;" disabled>
+                    <span class="ms-1 text-muted">/ ${asset.Quantity}</span>
+                </div>
+            `;
+            });
+
+            // ✅ Show container once loaded
+            container.style.display = "block";
+
+            // Handle checkbox behavior
+            assets.forEach(asset => {
+                const checkbox = document.getElementById(`asset_${asset.AssetId}`);
+                const qtyInput = document.getElementById(`qty_${asset.AssetId}`);
+
+                checkbox.addEventListener("change", () => {
+                    qtyInput.disabled = !checkbox.checked;
+                    if (!checkbox.checked) {
+                        qtyInput.value = "";
+                        // Remove from selected list
+                        selectedAssets = selectedAssets.filter(a => a.assetId !== asset.AssetId);
+                    } else {
+                        // Add to selected list
+                        selectedAssets.push({
+                            assetId: asset.AssetId,
+                            assetName: asset.AssetName,
+                            availableQty: asset.Quantity,
+                            selectedQty: 0
+                        });
+                    }
+                });
+
+                qtyInput.addEventListener("input", () => {
+                    const selected = selectedAssets.find(a => a.assetId === asset.AssetId);
+                    if (selected) selected.selectedQty = parseInt(qtyInput.value) || 0;
+                });
             });
         })
         .catch(err => console.error("Error fetching assets:", err));
 }
 
+function submitReservation() {
+    console.log("Submitting these assets:", selectedAssets);
+
+    /*fetch("ClientDashboard.aspx/SubmitReservation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            assets: selectedAssets,
+            roleId: roleId,
+            userId: userId,
+            userEmail: userEmail
+        })
+    })
+        .then(res => res.json())
+        .then(data => {
+            alert("Reservation submitted successfully!");
+            console.log(data);
+        })
+        .catch(err => console.error("Error submitting reservation:", err));*/
+}
 
 function connectDB() {
     console.log('connecting to DB...');

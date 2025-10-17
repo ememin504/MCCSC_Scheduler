@@ -107,10 +107,9 @@ var otpModalEl =
     "</div>" +
     "</div>";
 
-// Modal template (already in your global.js)
 let reservationModalEl =
     "<div class='modal fade' id='reservationModal' tabindex='-1' role='dialog'>" +
-    "<div class='modal-dialog'>" +
+    "<div class='modal-dialog modal-lg'>" +
     "<div class='modal-content'>" +
 
     "<div class='modal-header'>" +
@@ -120,19 +119,27 @@ let reservationModalEl =
 
     "<div class='modal-body'>" +
     "<label for='eventName'>Event Name</label>" +
-    "<input type='text' id='eventName' class='form-control' placeholder='Singing Contest'>" +
+    "<input type='text' id='eventName' class='form-control mb-2' placeholder='Singing Contest'>" +
 
     "<label for='eventDescription'>Event Description</label>" +
-    "<input type='text' id='eventDescription' class='form-control' placeholder='Battle of the Bands'>" +
+    "<input type='text' id='eventDescription' class='form-control mb-3' placeholder='Battle of the Bands'>" +
 
-    "<label for='eventDate'>Date of Event</label>" +
-    "<input type='date' id='eventDate' class='form-control'>" +
+    "<label>Items you wish to borrow</label>" +
+    "<div id='assetContainer' class='mb-3' style='display:none;'></div>" +
 
-    "<label for='asset'>Item you wish to borrow</label>" +
-    "<select id='asset' class='form-select'>" +
-    "<option value=''>Asset</option>" +
-    "</select>" +
+    "<div id='datesContainer'>" +
+    "<label>Event Dates and Time</label>" +
+    "<div class='date-group mb-3'>" +
+    "<div class='input-group mb-2'>" +
+    "<input type='date' class='form-control event-date'>" +
+    "<input type='time' class='form-control start-time'>" +
+    "<input type='time' class='form-control end-time'>" +
+    "<button type='button' class='btn btn-danger remove-date ms-1'>−</button>" +
+    "</div>" +
+    "</div>" +
+    "</div>" +
 
+    "<button type='button' class='btn btn-success mb-3' id='addDate'>+ Add Another Date</button>" +
     "</div>" +
 
     "<div class='modal-footer'>" +
@@ -143,6 +150,64 @@ let reservationModalEl =
     "</div>" +
     "</div>" +
     "</div>";
+
+
+// Restrict allowed date range
+function setDateRange(input) {
+    const today = new Date();
+    const twoMonthsFromNow = new Date();
+    twoMonthsFromNow.setMonth(today.getMonth() + 2);
+
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    const minDate = formatDate(today);
+    const maxDate = formatDate(twoMonthsFromNow);
+
+    input.min = minDate;
+    input.max = maxDate;
+
+    // Prevent selecting invalid dates manually
+    input.addEventListener('input', () => {
+        if (input.value < minDate) input.value = minDate;
+        if (input.value > maxDate) input.value = maxDate;
+    });
+
+    // Prevent opening the picker for invalid range
+    input.addEventListener('click', (e) => {
+        const currentDate = new Date(input.value || today);
+        if (currentDate < today || currentDate > twoMonthsFromNow) {
+            e.preventDefault();
+        }
+    });
+}
+
+// Apply to all date inputs
+function applyDateLimits() {
+    document.querySelectorAll('.event-date').forEach(setDateRange);
+}
+
+applyDateLimits();
+
+// Add/remove date rows
+document.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'addDate') {
+        const container = document.getElementById('datesContainer');
+        const newDateGroup = document.createElement('div');
+        newDateGroup.classList.add('date-group', 'mb-3');
+        newDateGroup.innerHTML = `
+      <div class='input-group mb-2'>
+        <input type='date' class='form-control event-date'>
+        <input type='time' class='form-control start-time'>
+        <input type='time' class='form-control end-time'>
+        <button type='button' class='btn btn-danger remove-date ms-1'>−</button>
+      </div>`;
+        container.appendChild(newDateGroup);
+        applyDateLimits();
+    }
+
+    if (e.target && e.target.classList.contains('remove-date')) {
+        e.target.closest('.date-group').remove();
+    }
+});
 
 let creatAssetModalEl = `
 <div class="modal fade" id="createAssetModal" tabindex="-1" aria-labelledby="createAssetModalLabel" aria-hidden="true">
@@ -325,11 +390,11 @@ function openAssetEditorModal(asset_name, asset_quantity) {
 
     console.log("✅ Modal opened successfully.");
 }
-function openReservationInfoModal() {
-    viewReservationModal = new bootstrap.Modal(document.getElementById('vewReservationModal'), {
+function openReservationModal() {
+    reservationModal = new bootstrap.Modal(document.getElementById('reservationModal'), {
         backdrop: 'static'
     });
-    viewReservationModal.show();
+    reservationModal.show();
 }
 
 
