@@ -330,7 +330,7 @@ namespace MCCSC_Scheduler.Database
                                     AssetQuantity = reader["asset_quantity"],
                                     EventID = reader["event_id"],
                                     Reference = reader["hashed_reference"]
-                                });
+                                });                        
                             }
                         }
                     }

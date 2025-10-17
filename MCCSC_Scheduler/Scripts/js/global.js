@@ -325,7 +325,12 @@ function openAssetEditorModal(asset_name, asset_quantity) {
 
     console.log("✅ Modal opened successfully.");
 }
-
+function openReservationInfoModal() {
+    viewReservationModal = new bootstrap.Modal(document.getElementById('vewReservationModal'), {
+        backdrop: 'static'
+    });
+    viewReservationModal.show();
+}
 
 
 

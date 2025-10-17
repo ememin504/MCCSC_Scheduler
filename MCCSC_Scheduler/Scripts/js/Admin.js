@@ -5,6 +5,7 @@
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
+
     getRegistrationRequests();
     getReservationRequests();
     getUsers();
@@ -136,18 +137,20 @@ function getReservationRequests() {
         }
     });
 }
+function openReservationInfoModal() {
+    viewReservationModal = new bootstrap.Modal(document.getElementById('vewReservationModal'), {
+        backdrop: 'static'
+    });
+    viewReservationModal.show();
+}
+
 function GetRequestInfo(clientID, statusID, remarks, assetID, assetQty, eventID, reference) {
     let requestInfo = {
         ClientID: clientID,
         StatusID: statusID,
-        Remarks: remarks,
         AssetID: assetID,
-        AssetQuantity: assetQty,
         EventID: eventID,
-        Reference: reference
     };
-
-    console.log(requestInfo);
 
     $.ajax({
         type: "POST",
@@ -156,7 +159,57 @@ function GetRequestInfo(clientID, statusID, remarks, assetID, assetQty, eventID,
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Server Response:", response.d);
+            console.log("Full server response:", response);
+
+            let data = response.d;
+            if (typeof data === "string") {
+                try { data = JSON.parse(data); } catch (e) { console.error("JSON parse error:", e); }
+            }
+
+            if (!data || !data.Client) {
+                console.error("Invalid data structure:", data);
+                alert("Reservation info could not be loaded.");
+                return;
+            }
+
+            // ✅ Build modal dynamically here
+            let modalHTML = `
+      <div class='modal fade' id='viewReservationModal' role='dialog'>
+        <div class='modal-dialog'>
+          <div class='modal-content'>
+            <div class='modal-header'>
+              <h4 class='modal-title'>Reservation Info</h4>
+              <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
+            </div>
+            <div class='modal-body'>
+            <p><strong>Event Title:</strong> ${data.Event}</p>
+              <p><strong>Client:</strong> ${data.Client.FirstName} ${data.Client.MiddleInitial || ""} ${data.Client.LastName}</p>
+              <p><strong>Organization:</strong> ${data.Organization}</p>
+              <p><strong>Status:</strong> ${data.Status}</p>
+              <p><strong>Asset:</strong> ${data.Asset}</p>
+              <p><strong>Asset Quantity:</strong> ${assetQty}</p>
+              <p><strong>Reference:</strong> ${reference}</p>
+              <p><strong>Remarks:</strong> ${remarks}</p>
+            </div>
+            <div class='modal-footer'>
+              <button type='button' class='btn btn-primary' data-bs-dismiss='modal'>OK</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+            // ✅ Remove existing modal (to avoid duplicates)
+            let oldModal = document.getElementById("viewReservationModal");
+            if (oldModal) oldModal.remove();
+
+            // ✅ Add new modal to the DOM
+            document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+            // ✅ Show modal
+            var modalInstance = new bootstrap.Modal(document.getElementById("viewReservationModal"), {
+                backdrop: "static"
+            });
+            modalInstance.show();
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
