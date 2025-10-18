@@ -53,7 +53,6 @@ function getAsset() {
                 </div>
             `;
             });
-
             // ✅ Show container once loaded
             container.style.display = "block";
 
@@ -63,34 +62,43 @@ function getAsset() {
                 const qtyInput = document.getElementById(`qty_${asset.AssetId}`);
 
                 checkbox.addEventListener("change", () => {
-                    qtyInput.disabled = !checkbox.checked;
-                    if (!checkbox.checked) {
-                        qtyInput.value = "";
-                        // Remove from selected list
-                        selectedAssets = selectedAssets.filter(a => a.assetId !== asset.AssetId);
-                    } else {
-                        // Add to selected list
-                        selectedAssets.push({
-                            assetId: asset.AssetId,
-                            assetName: asset.AssetName,
-                            availableQty: asset.Quantity,
-                            selectedQty: 0
-                        });
-                    }
-                });
+                    if (checkbox.checked) {
+                        qtyInput.disabled = false;
 
-                qtyInput.addEventListener("input", () => {
-                    const selected = selectedAssets.find(a => a.assetId === asset.AssetId);
-                    if (selected) selected.selectedQty = parseInt(qtyInput.value) || 0;
+                        // ✅ Add to selectedAsset[]
+                        selectedAssets.push({
+                            AssetId: asset.AssetId,
+                            AssetName: asset.AssetName,
+                            MaxQty: asset.Quantity,
+                            Qty: 1 // default
+                        });
+                    } else {
+                        qtyInput.disabled = true;
+                        qtyInput.value = "";
+
+                        // ✅ Remove from selectedAsset[] when unchecked
+                        selectedAssets = selectedAssets.filter(a => a.AssetId !== asset.AssetId);
+                    }
+
+                    console.log("Selected Assets:", selectedAssets);
                 });
-            });
+                qtyInput.addEventListener("input", () => {
+                    const selected = selectedAssets.find(a => a.AssetId === asset.AssetId);
+                    if (selected) {
+                        selected.Qty = parseInt(qtyInput.value) || 1;
+                    }
+                    console.log("Updated Assets:", selectedAssets);
+                });
+            })
         })
         .catch(err => console.error("Error fetching assets:", err));
 }
 
 function submitReservation() {
     console.log("Submitting these assets:", selectedAssets);
-
+    let reservationInfo = {
+        selectedAssets: selectedAssets
+    }
     /*fetch("ClientDashboard.aspx/SubmitReservation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

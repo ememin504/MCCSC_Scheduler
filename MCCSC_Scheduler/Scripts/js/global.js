@@ -131,9 +131,9 @@ let reservationModalEl =
     "<label>Event Dates and Time</label>" +
     "<div class='date-group mb-3'>" +
     "<div class='input-group mb-2'>" +
-    "<input type='date' class='form-control event-date'>" +
-    "<input type='time' class='form-control start-time'>" +
-    "<input type='time' class='form-control end-time'>" +
+        "<input type='date' class='form-control event-date'>" +
+        "<input type='time' class='form-control start-time'>" +
+        "<input type='time' class='form-control end-time'>" +
     "<button type='button' class='btn btn-danger remove-date ms-1'>−</button>" +
     "</div>" +
     "</div>" +
@@ -143,15 +143,13 @@ let reservationModalEl =
     "</div>" +
 
     "<div class='modal-footer'>" +
-    "<button type='button' class='btn btn-primary' id='submitReservation'>Submit</button>" +
+    "<button type='button' class='btn btn-primary' id='btnSubmitReservation' onclick='submitReservation()'; return false;> Submit</button >"+
     "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Clear</button>" +
     "</div>" +
 
     "</div>" +
     "</div>" +
     "</div>";
-
-
 // Restrict allowed date range
 function setDateRange(input) {
     const today = new Date();
