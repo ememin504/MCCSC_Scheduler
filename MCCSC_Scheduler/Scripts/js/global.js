@@ -207,6 +207,29 @@ document.addEventListener('click', function (e) {
     }
 });
 
+function getEventDates() {
+    const dateGroups = document.querySelectorAll('.date-group');
+    const eventDates = [];
+
+    dateGroups.forEach(group => {
+        const date = group.querySelector('.event-date').value;
+        const startTime = group.querySelector('.start-time').value;
+        const endTime = group.querySelector('.end-time').value;
+
+        // Only push if all fields are filled
+        if (date && startTime && endTime) {
+            eventDates.push({
+                date: date,
+                startTime: startTime,
+                endTime: endTime
+            });
+        }
+    });
+
+    return eventDates;
+}
+
+
 let creatAssetModalEl = `
 <div class="modal fade" id="createAssetModal" tabindex="-1" aria-labelledby="createAssetModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">

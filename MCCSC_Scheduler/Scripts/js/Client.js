@@ -96,9 +96,12 @@ function getAsset() {
 
 function submitReservation() {
     console.log("Submitting these assets:", selectedAssets);
+    const eventDates = getEventDates();
     let reservationInfo = {
-        selectedAssets: selectedAssets
+        selectedAssets: selectedAssets,
+        eventDates: eventDates
     }
+    console.log("Data to be submitted ",reservationInfo);
     /*fetch("ClientDashboard.aspx/SubmitReservation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
