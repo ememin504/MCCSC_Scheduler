@@ -5,21 +5,51 @@
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
+    getAsset();
+    
 });
+getAsset();
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
 const userEmail = sessionStorage.getItem("user_email");
+let clientID = 0;
 
 console.log(roleId, userId, userEmail);
-getAsset();
 
+getClientInfo()
 let selectedAssets = []; // use array in case multiple assets are checked
 let n = 0;
 
 console.log(roleId, userId, userEmail);
-getAsset();
+function getClientInfo() {
+    
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/GetClientInfo",
+        data: JSON.stringify({ clientData: { UserID: userId } }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            // Parse JSON since C# returns it as string
+            let info = JSON.parse(response.d);
+            console.log(info.name);
+            console.log(info.organizationName);
+            console.log(info.organizationType); 
+            console.log(info.clientID);
+            clientID = info.clientID;
+            console.log(clientID);
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+
+}
+
 
 function getAsset() {
+    console.log("loading assets!");
+
     fetch("ClientDashboard.aspx/GetAssets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -36,22 +66,24 @@ function getAsset() {
 
             // Populate with checkboxes
             assets.forEach(asset => {
-                container.innerHTML += `
-                <div class="form-check d-flex align-items-center mb-2">
-                    <input class="form-check-input me-2 asset-checkbox" 
-                           type="checkbox" 
-                           id="asset_${asset.AssetId}" 
-                           value="${asset.AssetId}">
-                    <label class="form-check-label me-3" for="asset_${asset.AssetId}">
-                        ${asset.AssetName}
-                    </label>
-                    <input type="number" class="form-control form-control-sm" 
-                           id="qty_${asset.AssetId}" placeholder="Qty" 
-                           min="1" max="${asset.Quantity}" 
-                           style="width: 80px;" disabled>
-                    <span class="ms-1 text-muted">/ ${asset.Quantity}</span>
-                </div>
-            `;
+                if (asset.IsActive != 0) {
+                    container.innerHTML += `
+                        <div class="form-check d-flex align-items-center mb-2">
+                            <input class="form-check-input me-2 asset-checkbox" 
+                                   type="checkbox" 
+                                   id="asset_${asset.AssetId}" 
+                                   value="${asset.AssetId}">
+                            <label class="form-check-label me-3" for="asset_${asset.AssetId}">
+                                ${asset.AssetName}
+                            </label>
+                            <input type="number" class="form-control form-control-sm" 
+                                   id="qty_${asset.AssetId}" placeholder="Qty" 
+                                   min="1" max="${asset.Quantity}" 
+                                   style="width: 80px;" disabled>
+                            <span class="ms-1 text-muted">/ ${asset.Quantity}</span>
+                        </div>
+                    `;
+                }
             });
             // ✅ Show container once loaded
             container.style.display = "block";
@@ -96,28 +128,33 @@ function getAsset() {
 
 function submitReservation() {
     console.log("Submitting these assets:", selectedAssets);
+
+    const eventName = document.getElementById("eventName").value;
+    const eventDescription = document.getElementById("eventDescription").value;
+    
     const eventDates = getEventDates();
+
     let reservationInfo = {
-        selectedAssets: selectedAssets,
-        eventDates: eventDates
+        EventName: eventName,
+        EventDescription: eventDescription,
+        SelectedAssets: selectedAssets,
+        EventDates: eventDates,
+        ClientID: clientID,
     }
     console.log("Data to be submitted ",reservationInfo);
-    /*fetch("ClientDashboard.aspx/SubmitReservation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            assets: selectedAssets,
-            roleId: roleId,
-            userId: userId,
-            userEmail: userEmail
-        })
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/SubmitReservation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response.d);
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
     })
-        .then(res => res.json())
-        .then(data => {
-            alert("Reservation submitted successfully!");
-            console.log(data);
-        })
-        .catch(err => console.error("Error submitting reservation:", err));*/
 }
 
 function connectDB() {

@@ -486,9 +486,11 @@ namespace MCCSC_Scheduler.Database
             string insertOrgQuery = @"INSERT INTO Organization (organization_name, organization_type)
                               OUTPUT INSERTED.organization_id
                               VALUES (@orgName, 'Unknown')";
-            string insertUserQuery = @"INSERT INTO Users (first_name, middle_initial, last_name, email, username, hashed_password)
-                               OUTPUT INSERTED.user_id
-                               VALUES (@FirstName, @MiddleInitial, @LastName, @Email, @UserName, @Password)";
+            string insertUserQuery = @"
+                                INSERT INTO Users (first_name, middle_initial, last_name, email, role_id, username, hashed_password)
+                                OUTPUT INSERTED.user_id
+                                VALUES (@FirstName, @MiddleInitial, @LastName, @Email, @RoleID, @UserName, @Password)";
+
             string insertClientQuery = @"INSERT INTO Client (user_id, organization_id)
                                  VALUES (@UserID, @OrganizationID)";
             string updateStatusQuery = @"UPDATE RegistrationRequests SET Status = 'Confirmed' WHERE RequestID = @id";
@@ -555,6 +557,7 @@ namespace MCCSC_Scheduler.Database
                         insertUserCmd.Parameters.AddWithValue("@MiddleInitial", request.MiddleInitial);
                         insertUserCmd.Parameters.AddWithValue("@LastName", request.LastName);
                         insertUserCmd.Parameters.AddWithValue("@Email", request.Email);
+                        insertUserCmd.Parameters.AddWithValue("@RoleID", 1);
                         insertUserCmd.Parameters.AddWithValue("@UserName", request.UserName);
                         insertUserCmd.Parameters.AddWithValue("@Password", request.PassWord); // temporary plain password
 
@@ -836,6 +839,161 @@ namespace MCCSC_Scheduler.Database
                     return (result != null) ? Convert.ToInt32(result) : 0;
                 }
             }
+
         }
+        public string GetClientInfo(object clientData)
+        {
+            var data = clientData as Dictionary<string, object>;
+            if (data == null || !data.ContainsKey("UserID"))
+                throw new ArgumentException("Invalid clientData: missing UserID");
+
+            int userId = Convert.ToInt32(data["UserID"]);
+
+            string query = @"
+                            SELECT 
+                                (U.first_name + ' ' + U.middle_initial + ' ' + U.last_name) AS FullName,
+                                C.client_id,
+                                O.organization_name,
+                                O.organization_type
+                            FROM Users U
+                            INNER JOIN Client C ON U.user_id = C.user_id
+                            INNER JOIN Organization O ON C.organization_id = O.organization_id
+                            WHERE U.user_id = @UserID";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlCommand cmd = new SqlCommand(query, conn))
+            {
+                cmd.Parameters.AddWithValue("@UserID", userId);
+                conn.Open();
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        var result = new
+                        {
+                            name = reader["FullName"].ToString(),
+                            clientID = reader["client_id"].ToString(),
+                            organizationName = reader["organization_name"].ToString(),
+                            organizationType = reader["organization_type"].ToString()
+                        };
+
+                        // Convert anonymous object to JSON string
+                        return new JavaScriptSerializer().Serialize(result);
+                    }
+                }
+            }
+
+            // Return empty JSON if no match found
+            var empty = new
+            {
+                name = "",
+                clientID = "",
+                organizationName = "",
+                organizationType = ""
+            };
+            return new JavaScriptSerializer().Serialize(empty);
+        }
+
+        public string SubmitReservation(object reservationData)
+        {
+            var serializer = new JavaScriptSerializer();
+            dynamic data = reservationData;
+
+            string eventName = data["EventName"];
+            string eventDesc = data["EventDescription"];
+            string clientId = data["ClientID"];
+            var assets = data["SelectedAssets"];
+            var dates = data["EventDates"];
+
+            int eventId;
+            int reservationId;
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                SqlTransaction trans = conn.BeginTransaction();
+
+                try
+                {
+                    // 1️⃣ Check or insert event
+                    string checkEventQuery = "SELECT event_id FROM Events WHERE title = @Title";
+                    using (SqlCommand checkCmd = new SqlCommand(checkEventQuery, conn, trans))
+                    {
+                        checkCmd.Parameters.AddWithValue("@Title", eventName);
+                        object result = checkCmd.ExecuteScalar();
+
+                        if (result != null)
+                            eventId = Convert.ToInt32(result);
+                        else
+                        {
+                            string insertEventQuery = "INSERT INTO Events (title, description) OUTPUT INSERTED.event_id VALUES (@Title, @Description)";
+                            using (SqlCommand insertCmd = new SqlCommand(insertEventQuery, conn, trans))
+                            {
+                                insertCmd.Parameters.AddWithValue("@Title", eventName);
+                                insertCmd.Parameters.AddWithValue("@Description", eventDesc);
+                                eventId = (int)insertCmd.ExecuteScalar();
+                            }
+                        }
+                    }
+
+                    // 2️⃣ Insert Reservation
+                    string insertReservation = @"
+                INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
+                OUTPUT INSERTED.reservation_id
+                VALUES (@ClientID, @StatusID, @EventID, @Reference)";
+
+                    using (SqlCommand cmd = new SqlCommand(insertReservation, conn, trans))
+                    {
+                        cmd.Parameters.AddWithValue("@ClientID", clientId);
+                        cmd.Parameters.AddWithValue("@StatusID", 1); // assume 1 = Reviewed
+                        cmd.Parameters.AddWithValue("@EventID", eventId);
+                        cmd.Parameters.AddWithValue("@Reference", Guid.NewGuid().ToString().Substring(0, 8));
+
+                        reservationId = (int)cmd.ExecuteScalar();
+                    }
+
+                    // 3️⃣ Insert Assets
+                    foreach (var asset in assets)
+                    {
+                        string insertAssetQuery = @"
+                    INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
+                    VALUES (@ReservationID, @AssetID, @Qty)";
+                        using (SqlCommand assetCmd = new SqlCommand(insertAssetQuery, conn, trans))
+                        {
+                            assetCmd.Parameters.AddWithValue("@ReservationID", reservationId);
+                            assetCmd.Parameters.AddWithValue("@AssetID", (int)asset["AssetId"]);
+                            assetCmd.Parameters.AddWithValue("@Qty", (int)asset["Qty"]);
+                            assetCmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    // 4️⃣ Insert Dates
+                    foreach (var d in dates)
+                    {
+                        string insertDateQuery = @"
+                    INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+                    VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
+                        using (SqlCommand dateCmd = new SqlCommand(insertDateQuery, conn, trans))
+                        {
+                            dateCmd.Parameters.AddWithValue("@ReservationID", reservationId);
+                            dateCmd.Parameters.AddWithValue("@Date", (string)d["date"]);
+                            dateCmd.Parameters.AddWithValue("@StartTime", (string)d["startTime"]);
+                            dateCmd.Parameters.AddWithValue("@EndTime", (string)d["endTime"]);
+                            dateCmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    trans.Commit();
+                    return "{\"success\":true,\"message\":\"Reservation submitted successfully.\"}";
+                }
+                catch (Exception ex)
+                {
+                    trans.Rollback();
+                    return "{\"success\":false,\"error\":\"" + ex.Message + "\"}";
+                }
+            }
+        }
+
     }
 }

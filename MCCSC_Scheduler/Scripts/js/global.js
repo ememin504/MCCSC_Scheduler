@@ -342,10 +342,28 @@ function openOtpModal(userID) {
 }
 
 function openReservationModal() {
-    reservationModal = new bootstrap.Modal(document.getElementById('reservationModal'), {
+    console.log("Opening reservation modal...");
+
+    // 1️⃣ Check if modal exists
+    let modalElement = document.getElementById('reservationModal');
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', reservationModalEl);
+        modalElement = document.getElementById('reservationModal');
+    }
+
+    // 2️⃣ Verify that insertion succeeded
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
         backdrop: 'static'
     });
-    reservationModal.show();
+    modalInstance.show();
+    console.log("✅ Modal opened successfully.");
 }
 
 function openRegistrationModal() {
@@ -410,12 +428,6 @@ function openAssetEditorModal(asset_name, asset_quantity) {
     modalInstance.show();
 
     console.log("✅ Modal opened successfully.");
-}
-function openReservationModal() {
-    reservationModal = new bootstrap.Modal(document.getElementById('reservationModal'), {
-        backdrop: 'static'
-    });
-    reservationModal.show();
 }
 
 

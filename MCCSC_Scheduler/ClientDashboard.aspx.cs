@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Web.Script.Serialization;
 using System.Web.Script.Services;
 using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
+using Newtonsoft.Json;
 
 namespace MCCSC_Scheduler
 {
@@ -43,6 +45,31 @@ namespace MCCSC_Scheduler
         {
             dbContext = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
             return dbContext.GetAssets();
+        }
+        [WebMethod]
+        public static string GetClientInfo(object clientData) {
+            try
+            {
+                var requests = dbContext.GetClientInfo(clientData); // should return List<RegistrationRequest>
+                return requests.ToString();
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string SubmitReservation(object reservationData)
+        {
+            try
+            {
+                var requests = dbContext.SubmitReservation(reservationData); // should return List<RegistrationRequest>
+                return requests.ToString();
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
         }
     }
 }
