@@ -4,11 +4,18 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
-     <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
-     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
-     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-     <script type="text/javascript" src="Scripts/js/Client.js"></script>
-     <script type="text/javascript" src="Scripts/js/global.js"></script>
+     <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
+
+    <!-- jQuery (must be loaded before any script using it) -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+
+    <!-- Bootstrap JS (depends on jQuery for some features like modals) -->
+    <script src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Your custom scripts -->
+    <script src="Scripts/js/global.js"></script>
+    <script src="Scripts/js/Client.js"></script>
      
     <title>Client Dashboard</title>
 </head>

@@ -67,8 +67,6 @@
             <th>Client ID</th>
             <th>Status ID</th>
             <th>Remarks</th>
-            <th>Asset ID</th>
-            <th>Asset Quantity</th>
             <th>Event ID</th>
             <th>Reference</th>
             <th>Actions</th>

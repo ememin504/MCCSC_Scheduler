@@ -2224,6 +2224,7 @@
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
     <Compile Include="DTO\AssetDTO.cs" />
+    <Compile Include="DTO\EventDateDTO.cs" />
     <Compile Include="DTO\OtpDTO.cs" />
     <Compile Include="DTO\ReservationDTO.cs" />
     <Compile Include="DTO\UserDTO.cs" />

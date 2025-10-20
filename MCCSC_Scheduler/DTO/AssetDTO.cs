@@ -7,6 +7,4 @@
         public int Quantity { get; set; }
         public bool IsActive { get; set; }
     }
-    
-
 }

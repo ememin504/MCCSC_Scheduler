@@ -75,7 +75,7 @@ namespace MCCSC_Scheduler
                 var jsonString = JsonConvert.SerializeObject(requestData);
                 var data = JsonConvert.DeserializeObject<RequestData>(jsonString);
 
-                string result = dbContext.GetRequestInfo(data.ClientID, data.StatusID, data.AssetID, data.EventID);
+                string result = dbContext.GetRequestInfo(data.ReservationID, data.ClientID, data.StatusID, data.EventID);
 
                 return result;
             }
@@ -86,6 +86,7 @@ namespace MCCSC_Scheduler
         }
         public class RequestData
         {
+            public int ReservationID { get; set; }
             public int ClientID { get; set; }
             public int StatusID { get; set; }
             public string Remarks { get; set; }
@@ -186,5 +187,16 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+
+        [WebMethod]
+        public static string AcceptReservation(ReservationDTO reservationData)
+        {
+            int reservationID = reservationData.ReservationID;
+            // Do DB update
+            string result = dbContext.AcceptReservation(reservationData);
+            //return "{\"success\":true}";
+            return result.ToString();
+        }
+
     }
 }

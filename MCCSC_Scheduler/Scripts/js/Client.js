@@ -139,7 +139,7 @@ function submitReservation() {
         EventDescription: eventDescription,
         SelectedAssets: selectedAssets,
         EventDates: eventDates,
-        ClientID: clientID,
+        ClientID: parseInt(clientID),
     }
     console.log("Data to be submitted ",reservationInfo);
     $.ajax({
@@ -149,12 +149,12 @@ function submitReservation() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log(response.d);
+            console.log("Success:", response.d);
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
-    })
+    });
 }
 
 function connectDB() {

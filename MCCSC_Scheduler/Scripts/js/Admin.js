@@ -70,6 +70,7 @@ function getUsers() {
         }
     });
 }
+let eventID;
 function getReservationRequests() {
     console.log("getting reservation requests!");
     $.ajax({
@@ -87,7 +88,9 @@ function getReservationRequests() {
                 data = JSON.parse(response.d);
             } catch (e) {
                 console.error("JSON parse error:", e);
+                data = [];
             }
+
 
             console.log("Parsed data:", data);
 
@@ -96,10 +99,10 @@ function getReservationRequests() {
 
             // Check if there are any records
             if (!Array.isArray(data) || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No User found</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Reservation Request found</td></tr>`;
                 return;
             }
-
+            
             // Loop through the data and build table rows
             data.forEach(req => {
                 let row = `
@@ -108,18 +111,15 @@ function getReservationRequests() {
                         <td>${req.ClientID}</td>
                         <td>${req.StatusID}</td>
                         <td>${req.Remarks}</td>
-                        <td>${req.AssetID}</td>
-                        <td>${req.AssetQuantity}</td>
                         <td>${req.EventID}</td>
                         <td>${req.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
                             onclick="GetRequestInfo(
+                                ${req.ReservationID},
                                 ${req.ClientID}, 
                                 ${req.StatusID}, 
                                 '${req.Remarks}', 
-                                ${req.AssetID}, 
-                                ${req.AssetQuantity}, 
                                 ${req.EventID}, 
                                 '${req.Reference}'
                             )">
@@ -130,6 +130,7 @@ function getReservationRequests() {
                     </tr>
                 `;
                 tbody.innerHTML += row;
+                console.log(eventID);
             });
         },
         error: function (xhr, status, error) {
@@ -144,14 +145,14 @@ function openReservationInfoModal() {
     viewReservationModal.show();
 }
 
-function GetRequestInfo(clientID, statusID, remarks, assetID, assetQty, eventID, reference) {
+function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, reference) {
     let requestInfo = {
+        ReservationID: reservationID,
         ClientID: clientID,
         StatusID: statusID,
-        AssetID: assetID,
         EventID: eventID,
     };
-
+    console.log(requestInfo);
     $.ajax({
         type: "POST",
         url: "AdminDashboard.aspx/GetRequestInfo",
@@ -159,7 +160,7 @@ function GetRequestInfo(clientID, statusID, remarks, assetID, assetQty, eventID,
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Full server response:", response);
+            console.log("Full server response:", response.d);
 
             let data = response.d;
             if (typeof data === "string") {
@@ -171,32 +172,44 @@ function GetRequestInfo(clientID, statusID, remarks, assetID, assetQty, eventID,
                 alert("Reservation info could not be loaded.");
                 return;
             }
-
+            let assetDetails = "";
+            let dateDetails = "";
+            data.Asset.forEach(a => {
+                assetDetails += `<p><strong>Asset:</strong> ${a.AssetName}</p>
+                     <p><strong>Quantity:</strong> ${a.Quantity}</p>`;
+            });
+            data.Date.forEach(d => {
+                dateDetails += `<p><strong>Date:</strong> ${d.Date}</p>
+                     <p><strong>Starting Time:</strong> ${d.StartTime}</p>
+                     <p><strong>Ending Time:</strong> ${d.EndTime}</p>`;
+            });
             // ✅ Build modal dynamically here
             let modalHTML = `
-      <div class='modal fade' id='viewReservationModal' role='dialog'>
-        <div class='modal-dialog'>
-          <div class='modal-content'>
-            <div class='modal-header'>
-              <h4 class='modal-title'>Reservation Info</h4>
-              <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
-            </div>
-            <div class='modal-body'>
-            <p><strong>Event Title:</strong> ${data.Event}</p>
-              <p><strong>Client:</strong> ${data.Client.FirstName} ${data.Client.MiddleInitial || ""} ${data.Client.LastName}</p>
-              <p><strong>Organization:</strong> ${data.Organization}</p>
-              <p><strong>Status:</strong> ${data.Status}</p>
-              <p><strong>Asset:</strong> ${data.Asset}</p>
-              <p><strong>Asset Quantity:</strong> ${assetQty}</p>
-              <p><strong>Reference:</strong> ${reference}</p>
-              <p><strong>Remarks:</strong> ${remarks}</p>
-            </div>
-            <div class='modal-footer'>
-              <button type='button' class='btn btn-primary' data-bs-dismiss='modal'>OK</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
+                <div class='modal fade' id='viewReservationModal' role='dialog'>
+                  <div class='modal-dialog'>
+                    <div class='modal-content'>
+                      <div class='modal-header'>
+                        <h4 class='modal-title'>Reservation Info</h4>
+                        <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
+                      </div>
+                      <div class='modal-body'>
+                        <p><strong>Event Title:</strong> ${data.Event}</p>
+                        <p><strong>Client:</strong> ${data.Client.FirstName} ${data.Client.MiddleInitial || ""} ${data.Client.LastName}</p>
+                        <p><strong>Organization:</strong> ${data.Organization}</p>
+                        <p><strong>Status:</strong> ${data.Status}</p>
+                        ${assetDetails}<br>
+                        ${dateDetails}
+                        <p><strong>Reference:</strong> ${reference}</p>
+                        <p><strong>Remarks:</strong> ${remarks}</p>
+                      </div>
+                      <div class='modal-footer'>
+                        <button type='button' class='btn btn-success' onclick="acceptReservation(${reservationID})">Accept</button>
+                        <button type='button' class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
+                    </div>
+                    </div>
+                  </div>
+                </div>`;
+
 
             // ✅ Remove existing modal (to avoid duplicates)
             let oldModal = document.getElementById("viewReservationModal");
@@ -215,6 +228,25 @@ function GetRequestInfo(clientID, statusID, remarks, assetID, assetQty, eventID,
             console.error("Error:", xhr.responseText);
         }
     });
+}
+function acceptReservation(reservationID) {
+    let reservationInfo = {
+        ReservationID : reservationID
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/AcceptReservation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response.d);
+            getReservationRequests();
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
 }
 
 function openReservationModal() {
