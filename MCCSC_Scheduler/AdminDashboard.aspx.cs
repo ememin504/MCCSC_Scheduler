@@ -197,6 +197,19 @@ namespace MCCSC_Scheduler
             //return "{\"success\":true}";
             return result.ToString();
         }
+        [WebMethod]
+        public static string GetAcceptedReservation()
+        {
+            try
+            {
+                var requests = dbContext.GetAcceptedReservation();
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
     }
 }

@@ -74,7 +74,24 @@
     </thead>
     <tbody id="reservationTableBody">
     </tbody>
-</table>
+    </table>
+
+    <h3>Accepted Reservations</h3>
+    <table class="table table-striped table-bordered" id="acceptedReservationTable">
+    <thead>
+        <tr>
+            <th>Reservation ID</th>
+            <th>Client ID</th>
+            <th>Status ID</th>
+            <th>Remarks</th>
+            <th>Event ID</th>
+            <th>Reference</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="acceptedReservationTableBody">
+    </tbody>
+    </table>
     <h3>Assets</h3>
     <button onclick="openCreateAssetModal(); return false">Add asset</button>
     <table class="table table-striped table-bordered" id="assetTable">

@@ -10,6 +10,7 @@
     getReservationRequests();
     getUsers();
     getAssets();
+    getAcceptedReservation();
 });
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
@@ -242,6 +243,74 @@ function acceptReservation(reservationID) {
         success: function (response) {
             console.log(response.d);
             getReservationRequests();
+            getAcceptedReservation();
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
+
+function getAcceptedReservation() {
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard.aspx/GetAcceptedReservation",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Raw response:", response);
+            console.log("Response.d:", response.d);
+
+            // Parse the string into a real array
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("acceptedReservationTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Accepted Reservation Request found</td></tr>`;
+                return;
+            }
+            // Loop through the data and build table rows
+            data.forEach(res => {
+                let row = `
+                    <tr>
+                        <td>${res.ReservationID}</td>
+                        <td>${res.ClientID}</td>
+                        <td>${res.StatusID}</td>
+                        <td>${res.Remarks}</td>
+                        <td>${res.EventID}</td>
+                        <td>${res.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                            onclick="GetRequestInfo(
+                                ${res.ReservationID},
+                                ${res.ClientID}, 
+                                ${res.StatusID}, 
+                                '${res.Remarks}', 
+                                ${res.EventID}, 
+                                '${res.Reference}'
+                            )">
+                            View
+                            </button>
+                        </td>
+
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+            
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);

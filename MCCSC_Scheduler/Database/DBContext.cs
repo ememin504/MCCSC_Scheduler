@@ -1073,6 +1073,37 @@ namespace MCCSC_Scheduler.Database
                 return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
             }
         }
+        public string GetAcceptedReservation() {
+            try {
+                string query = @"SELECT * FROM Reservation WHERE status_id = 3";
+                List<object> result = new List<object>();
+
+                using (SqlConnection conn = new SqlConnection(connectionString)) {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(query, conn)) { 
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                result.Add(new
+                                {
+                                    ReservationID = reader["reservation_id"],
+                                    ClientID = reader["client_id"],
+                                    StatusID = reader["status_id"] == DBNull.Value ? "" : reader["status_id"].ToString(),
+                                    Remarks = reader["remarks"],
+                                    EventID = reader["event_id"],
+                                    Reference = reader["hashed_reference"],
+                                });
+                            }
+                        }
+                        return JsonConvert.SerializeObject(result);
+                    }
+                }
+            }
+            catch (Exception ex) {
+                return $"Error in GetAcceptedReservation: {ex.Message}";
+            }
+        }
 
     }
 }
