@@ -1,17 +1,53 @@
 ﻿document.addEventListener("DOMContentLoaded", function () {
-    // inject alert modal
+    setInterval(() => {
+        fetch("AdminDashboard.aspx/CheckForUpdate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: "{}"
+        })
+            .then(res => res.json())
+            .then(data => {
+                const parsed = data.d; // ✅ no need to JSON.parse
+
+                console.log("Reservation:", parsed.Reservation);
+                console.log("Registration:", parsed.Registration);
+
+                // Compare each timestamp
+                const storedRes = localStorage.getItem("lastRes");
+                const storedReg = localStorage.getItem("lastReg");
+
+                if (parsed.Reservation !== storedRes) {
+                    localStorage.setItem("lastRes", parsed.Reservation);
+                    console.log("Reservation table changed!");
+                    getReservationRequests();
+                }
+
+                if (parsed.Registration !== storedReg) {
+                    localStorage.setItem("lastReg", parsed.Registration);
+                    console.log("Registration table changed!");
+                    getRegistrationRequests();
+                }
+            })
+            .catch(err => console.error("CheckForUpdate error:", err));
+
+    }, 5000);
+
+    // Inject modals
     const alertModalDiv = document.getElementById('form1');
     if (alertModalDiv) {
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
 
+    // Initial data load
     getRegistrationRequests();
     getReservationRequests();
     getUsers();
     getAssets();
     getAcceptedReservation();
 });
+
+
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
 const userEmail = sessionStorage.getItem("user_email");

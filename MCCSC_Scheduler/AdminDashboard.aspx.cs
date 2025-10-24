@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
+using System.Web.Configuration;
 using System.Web.Script.Serialization;
 using System.Web.Script.Services;
 using System.Web.Services;
@@ -14,12 +17,72 @@ namespace MCCSC_Scheduler
 {
     public partial class AdminDashboard : System.Web.UI.Page
     {
+        private static readonly string connectionString = WebConfigurationManager.ConnectionStrings["MCCSC_SchedulerDB"].ConnectionString;
+        private static DBContext dbContext;
         protected void Page_Load(object sender, EventArgs e)
         {
-            dbContext = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
+            // ✅ Initialize database context (make sure DBContext sets up correctly)
+            dbContext = new DBContext(@".\SQLEXPRESS", "MCCSC_SchedulerDB");
             ConnectDB();
         }
-        private static DBContext dbContext;
+
+        [WebMethod]
+        public static string GetLatestUpdateTime(string tableName)
+        {
+            string latest = string.Empty;
+            string connectionString = ConfigurationManager.ConnectionStrings["MCCSC_SchedulerDB"].ConnectionString;
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                string query;
+
+                if (tableName == "Reservation")
+                {
+                    query = "SELECT MAX(updated_at) FROM Reservation";
+                }
+                else if (tableName == "RegistrationRequests")
+                {
+                    query = @"
+                SELECT MAX(LatestDate)
+                FROM (
+                    SELECT MAX(DateRequested) AS LatestDate FROM RegistrationRequests
+                    UNION ALL
+                    SELECT MAX(DateReviewed) FROM RegistrationRequests WHERE DateReviewed IS NOT NULL
+                ) AS CombinedDates";
+                }
+                else
+                {
+                    throw new ArgumentException("Invalid table name specified.");
+                }
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    object result = cmd.ExecuteScalar();
+
+                    if (result != DBNull.Value && result != null)
+                    {
+                        DateTime latestUpdate = Convert.ToDateTime(result);
+                        latest = latestUpdate.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                    }
+                }
+            }
+
+            // ✅ Return as JSON-safe string
+            var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+            return serializer.Serialize(new { LatestUpdate = latest });
+        }
+        [WebMethod]
+        public static object CheckForUpdate()
+        {
+            return new
+            {
+                Reservation = GetLatestUpdateTime("Reservation"),
+                Registration = GetLatestUpdateTime("RegistrationRequests")
+            };
+        }
+
 
         [WebMethod(Description = "A web method that will check the DB connection")]
         [ScriptMethod(UseHttpGet = true)]
