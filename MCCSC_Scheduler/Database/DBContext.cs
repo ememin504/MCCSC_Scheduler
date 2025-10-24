@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
 using System.Runtime.Remoting.Messaging;
@@ -707,26 +708,30 @@ namespace MCCSC_Scheduler.Database
             string json = JsonConvert.SerializeObject(assetData);
             var asset = JsonConvert.DeserializeObject<AssetModel>(json);
 
-
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
 
                 string query = @"UPDATE Assets 
-                         SET asset_name = @name, quantity_available = @qty 
+                         SET asset_name = @name, quantity_available = @qty, updated_at = @update_date
                          WHERE asset_id = @id";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@id", asset.AssetID);
-                    cmd.Parameters.AddWithValue("@name", asset.AssetName);
-                    cmd.Parameters.AddWithValue("@qty", asset.Quantity);
-                    cmd.ExecuteNonQuery();
+                    cmd.Parameters.Add("@id", SqlDbType.Int).Value = asset.AssetID;
+                    cmd.Parameters.Add("@name", SqlDbType.NVarChar, 255).Value = asset.AssetName;
+                    cmd.Parameters.Add("@qty", SqlDbType.Int).Value = asset.Quantity;
+                    cmd.Parameters.Add("@update_date", SqlDbType.DateTime).Value = DateTime.Now;
+
+                    int rowsAffected = cmd.ExecuteNonQuery();
+                    if (rowsAffected == 0)
+                        return "No asset found with the specified ID.";
                 }
             }
 
             return "Asset record updated successfully.";
         }
+
         public string ActivateAsset(object assetData)
         {
             try
