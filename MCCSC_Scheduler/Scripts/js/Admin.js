@@ -9,9 +9,6 @@
             .then(data => {
                 const parsed = data.d; // ✅ no need to JSON.parse
 
-                console.log("Reservation:", parsed.Reservation);
-                console.log("Registration:", parsed.Registration);
-
                 // Compare each timestamp
                 const storedRes = localStorage.getItem("lastRes");
                 const storedReg = localStorage.getItem("lastReg");
@@ -45,14 +42,18 @@
     getUsers();
     getAssets();
     getAcceptedReservation();
+    //getUserProfile();
 });
 
 
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
 const userEmail = sessionStorage.getItem("user_email");
+const roleName = sessionStorage.getItem("roleName");
+const roleTypeID = sessionStorage.getItem("role_type_id");
+const roleTypeDescription = sessionStorage.getItem("role_type_description");
 
-console.log(roleId, userId, userEmail);
+console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription);
 
 function getUsers() {
     $.ajax({

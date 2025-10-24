@@ -57,7 +57,10 @@ let userID; // global variable
 }*/
 var user_id = 0;
 var role_id = 0;
+var role_type_id = 0;
 var user_email = "";
+var role_name = "";
+var role_type_description = "";
 function authenticateUser() {
     let username = document.getElementById("loginUsername").value;
     let password = document.getElementById("loginPassword").value;
@@ -83,48 +86,33 @@ function authenticateUser() {
                 return;
             }
 
-            // Example: "Login Successful - Role: 2 UserID: 1006"
-            const msg = data.d;
-            alert(msg); // keep alert if you want to debug
+            const user = data.d; // structured object
 
-            if (msg.startsWith("Login Successful")) {
-                const roleMatch = msg.match(/Role:\s*(\d+)/);
-                const userMatch = msg.match(/UserID:\s*(\d+)/);
-                const emailMatch = msg.match(/Email:\s*([^\s]+)/);
+            console.log(user.UserID);
+            if (user.Success) {
+                // Assign all the data safely
+                user_id = user.UserID;
+                role_id = user.RoleID;
+                user_email = user.Email;
+                role_name = user.RoleName;
+                role_type_id = user.RoleTypeID;
+                role_type_description = user.RoleTypeDescription;
 
-                const roleID = roleMatch ? parseInt(roleMatch[1]) : null;
-                const userID = userMatch ? parseInt(userMatch[1]) : null;
-                const email = emailMatch ? emailMatch[1] : null;
-                console.log(email, emailMatch);
-                parseInt(userID);
-                parseInt(roleID);
-                if (roleID && userID) {
-                    user_id = parseInt(userID); // global assignment
-                    role_id = parseInt(roleID);
-                    user_email = email;
+                console.log("All user data:", user);
+                console.log(role_id, user_id, user_email, role_name, role_type_id, role_type_description);
 
-                    console.log("Extracted role:", roleID, "user:", user_id, "email:", user_email, typeof user_id);
-                    if (isNaN(user_id)) {
-                        console.log("Invalid user_id, defaulting to 0");
-                        user_id = 0;
-                         
-                    }
-                    else {
-                        openOtpModal(role_id, user_id, user_email);
-                        console.log(typeof user_id);  
-                    }         
-                } else {
-                    console.error("Failed to parse role or userID:", msg);
-                }
+                // Pass all relevant info to the OTP modal
+                openOtpModal(user_id, role_id, user_email, role_name, role_type_id, role_type_description);
             } else {
-                alert("Login failed: " + msg);  
+                alert("Login failed: " + (user.Message || JSON.stringify(user)));
             }
+
         })
         .catch(error => {
             console.error("Authentication error:", error);
             alert("An error occurred while logging in.");
-            
         });
+
 }
 function verifyOTP(role_id ,user_id, user_email) {
     parseInt(user_id);

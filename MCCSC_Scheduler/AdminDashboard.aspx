@@ -17,6 +17,9 @@
         roleId: '<%= Session["role_id"] %>',
         userId: '<%= Session["user_id"] %>',
         userEmail: '<%= Session["user_email"] %>'
+        roleName: '<%= Session["role_name"] %>'
+        roleTypeID: '<%= Session["role_type_id"] %>'
+        roleTypeDescription: '<%= Session["role_type_description"] %>'
     };
     </script>
     <form id="aspForm" runat="server">
@@ -44,6 +47,7 @@
         <tbody id="registrationTableBody">
         </tbody>
     </table>
+    <h3>Users</h3>
     <table class="table table-striped table-bordered" id="userTable">
         <thead>
             <tr>

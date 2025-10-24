@@ -95,33 +95,76 @@ namespace MCCSC_Scheduler.Database
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
-                string query = @"SELECT user_id, username, role_id, email  
-                                FROM Users 
-                                WHERE username = @UserName AND hashed_password = @Password
+                conn.Open();
+
+                // First: get user info
+                string queryUser = @"
+                                    SELECT user_id, username, role_id, email  
+                                    FROM Users 
+                                    WHERE username = @UserName AND hashed_password = @Password;
                                 ";
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                UserDTO user = null;
+                int userId = 0;
+                int roleID = 0;
+
+                using (SqlCommand cmd = new SqlCommand(queryUser, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserName", username);
                     cmd.Parameters.AddWithValue("@Password", password);
 
-                    conn.Open();
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            return new UserDTO
+                            userId = Convert.ToInt32(reader["user_id"]);
+                            roleID = Convert.ToInt32(reader["role_id"]);
+                            string roleName = roleID == 1 ? "Client" : "Admin";
+
+                            user = new UserDTO
                             {
-                                UserID = Convert.ToInt32(reader["user_id"]),
+                                UserID = userId,
                                 UserName = reader["username"].ToString(),
-                                RoleID = Convert.ToInt32(reader["role_id"]),
-                                Email = reader["email"].ToString(),
+                                RoleID = roleID,
+                                RoleName = roleName,
+                                Email = reader["email"].ToString()
                             };
+                        }
+                        else
+                        {
+                            return null; // user not found
                         }
                     }
                 }
+
+                // Determine table names based on roleID
+                string typeTable = roleID == 1 ? "Client" : "Admins";
+                string descriptionTable = roleID == 1 ? "Client_type" : "Admin_type";
+
+                // Combined query: get RoleTypeID and its description in one go
+                string queryType = $@"
+                                        SELECT t.type_id, d.type_description
+                                        FROM {typeTable} t
+                                        INNER JOIN {descriptionTable} d ON t.type_id = d.type_id
+                                        WHERE t.user_id = @UserID;
+                                    ";
+
+                using (SqlCommand cmd = new SqlCommand(queryType, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            user.RoleTypeID = Convert.ToInt32(reader["type_id"]);
+                            user.RoleTypeDescription = reader["type_description"].ToString();
+                        }
+                    }
+                }
+
+                return user;
             }
-            return null;
         }
 
 
