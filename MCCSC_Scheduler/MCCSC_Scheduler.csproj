@@ -70,7 +70,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="AdminDashboard.aspx" />
+    <Content Include="AdminDashboard1.aspx" />
+    <Content Include="AdminDashboard2.aspx" />
     <Content Include="ClientDashboard.aspx" />
     <Content Include="Default.aspx" />
     <Content Include="Images\494814716_588640820918268_3466504227378786476_n.jpg" />
@@ -2201,12 +2202,19 @@
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AdminDashboard.aspx.cs">
-      <DependentUpon>AdminDashboard.aspx</DependentUpon>
+    <Compile Include="AdminDashboard1.aspx.cs">
+      <DependentUpon>AdminDashboard1.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
-    <Compile Include="AdminDashboard.aspx.designer.cs">
-      <DependentUpon>AdminDashboard.aspx</DependentUpon>
+    <Compile Include="AdminDashboard1.aspx.designer.cs">
+      <DependentUpon>AdminDashboard1.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="AdminDashboard2.aspx.cs">
+      <DependentUpon>AdminDashboard2.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="AdminDashboard2.aspx.designer.cs">
+      <DependentUpon>AdminDashboard2.aspx</DependentUpon>
     </Compile>
     <Compile Include="ClientDashboard.aspx.cs">
       <DependentUpon>ClientDashboard.aspx</DependentUpon>

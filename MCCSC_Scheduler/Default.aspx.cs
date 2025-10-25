@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Dynamic;
 using System.Linq;
 using System.Security;
@@ -13,7 +14,7 @@ using MCCSC_Scheduler.Database;
 using MCCSC_Scheduler.DTO;
 using MCCSC_Scheduler.Model;
 using MCCSC_Scheduler.ViewModel;
-using System.Data.SqlClient;
+using Newtonsoft.Json;
 using static System.Net.WebRequestMethods;
 
 namespace MCCSC_Scheduler
@@ -53,24 +54,41 @@ namespace MCCSC_Scheduler
         {
             try
             {
-                // Example: Windows auth
                 var db = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
-
                 var user = db.AuthenticateUser(loginVM.UserName, loginVM.Password);
 
                 if (user != null)
                 {
-                    Convert.ToInt32(user.UserID);
-                    GenerateOTP(user.UserID);
-                    return $"Login Successful - Role: {user.RoleID} UserID: {user.UserID} Email: {user.Email} RoleName: {user.RoleName} RoleTypeID: {user.RoleTypeID} RoleTypeDescription: {user.RoleTypeDescription}";
+                    GenerateOTP(user.UserID); // your OTP logic
+                    return JsonConvert.SerializeObject(new
+                    {
+                        Success = true,
+                        UserID = user.UserID,
+                        RoleID = user.RoleID,
+                        Email = user.Email,
+                        RoleName = user.RoleName,
+                        RoleTypeID = user.RoleTypeID,
+                        RoleTypeDescription = user.RoleTypeDescription
+                    });
                 }
                 else
-                    return "Invalid Username or Password!";
+                {
+                    return JsonConvert.SerializeObject(new
+                    {
+                        Success = false,
+                        Message = "Invalid Username or Password!"
+                    });
+                }
             }
             catch (Exception ex)
             {
-                return "Authentication Error: " + ex.Message;
+                return JsonConvert.SerializeObject(new
+                {
+                    Success = false,
+                    Message = "Authentication Error: " + ex.Message
+                });
             }
+
         }
 
 

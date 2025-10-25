@@ -81,14 +81,8 @@ function authenticateUser() {
     })
         .then(response => response.json())
         .then(data => {
-            if (!data || !data.d) {
-                alert("Invalid response from server!");
-                return;
-            }
+            const user = JSON.parse(data.d); 
 
-            const user = data.d; // structured object
-
-            console.log(user.UserID);
             if (user.Success) {
                 // Assign all the data safely
                 user_id = user.UserID;
@@ -99,19 +93,17 @@ function authenticateUser() {
                 role_type_description = user.RoleTypeDescription;
 
                 console.log("All user data:", user);
-                console.log(role_id, user_id, user_email, role_name, role_type_id, role_type_description);
-
-                // Pass all relevant info to the OTP modal
-                openOtpModal(user_id, role_id, user_email, role_name, role_type_id, role_type_description);
+                openOtpModal(user); // pass full object
             } else {
-                alert("Login failed: " + (user.Message || JSON.stringify(user)));
+                alert("Login failed: " + user.Success);
+                console.log("All user data:", user.Success);
             }
-
         })
         .catch(error => {
             console.error("Authentication error:", error);
             alert("An error occurred while logging in.");
         });
+
 
 }
 function verifyOTP(role_id ,user_id, user_email) {
@@ -144,6 +136,9 @@ function verifyOTP(role_id ,user_id, user_email) {
                     sessionStorage.setItem("role_id", role_id);
                     sessionStorage.setItem("user_id", user_id);
                     sessionStorage.setItem("user_email", user_email);
+                    sessionStorage.setItem("role_name", role_name);
+                    sessionStorage.setItem("role_type_id", role_type_id);
+                    sessionStorage.setItem("role_type_description", role_type_description);
 
                     // Redirect to dashboard
                     window.location.href = "ClientDashboard.aspx";
@@ -153,8 +148,11 @@ function verifyOTP(role_id ,user_id, user_email) {
                     sessionStorage.setItem("role_id", role_id);
                     sessionStorage.setItem("user_id", user_id);
                     sessionStorage.setItem("user_email", user_email);
-
-                    window.location.href = "AdminDashboard.aspx";
+                    sessionStorage.setItem("role_name", role_name);
+                    sessionStorage.setItem("role_type_id", role_type_id);
+                    sessionStorage.setItem("role_type_description", role_type_description);
+                    if (role_type_id == 1)
+                        window.location.href = "AdminDashboard1.aspx";
                 }
                 else {
                     console.log("User role is undefined");

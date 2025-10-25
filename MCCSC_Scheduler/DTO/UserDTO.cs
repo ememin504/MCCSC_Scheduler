@@ -9,8 +9,8 @@
         public string LastName { get; set; }
         public int RoleID { get; set; }
         public int RoleTypeID { get; set; }
-        public string RoleTypeDescription { get; set; } 
-
+        public string RoleTypeDescription { get; set; }
+        public bool Success { get; set; }
         public string RoleName { get; set; }
         public string Email { get; set; }
         public string Organization { get; set; }

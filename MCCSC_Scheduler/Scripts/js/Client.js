@@ -12,6 +12,11 @@ getAsset();
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
 const userEmail = sessionStorage.getItem("user_email");
+const roleName = sessionStorage.getItem("role_name");
+const roleTypeID = sessionStorage.getItem("role_type_id");
+const roleTypeDescription = sessionStorage.getItem("role_type_description");
+
+console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription);
 let clientID = 0;
 
 console.log(roleId, userId, userEmail);
