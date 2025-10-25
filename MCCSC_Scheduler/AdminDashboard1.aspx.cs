@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 
 namespace MCCSC_Scheduler
 {
-    public partial class AdminDashboard : System.Web.UI.Page
+    public partial class AdminDashboard1 : System.Web.UI.Page
     {
         private static readonly string connectionString = WebConfigurationManager.ConnectionStrings["MCCSC_SchedulerDB"].ConnectionString;
         private static DBContext dbContext;

@@ -2194,7 +2194,7 @@
     <Content Include="Lib\fontawesome\6.7.2\svgs\solid\yin-yang.svg" />
     <Content Include="Lib\fontawesome\6.7.2\svgs\solid\z.svg" />
     <Content Include="Scripts\css\default.css" />
-    <Content Include="Scripts\js\Admin.js" />
+    <Content Include="Scripts\js\Admin1.js" />
     <Content Include="Scripts\js\Client.js" />
     <Content Include="Scripts\js\default.js" />
     <Content Include="Scripts\js\global.js" />

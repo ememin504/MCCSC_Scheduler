@@ -11,7 +11,7 @@ namespace MCCSC_Scheduler
 {
 
 
-    public partial class AdminDashboard
+    public partial class AdminDashboard1
     {
 
         /// <summary>

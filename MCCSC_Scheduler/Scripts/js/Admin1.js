@@ -1,6 +1,19 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
+﻿const roleId = sessionStorage.getItem("role_id");
+const userId = sessionStorage.getItem("user_id");
+const userEmail = sessionStorage.getItem("user_email");
+const firstName = sessionStorage.getItem("first_name");
+const middleInitial = sessionStorage.getItem("middle_initial");
+const lastName = sessionStorage.getItem("last_name");
+const roleName = sessionStorage.getItem("role_name");
+const roleTypeID = sessionStorage.getItem("role_type_id");
+const roleTypeDescription = sessionStorage.getItem("role_type_description");
+
+console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
+
+
+document.addEventListener("DOMContentLoaded", function () {
     setInterval(() => {
-        fetch("AdminDashboard.aspx/CheckForUpdate", {
+        fetch("AdminDashboard1.aspx/CheckForUpdate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: "{}"
@@ -35,30 +48,20 @@
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
-
+    document.getElementById("fullname").textContent = firstName + " " + lastName;
+    document.getElementById("roles").textContent = roleName + "/" + roleTypeDescription;
     // Initial data load
     getRegistrationRequests();
     getReservationRequests();
     getUsers();
     getAssets();
     getAcceptedReservation();
-    //getUserProfile();
 });
-
-
-const roleId = sessionStorage.getItem("role_id");
-const userId = sessionStorage.getItem("user_id");
-const userEmail = sessionStorage.getItem("user_email");
-const roleName = sessionStorage.getItem("role_name");
-const roleTypeID = sessionStorage.getItem("role_type_id");
-const roleTypeDescription = sessionStorage.getItem("role_type_description");
-
-console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription);
 
 function getUsers() {
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/GetUser",
+        url: "AdminDashboard1.aspx/GetUser",
         data: "{}",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -113,7 +116,7 @@ function getReservationRequests() {
     console.log("getting reservation requests!");
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/GetReservationRequest",
+        url: "AdminDashboard1.aspx/GetReservationRequest",
         data: "{}",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -193,7 +196,7 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
     console.log(requestInfo);
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/GetRequestInfo",
+        url: "AdminDashboard1.aspx/GetRequestInfo",
         data: JSON.stringify({ requestData: requestInfo }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -273,7 +276,7 @@ function acceptReservation(reservationID) {
     }
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/AcceptReservation",
+        url: "AdminDashboard1.aspx/AcceptReservation",
         data: JSON.stringify({ reservationData: reservationInfo }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -291,7 +294,7 @@ function acceptReservation(reservationID) {
 function getAcceptedReservation() {
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/GetAcceptedReservation",
+        url: "AdminDashboard1.aspx/GetAcceptedReservation",
         data: "{}",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -388,7 +391,7 @@ function connectDB() {
 function getRegistrationRequests() {
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/GetRegistrationRequests",
+        url: "AdminDashboard1.aspx/GetRegistrationRequests",
         data: "{}",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -451,7 +454,7 @@ function UserConfirmation(request_id) {
     console.log(user_data);
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/ConfirmUser",
+        url: "AdminDashboard1.aspx/ConfirmUser",
         data: JSON.stringify({ UserData: user_data }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -470,7 +473,7 @@ function UserConfirmation(request_id) {
 function getAssets() {
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/GetAssets",
+        url: "AdminDashboard1.aspx/GetAssets",
         data: "{}",
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -546,7 +549,7 @@ function createAsset() {
     console.log("Asset to be added:", asset_data);
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/AddAsset",
+        url: "AdminDashboard1.aspx/AddAsset",
         data: JSON.stringify({ assetData: asset_data }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -581,7 +584,7 @@ function saveAssetChanges() {
     // ✅ 2. Send it correctly as JSON to your ASP.NET method
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/UpdateAsset", // <-- Use your update method here
+        url: "AdminDashboard1.aspx/UpdateAsset", // <-- Use your update method here
         data: JSON.stringify({ assetData: asset_data }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -614,7 +617,7 @@ function activateAsset(asset_id) {
 
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/ActivateAsset",
+        url: "AdminDashboard1.aspx/ActivateAsset",
         data: JSON.stringify({ assetData: assetData }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -640,7 +643,7 @@ function deactivateAsset(asset_id) {
 
     $.ajax({
         type: "POST",
-        url: "AdminDashboard.aspx/DeactivateAsset",
+        url: "AdminDashboard1.aspx/DeactivateAsset",
         data: JSON.stringify({ assetData: assetData }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",

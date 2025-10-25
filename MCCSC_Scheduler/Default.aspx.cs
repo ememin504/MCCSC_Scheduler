@@ -68,7 +68,10 @@ namespace MCCSC_Scheduler
                         Email = user.Email,
                         RoleName = user.RoleName,
                         RoleTypeID = user.RoleTypeID,
-                        RoleTypeDescription = user.RoleTypeDescription
+                        RoleTypeDescription = user.RoleTypeDescription,
+                        FirstName = user.FirstName,
+                        MiddleInitial = user.MiddleInitial,
+                        LastName = user.LastName,
                     });
                 }
                 else

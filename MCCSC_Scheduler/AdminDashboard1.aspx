@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="AdminDashboard1.aspx.cs" Inherits="MCCSC_Scheduler.AdminDashboard" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="AdminDashboard1.aspx.cs" Inherits="MCCSC_Scheduler.AdminDashboard1" %>
 
 <!DOCTYPE html>
 
@@ -8,7 +8,7 @@
     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script type="text/javascript" src="Scripts/js/global.js"></script>
-    <script type="text/javascript" src="Scripts/js/Admin.js"></script>
+    <script type="text/javascript" src="Scripts/js/Admin1.js"></script>
     <title></title>
 </head>
 <body>
@@ -20,6 +20,9 @@
         roleName: '<%= Session["role_name"] %>'
         roleTypeID: '<%= Session["role_type_id"] %>'
         roleTypeDescription: '<%= Session["role_type_description"] %>'
+        firstName: '<%= Session["first_name"] %>'
+        middleInitial: '<%= Session["middle_initial"] %>'
+        lastName: '<%= Session["last_name"] %>'
     };
     </script>
     <form id="aspForm" runat="server">
@@ -28,6 +31,8 @@
              <asp:Button ID="btnReserve" runat="server" class="btn btn-primary " OnClientClick="openReservationModal(); return false;" Text="Request +" />
         </div>
     </form>
+    <h1>Hello <span id="fullname"></span></h1>
+    <p id="roles"></p>
     <h3>Registration Requests</h3>
     <table class="table table-striped table-bordered" id="registrationTable">
         <thead>

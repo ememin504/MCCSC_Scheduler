@@ -63,14 +63,7 @@ namespace MCCSC_Scheduler
         public static string SubmitReservation(ReservationDTO reservationData)
         {
             DBContext dbContext = new DBContext();
-            var requests = dbContext.SubmitReservation(reservationData);
-
-            // Convert to JSON here
-            return JsonConvert.SerializeObject(new
-            {
-                success = true,
-                data = requests
-            });
+            return dbContext.SubmitReservation(reservationData);
         }
     }
 }

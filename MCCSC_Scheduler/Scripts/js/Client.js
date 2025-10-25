@@ -6,7 +6,6 @@
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
     getAsset();
-    
 });
 getAsset();
 const roleId = sessionStorage.getItem("role_id");
@@ -122,7 +121,7 @@ function getAsset() {
                 qtyInput.addEventListener("input", () => {
                     const selected = selectedAssets.find(a => a.AssetId === asset.AssetId);
                     if (selected) {
-                        selected.Qty = parseInt(qtyInput.value) || 1;
+                        selected.Quantity = parseInt(qtyInput.value) || 1;
                     }
                     console.log("Updated Assets:", selectedAssets);
                 });
@@ -136,7 +135,7 @@ function submitReservation() {
 
     const eventName = document.getElementById("eventName").value;
     const eventDescription = document.getElementById("eventDescription").value;
-    
+
     const eventDates = getEventDates();
 
     let reservationInfo = {
@@ -145,8 +144,10 @@ function submitReservation() {
         SelectedAssets: selectedAssets,
         EventDates: eventDates,
         ClientID: parseInt(clientID),
-    }
-    console.log("Data to be submitted ",reservationInfo);
+    };
+
+    console.log("Data to be submitted:", reservationInfo);
+
     $.ajax({
         type: "POST",
         url: "ClientDashboard.aspx/SubmitReservation",
@@ -154,40 +155,54 @@ function submitReservation() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Success:", response.d);
+            console.log("Raw response:", response.d);
+
+            // Parse the JSON string returned from the server
+            let result = JSON.parse(response.d);
+
+            if (result.success) {
+                alert(result.message || "Reservation submitted successfully!");
+                console.log("Reservation success:", result);
+                // Optionally clear form or reload data
+                // location.reload();
+            } else {
+                alert(result.error || "An error occurred while submitting the reservation.");
+                console.log("Reservation failed:", result.error);
+            }
         },
         error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
+            console.error("AJAX Error:", xhr.responseText);
+            alert("A system error occurred. Please try again later.");
         }
     });
-}
 
-function connectDB() {
-    console.log('connecting to DB...');
-    var xhr = new XMLHttpRequest();
-    //initiate a request to the server asynchronously (AJAX)
-    xhr.open('GET', 'ClientDashboard.aspx/ConnectDB', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    //send the request
-    xhr.send();
-    //implement the onreadystatechange callback function
-    xhr.onreadystatechange = function () {
-        //check if the request is complete (readyState 4) and was successful (HTTP status 200)
-        if (xhr.readyState == 4 && xhr.status == 200) {
+
+    function connectDB() {
+        console.log('connecting to DB...');
+        var xhr = new XMLHttpRequest();
+        //initiate a request to the server asynchronously (AJAX)
+        xhr.open('GET', 'ClientDashboard.aspx/ConnectDB', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        //send the request
+        xhr.send();
+        //implement the onreadystatechange callback function
+        xhr.onreadystatechange = function () {
+            //check if the request is complete (readyState 4) and was successful (HTTP status 200)
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                //get server response
+                var response = JSON.parse(xhr.responseText);
+                console.log('Server response: ', response);
+                openAlertModal('App Info', 'DB connection status: ' + response.d);
+            }
+        };
+        //implement onerror callback function
+        xhr.onerror = function () {
             //get server response
             var response = JSON.parse(xhr.responseText);
             console.log('Server response: ', response);
             openAlertModal('App Info', 'DB connection status: ' + response.d);
-        }
-    };
-    //implement onerror callback function
-    xhr.onerror = function () {
-        //get server response
-        var response = JSON.parse(xhr.responseText);
-        console.log('Server response: ', response);
-        openAlertModal('App Info', 'DB connection status: ' + response.d);
-    };
+        };
+    }
+
 }
-
-
 

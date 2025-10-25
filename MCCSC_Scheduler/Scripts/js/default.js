@@ -61,6 +61,9 @@ var role_type_id = 0;
 var user_email = "";
 var role_name = "";
 var role_type_description = "";
+var first_name = "";
+var middle_initial = "";
+var last_name = "";
 function authenticateUser() {
     let username = document.getElementById("loginUsername").value;
     let password = document.getElementById("loginPassword").value;
@@ -88,6 +91,9 @@ function authenticateUser() {
                 user_id = user.UserID;
                 role_id = user.RoleID;
                 user_email = user.Email;
+                first_name = user.FirstName;
+                middle_initial = user.MiddleInitial;
+                last_name = user.LastName;
                 role_name = user.RoleName;
                 role_type_id = user.RoleTypeID;
                 role_type_description = user.RoleTypeDescription;
@@ -139,6 +145,9 @@ function verifyOTP(role_id ,user_id, user_email) {
                     sessionStorage.setItem("role_name", role_name);
                     sessionStorage.setItem("role_type_id", role_type_id);
                     sessionStorage.setItem("role_type_description", role_type_description);
+                    sessionStorage.setItem("first_name", first_name);
+                    sessionStorage.setItem("middle_initial", middle_initial);
+                    sessionStorage.setItem("last_name", last_name);
 
                     // Redirect to dashboard
                     window.location.href = "ClientDashboard.aspx";
@@ -151,8 +160,13 @@ function verifyOTP(role_id ,user_id, user_email) {
                     sessionStorage.setItem("role_name", role_name);
                     sessionStorage.setItem("role_type_id", role_type_id);
                     sessionStorage.setItem("role_type_description", role_type_description);
+                    sessionStorage.setItem("first_name", first_name);
+                    sessionStorage.setItem("middle_initial", middle_initial);
+                    sessionStorage.setItem("last_name", last_name);
                     if (role_type_id == 1)
                         window.location.href = "AdminDashboard1.aspx";
+                    else
+                        window.location.href = "AdminDashboard2.aspx";
                 }
                 else {
                     console.log("User role is undefined");

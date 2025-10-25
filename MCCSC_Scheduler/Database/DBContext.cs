@@ -99,7 +99,7 @@ namespace MCCSC_Scheduler.Database
 
                 // First: get user info
                 string queryUser = @"
-                                    SELECT user_id, username, role_id, email  
+                                    SELECT user_id, username, role_id, email, first_name, middle_initial, last_name
                                     FROM Users 
                                     WHERE username = @UserName AND hashed_password = @Password;
                                 ";
@@ -127,7 +127,10 @@ namespace MCCSC_Scheduler.Database
                                 UserName = reader["username"].ToString(),
                                 RoleID = roleID,
                                 RoleName = roleName,
-                                Email = reader["email"].ToString()
+                                Email = reader["email"].ToString(),
+                                FirstName = reader["first_name"].ToString(),
+                                MiddleInitial = reader["middle_initial"].ToString(),
+                                LastName = reader["last_name"].ToString(),
                             };
                         }
                         else
@@ -989,7 +992,6 @@ namespace MCCSC_Scheduler.Database
 
         public string SubmitReservation(ReservationDTO reservationData)
         {
-
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 return JsonConvert.SerializeObject(new
@@ -1007,7 +1009,7 @@ namespace MCCSC_Scheduler.Database
 
             int eventId;
             int reservationId;
-           
+
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
@@ -1037,9 +1039,8 @@ namespace MCCSC_Scheduler.Database
                         }
 
                         // 2️⃣ Insert Reservation
-                        string insertReservation = @" INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
-                                                  OUTPUT INSERTED.reservation_id VALUES (@ClientID, @StatusID, @EventID, @Reference)";
-
+                        string insertReservation = @"INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
+                                           OUTPUT INSERTED.reservation_id VALUES (@ClientID, @StatusID, @EventID, @Reference)";
                         using (SqlCommand cmd = new SqlCommand(insertReservation, conn, trans))
                         {
                             cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -1055,7 +1056,7 @@ namespace MCCSC_Scheduler.Database
                         foreach (var asset in assets)
                         {
                             string insertAssetQuery = @"INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
-                                                    VALUES (@ReservationID, @AssetID, @Qty)";
+                                             VALUES (@ReservationID, @AssetID, @Qty)";
                             using (SqlCommand assetCmd = new SqlCommand(insertAssetQuery, conn, trans))
                             {
                                 assetCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1065,11 +1066,35 @@ namespace MCCSC_Scheduler.Database
                             }
                         }
 
-                        // 4️⃣ Insert Dates
+                        // 4️⃣ Insert Dates (Check if date already exists)
                         foreach (var d in dates)
                         {
-                            string insertDateQuery = @" INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
-                                                    VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
+                            string checkDateQuery = @"SELECT COUNT(*) FROM Reservation_Dates 
+                                              WHERE date = @Date 
+                                              AND ((@StartTime BETWEEN start_time AND end_time)
+                                               OR (@EndTime BETWEEN start_time AND end_time)
+                                               OR (start_time BETWEEN @StartTime AND @EndTime)
+                                               OR (end_time BETWEEN @StartTime AND @EndTime))";
+                            using (SqlCommand checkDateCmd = new SqlCommand(checkDateQuery, conn, trans))
+                            {
+                                checkDateCmd.Parameters.AddWithValue("@Date", d.Date);
+                                checkDateCmd.Parameters.AddWithValue("@StartTime", d.StartTime);
+                                checkDateCmd.Parameters.AddWithValue("@EndTime", d.EndTime);
+
+                                int exists = (int)checkDateCmd.ExecuteScalar();
+                                if (exists > 0)
+                                {
+                                    trans.Rollback();
+                                    return JsonConvert.SerializeObject(new
+                                    {
+                                        success = false,
+                                        error = $"The event date {d.Date:yyyy-MM-dd} ({d.StartTime} - {d.EndTime}) is already booked."
+                                    });
+                                }
+                            }
+
+                            string insertDateQuery = @"INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+                                             VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
                             using (SqlCommand dateCmd = new SqlCommand(insertDateQuery, conn, trans))
                             {
                                 dateCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1091,6 +1116,7 @@ namespace MCCSC_Scheduler.Database
                 }
             }
         }
+
 
         public string AcceptReservation(ReservationDTO reservationData)
         {
