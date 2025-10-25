@@ -273,6 +273,19 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+        [WebMethod]
+        public static string GetEvents()
+        {
+            try
+            {
+                DBContext dbContext = new DBContext();
+                return dbContext.GetEvents();
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
     }
 }

@@ -143,12 +143,12 @@ function verifyOTP(role_id ,user_id, user_email) {
                     sessionStorage.setItem("user_id", user_id);
                     sessionStorage.setItem("user_email", user_email);
                     sessionStorage.setItem("role_name", role_name);
+                    console.log(role_name);
                     sessionStorage.setItem("role_type_id", role_type_id);
                     sessionStorage.setItem("role_type_description", role_type_description);
                     sessionStorage.setItem("first_name", first_name);
                     sessionStorage.setItem("middle_initial", middle_initial);
                     sessionStorage.setItem("last_name", last_name);
-
                     // Redirect to dashboard
                     window.location.href = "ClientDashboard.aspx";
 
@@ -163,6 +163,7 @@ function verifyOTP(role_id ,user_id, user_email) {
                     sessionStorage.setItem("first_name", first_name);
                     sessionStorage.setItem("middle_initial", middle_initial);
                     sessionStorage.setItem("last_name", last_name);
+                    
                     if (role_type_id == 1)
                         window.location.href = "AdminDashboard1.aspx";
                     else

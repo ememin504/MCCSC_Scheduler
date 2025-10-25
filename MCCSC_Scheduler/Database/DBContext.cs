@@ -126,7 +126,6 @@ namespace MCCSC_Scheduler.Database
                                 UserID = userId,
                                 UserName = reader["username"].ToString(),
                                 RoleID = roleID,
-                                RoleName = roleName,
                                 Email = reader["email"].ToString(),
                                 FirstName = reader["first_name"].ToString(),
                                 MiddleInitial = reader["middle_initial"].ToString(),
@@ -165,7 +164,6 @@ namespace MCCSC_Scheduler.Database
                         }
                     }
                 }
-
                 return user;
             }
         }
@@ -945,15 +943,17 @@ namespace MCCSC_Scheduler.Database
             int userId = Convert.ToInt32(data["UserID"]);
 
             string query = @"
-                            SELECT 
-                                (U.first_name + ' ' + U.middle_initial + ' ' + U.last_name) AS FullName,
-                                C.client_id,
-                                O.organization_name,
-                                O.organization_type
-                            FROM Users U
-                            INNER JOIN Client C ON U.user_id = C.user_id
-                            INNER JOIN Organization O ON C.organization_id = O.organization_id
-                            WHERE U.user_id = @UserID";
+        SELECT 
+            (U.first_name + ' ' + U.middle_initial + ' ' + U.last_name) AS FullName,
+            C.client_id,
+            O.organization_id,
+            O.organization_name,
+            O.organization_type
+        FROM Users U
+        INNER JOIN Client C ON U.user_id = C.user_id
+        INNER JOIN Organization O ON C.organization_id = O.organization_id
+        WHERE U.user_id = @UserID
+    ";
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             using (SqlCommand cmd = new SqlCommand(query, conn))
@@ -968,7 +968,8 @@ namespace MCCSC_Scheduler.Database
                         var result = new
                         {
                             name = reader["FullName"].ToString(),
-                            clientID = reader["client_id"].ToString(),
+                            clientID = Convert.ToInt32(reader["client_id"]),
+                            organizationID = Convert.ToInt32(reader["organization_id"]),
                             organizationName = reader["organization_name"].ToString(),
                             organizationType = reader["organization_type"].ToString()
                         };
@@ -979,16 +980,10 @@ namespace MCCSC_Scheduler.Database
                 }
             }
 
-            // Return empty JSON if no match found
-            var empty = new
-            {
-                name = "",
-                clientID = "",
-                organizationName = "",
-                organizationType = ""
-            };
-            return new JavaScriptSerializer().Serialize(empty);
+            // Return empty if not found
+            return new JavaScriptSerializer().Serialize(new { error = "Client not found" });
         }
+
 
         public string SubmitReservation(ReservationDTO reservationData)
         {
@@ -1006,6 +1001,7 @@ namespace MCCSC_Scheduler.Database
             int clientId = reservationData.ClientID;
             var assets = reservationData.SelectedAssets;
             var dates = reservationData.EventDates;
+            var orgID = reservationData.OrganizationID;
 
             int eventId;
             int reservationId;
@@ -1028,11 +1024,12 @@ namespace MCCSC_Scheduler.Database
                                 eventId = Convert.ToInt32(result);
                             else
                             {
-                                string insertEventQuery = "INSERT INTO Events (title, description) OUTPUT INSERTED.event_id VALUES (@Title, @Description)";
+                                string insertEventQuery = "INSERT INTO Events (title, description, organization_id) OUTPUT INSERTED.event_id VALUES (@Title, @Description, @OrganizationID)";
                                 using (SqlCommand insertCmd = new SqlCommand(insertEventQuery, conn, trans))
                                 {
                                     insertCmd.Parameters.AddWithValue("@Title", eventName);
                                     insertCmd.Parameters.AddWithValue("@Description", eventDesc);
+                                    insertCmd.Parameters.AddWithValue("@OrganizationID", orgID);
                                     eventId = (int)insertCmd.ExecuteScalar();
                                 }
                             }
@@ -1177,6 +1174,54 @@ namespace MCCSC_Scheduler.Database
             catch (Exception ex) {
                 return $"Error in GetAcceptedReservation: {ex.Message}";
             }
+        }
+        public string GetEvents()
+        {
+            List<EventDTO> events = new List<EventDTO>();
+
+            // get the entire event records especially the organization_id 
+            string query = @"SELECT 
+                                e.event_id,
+                                e.title,
+                                e.description,
+                                e.isPrioritized,
+                                e.isRecurring,
+                                e.organization_id,
+                                o.organization_name,
+                                o.organization_type
+                            FROM Events e
+                            LEFT JOIN Organization o ON e.organization_id = o.organization_id";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            EventDTO ev = new EventDTO
+                            {
+                                EventID = Convert.ToInt32(reader["event_id"]),
+                                EventTitle = reader["title"].ToString(),
+                                Description = reader["description"].ToString(),
+                                OrganizationID = reader["organization_id"] == DBNull.Value ? 0 : Convert.ToInt32(reader["organization_id"]),
+                                OrganizationType = reader["organization_type"].ToString(),
+                                OrganizationName = reader["organization_name"].ToString(),
+                                IsPrioritized = Convert.ToBoolean(reader["isPrioritized"]),
+                                IsRecurring = Convert.ToBoolean(reader["isRecurring"])
+                            };
+
+                            events.Add(ev);
+                        }
+                    }
+                }
+            }
+
+            // Return as JSON string
+            return JsonConvert.SerializeObject(events);
         }
 
     }

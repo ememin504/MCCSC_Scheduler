@@ -56,7 +56,62 @@ document.addEventListener("DOMContentLoaded", function () {
     getUsers();
     getAssets();
     getAcceptedReservation();
+    getEvents();
 });
+function getEvents() {
+    console.log("Loading Events...");
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetEvents",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            // ASP.NET [WebMethod] returns data under response.d
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+            console.log("✅ Events loaded:", data);
+
+            // Example: display first event
+            if (data.length > 0) {
+                console.log("First event:", data[0]);
+            }
+
+            let tbody = document.getElementById("eventTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No User found</td></tr>`;
+                return;
+            }
+
+            // Loop through the data and build table rows
+            data.forEach(req => {
+                let row = `
+                    <tr>
+                        <td>${req.EventID}</td>
+                        <td>${req.EventTitle}</td>
+                        <td>${req.Description}</td>
+                        <td>${req.OrganizationID}</td>
+                        <td>${req.OrganizationName}</td>
+                        <td>${req.OrganizationType}</td>
+                        <td>${req.IsPrioritized}</td>
+                        <td>${req.IsRecurring}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        },
+        error: function (xhr, status, error) {
+            console.error("❌ Error loading events:", xhr.responseText);
+        }
+    });
+}
 
 function getUsers() {
     $.ajax({
@@ -658,6 +713,3 @@ function deactivateAsset(asset_id) {
         }
     });
 }
-
-
-

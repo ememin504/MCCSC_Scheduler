@@ -25,6 +25,12 @@
         roleId: '<%= Session["role_id"] %>',
         userId: '<%= Session["user_id"] %>',
         userEmail: '<%= Session["user_email"] %>'
+        roleName: '<%= Session["role_name"] %>'
+        roleTypeID: '<%= Session["type_id"] %>'
+        roleTypeDescription: '<%= Session["type_description"] %>'
+        firstName: '<%= Session["first_name"] %>'
+        middleInitial: '<%= Session["middle_initial"] %>'
+        lastName: '<%= Session["last_name"] %>'
     };
     </script>
 

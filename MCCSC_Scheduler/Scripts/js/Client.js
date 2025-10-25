@@ -7,6 +7,7 @@
     }
     getAsset();
 });
+var clientID = 0;
 getAsset();
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
@@ -14,10 +15,7 @@ const userEmail = sessionStorage.getItem("user_email");
 const roleName = sessionStorage.getItem("role_name");
 const roleTypeID = sessionStorage.getItem("role_type_id");
 const roleTypeDescription = sessionStorage.getItem("role_type_description");
-
-console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription);
-let clientID = 0;
-
+var organizationID = 0;
 console.log(roleId, userId, userEmail);
 
 getClientInfo()
@@ -37,11 +35,13 @@ function getClientInfo() {
             // Parse JSON since C# returns it as string
             let info = JSON.parse(response.d);
             console.log(info.name);
+            console.log(info.organizationID);
             console.log(info.organizationName);
             console.log(info.organizationType); 
             console.log(info.clientID);
+            console.log(info.roleName);
             clientID = info.clientID;
-            console.log(clientID);
+            organizationID = info.organizationID;
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
@@ -144,6 +144,7 @@ function submitReservation() {
         SelectedAssets: selectedAssets,
         EventDates: eventDates,
         ClientID: parseInt(clientID),
+        organizationID: organizationID
     };
 
     console.log("Data to be submitted:", reservationInfo);

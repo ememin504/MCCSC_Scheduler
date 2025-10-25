@@ -116,5 +116,23 @@
         <tbody id="assetTableBody">
         </tbody>
     </table>
+    <h3>Event Management</h3>
+    <table class="table table-striped table-bordered" id="eventTable">
+        <thead>
+            <tr>
+                <th>Event ID</th>
+                <th>Event Title</th>
+                <th>Description</th>
+                <th>Organization ID</th>
+                <th>Organization Name</th>
+                <th>Organization Type</th>
+                <th>IsPrioritized</th>
+                <th>IsRecurring</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="eventTableBody">
+        </tbody>
+    </table>
 </body>
 </html>

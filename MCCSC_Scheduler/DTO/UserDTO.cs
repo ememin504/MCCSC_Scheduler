@@ -10,6 +10,8 @@
         public int RoleID { get; set; }
         public int RoleTypeID { get; set; }
         public string RoleTypeDescription { get; set; }
+        public int ClientID { get; set; }
+        public int OrganizationID { get; set; }
         public bool Success { get; set; }
         public string RoleName { get; set; }
         public string Email { get; set; }
