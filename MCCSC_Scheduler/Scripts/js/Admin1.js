@@ -10,6 +10,131 @@ const roleTypeDescription = sessionStorage.getItem("role_type_description");
 
 console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
 
+async function loadParentCategoryOptions() {
+    try {
+        const response = await fetch('AdminDashboard1.aspx/GetAssetCategories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({})
+        });
+
+        const data = await response.json();
+        const categories = JSON.parse(data.d);
+
+        const select = document.getElementById('parentCategorySelect');
+        select.innerHTML = '<option value="">-- Add as Main Category --</option>';
+        select.innerHTML += buildCategoryOptions(categories);
+    } catch (error) {
+        console.error("Error loading parent categories:", error);
+    }
+}
+
+document.addEventListener('shown.bs.modal', event => {
+    if (event.target.id === 'createAssetModal') {
+        loadAssetCategories();
+    }
+});
+// categoryLoader.js
+var categoriesGlobal = []; // initialize as array
+
+async function loadAssetCategories() {
+    try {
+        const response = await fetch('AdminDashboard1.aspx/GetAssetCategories', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json; charset=utf-8'
+            },
+            body: JSON.stringify({}) // WebMethod requires a body, even if empty
+        });
+
+        const data = await response.json();
+        const categories = JSON.parse(data.d); // JSON from backend
+        categoriesGlobal = categories;
+
+        populateCategoryDropdown(categories);
+        console.log("Categories loaded:", categories);
+        console.log("Categories set for global", categoriesGlobal);
+
+        const container = document.getElementById('assetCategories');
+        if (!container) return;
+
+        // Build the dropdown with hierarchical indentation
+        let html = `
+            <label for="assetCategorySelect" class="form-label">Select Category</label>
+            <select id="assetCategorySelect" class="form-select" required>
+                <option value="">-- Choose a Category --</option>
+                ${buildCategoryOptions(categories)}
+            </select>
+        `;
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error("Error loading categories:", error);
+    }
+}
+
+function populateCategoryDropdown(categories) {
+    const select = document.getElementById('createAssetCategory');
+    select.innerHTML = '<option value="">-- Select a Category --</option>';
+    select.innerHTML += buildCategoryOptions(categories);
+}
+
+function buildCategoryOptions(categories, parentId = null, level = 0) {
+    let html = '';
+    categories
+        .filter(cat => cat.parent_category_id === parentId)
+        .forEach(cat => {
+            const indent = '&nbsp;'.repeat(level * 4);
+            html += `<option value="${cat.id}">${indent}${cat.name}</option>`;
+            html += buildCategoryOptions(categories, cat.id, level + 1);
+        });
+    return html;
+}
+function addCategory() {
+    // 1️⃣ Close the createAssetModal if it's open
+    const createModalEl = document.getElementById('createAssetModal');
+    const createModalInstance = bootstrap.Modal.getInstance(createModalEl);
+    if (createModalInstance) {
+        createModalInstance.hide();
+    }
+    // 2️⃣ Open the Add Asset Category modal
+    openAddAssetCategoryModal();
+}
+function EditCategory() {
+    console.log("loading Edit Category Modal");
+    console.log(categoriesGlobal);
+}
+function saveAssetCategory() {
+    const categoryName = document.getElementById("assetCategoryName").value.trim();
+    const parentId = document.getElementById("parentCategorySelect").value || null;
+
+    if (!categoryName) {
+        alert("Please enter a category name.");
+        return;
+    }
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/AddCategory",
+        data: JSON.stringify({ categoryName: categoryName, parentCategoryId: parentId }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            const result = JSON.parse(response.d);
+            if (result.success) {
+                alert(result.message);
+                $('#addAssetCategoryModal').modal('hide');
+                loadAssetCategories();
+                openCreateAssetModal();
+            } else {
+                alert(result.message || "Error: " + result.error);
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error(error);
+        }
+    });
+}
 
 document.addEventListener("DOMContentLoaded", function () {
     setInterval(() => {
@@ -601,9 +726,9 @@ function getAssets() {
                         <td>${req.AssetId}</td>
                         <td>${req.AssetName}</td>
                         <td>${req.Quantity}</td>
+                        <td>${req.CategoryID}</td>
                         <td>${req.IsActive}</td>
                         <td>
-                          <td>
                           <button class="btn btn-primary btn-sm"
                               onclick="editAsset(${req.AssetId}, '${req.AssetName}', ${req.Quantity})">
                               Edit
@@ -631,12 +756,22 @@ function editAsset(asset_id, asset_name, asset_quantity) {
     openAssetEditorModal(asset_name, asset_quantity);
     assetID = asset_id;
 }
+
 function createAsset() {
     const asset_name = document.getElementById('createAssetName').value.trim();
     const qty = document.getElementById('createQuantity').value;
+    const categorySelect = document.getElementById("assetCategorySelect");
+    const categoryId = categorySelect ? categorySelect.value : null;
+
+    if (!asset_name || !qty || !categoryId) {
+        alert("Please fill in all required fields and select a category.");
+        return;
+    }
+
     let asset_data = {
         AssetName: asset_name,
-        Quantity: qty
+        Quantity: qty,
+        categoryId: parseInt(categoryId)
     }
     console.log("Asset to be added:", asset_data);
     $.ajax({

@@ -6,5 +6,6 @@
         public string AssetName { get; set; }
         public int Quantity { get; set; }
         public bool IsActive { get; set; }
+        public int CategoryID { get; set; }
     }
 }

@@ -109,6 +109,7 @@
                 <th>Asset ID</th>
                 <th>Asset Name</th>
                 <th>Quantity Available</th>
+                <th>CategoryID</th>
                 <th>IsActive</th>
                 <th>Actions</th>
             </tr>

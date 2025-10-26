@@ -397,7 +397,81 @@ namespace MCCSC_Scheduler.Database
             }
         }
 
-//Asset Section========================================================================================================================
+ //Asset Section========================================================================================================================
+        public List<object> GetAssetCategories()
+        {
+            var categories = new List<object>();
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                string query = "SELECT category_id, category_name, parent_category_id FROM AssetCategory";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        categories.Add(new
+                        {
+                            id = Convert.ToInt32(reader["category_id"]),
+                            name = reader["category_name"].ToString(),
+                            parent_category_id = reader["parent_category_id"] == DBNull.Value
+                                ? (int?)null
+                                : Convert.ToInt32(reader["parent_category_id"])
+                        });
+                    }
+                }
+            }
+
+            return categories;
+        }
+        public int AddCategory(string categoryName, int? parentCategoryId)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                // Step 1: Check if category already exists (case-insensitive)
+                string checkQuery = @"
+            SELECT COUNT(*) 
+            FROM AssetCategory 
+            WHERE LOWER(category_name) = LOWER(@name)
+              AND ((parent_category_id IS NULL AND @parentId IS NULL)
+                   OR parent_category_id = @parentId)";
+
+                using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
+                {
+                    checkCmd.Parameters.AddWithValue("@name", categoryName);
+                    checkCmd.Parameters.AddWithValue("@parentId", (object)parentCategoryId ?? DBNull.Value);
+
+                    int count = Convert.ToInt32(checkCmd.ExecuteScalar());
+                    if (count > 0)
+                    {
+                        // Return -1 to indicate duplicate
+                        return -1;
+                    }
+                }
+
+                // Step 2: Insert new category if not duplicate
+                string insertQuery = @"
+            INSERT INTO AssetCategory (category_name, parent_category_id)
+            VALUES (@name, @parentId);
+            SELECT SCOPE_IDENTITY();";
+
+                using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@name", categoryName);
+                    cmd.Parameters.AddWithValue("@parentId", (object)parentCategoryId ?? DBNull.Value);
+
+                    int newId = Convert.ToInt32(cmd.ExecuteScalar());
+                    return newId;
+                }
+            }
+        }
+
+
+
         public List<AssetDTO> GetAssets()
         {
             List<AssetDTO> assets = new List<AssetDTO>();
@@ -405,7 +479,7 @@ namespace MCCSC_Scheduler.Database
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                string query = "SELECT asset_id, asset_name, quantity_available, isActive FROM Assets";
+                string query = "SELECT asset_id, asset_name, quantity_available, isActive category_id FROM Assets";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 using (SqlDataReader reader = cmd.ExecuteReader())
@@ -417,7 +491,8 @@ namespace MCCSC_Scheduler.Database
                             AssetId = reader.GetInt32(0),
                             AssetName = reader.GetString(1),
                             Quantity = reader.GetInt32(2),
-                            IsActive = reader.GetBoolean(3)
+                            IsActive = reader.GetBoolean(3),
+                            CategoryID = reader.GetInt32(4),
                         });
                     }
                 }
@@ -427,7 +502,7 @@ namespace MCCSC_Scheduler.Database
         }
         public string GetAssetRecords()
         {
-            string query = "SELECT asset_id, asset_name, quantity_available, isActive FROM Assets";
+            string query = "SELECT asset_id, asset_name, quantity_available, isActive, category_id FROM Assets";
             List<object> requests = new List<object>();
 
             try
@@ -446,6 +521,7 @@ namespace MCCSC_Scheduler.Database
                                     AssetId = reader["asset_id"],
                                     AssetName = reader["asset_name"],
                                     Quantity = reader["quantity_available"] == DBNull.Value ? "" : reader["quantity_available"].ToString(),
+                                    CategoryID = reader["category_id"],
                                     IsActive = reader["isActive"],
                                 });
                             }
@@ -472,13 +548,14 @@ namespace MCCSC_Scheduler.Database
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
-                    string query = @"INSERT INTO Assets (asset_name, quantity_available)
-                             VALUES (@name, @qty)";
+                    string query = @"INSERT INTO Assets (asset_name, quantity_available, category_id)
+                             VALUES (@name, @qty, @catID)";
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@name", asset.AssetName);
                         cmd.Parameters.AddWithValue("@qty", asset.Quantity);
+                        cmd.Parameters.AddWithValue("@catID", asset.CategoryID);
                         cmd.ExecuteNonQuery();
                     }
                 }

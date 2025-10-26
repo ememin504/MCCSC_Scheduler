@@ -199,6 +199,52 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+        [WebMethod]
+        public static string GetAssetCategories()
+        {
+            try
+            {
+                var categories = dbContext.GetAssetCategories();
+
+                return JsonConvert.SerializeObject(categories);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string AddCategory(string categoryName, int? parentCategoryId)
+        {
+            try
+            {
+                int result = dbContext.AddCategory(categoryName, parentCategoryId);
+
+                if (result == -1)
+                {
+                    return JsonConvert.SerializeObject(new
+                    {
+                        success = false,
+                        message = "This category already exists under the selected parent."
+                    });
+                }
+
+                return JsonConvert.SerializeObject(new
+                {
+                    success = true,
+                    message = "Category added successfully.",
+                    newCategoryId = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    error = ex.Message
+                });
+            }
+        }
 
         [WebMethod]
         public static string UpdateAsset(object assetData)

@@ -5,6 +5,70 @@ var reservationModal;
 var registrationModal;
 var assetEditorModal;
 var createAssetModal;
+var addAssetCategoryModal;
+
+var addAssetCategoryModalEl = `
+    <div class="modal fade" id="addAssetCategoryModal" tabindex="-1" aria-labelledby="addAssetCategoryModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+          <div class="modal-header">
+            <h5 class="modal-title" id="addAssetCategoryModalLabel">Add Asset Category</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body">
+            <form id="addAssetCategoryForm">
+              <div class="mb-3">
+                <label for="parentCategorySelect" class="form-label">Parent Category</label>
+                <select id="parentCategorySelect" class="form-select">
+                  <option value="">-- Add as Main Category --</option>
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="assetCategoryName" class="form-label">Category Name</label>
+                <input type="text" id="assetCategoryName" class="form-control" required>
+              </div>
+            </form>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveAssetCategory()">Save</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    `;
+
+function openAddAssetCategoryModal() {
+    console.log("Opening add asset category modal...");
+
+    // 1️⃣ Check if modal exists
+    let modalElement = document.getElementById('addAssetCategoryModal');
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', addAssetCategoryModalEl);
+        modalElement = document.getElementById('addAssetCategoryModal');
+    }
+
+    // 2️⃣ Verify that insertion succeeded
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static'
+    });
+    modalInstance.show();
+
+    console.log("✅ Modal opened successfully.");
+    loadParentCategoryOptions();
+}
 
 var alertModalEl = "<div class='modal fade' id='alertModal' role='dialog'>" +
     "<div class='modal-dialog'>" +
@@ -234,7 +298,7 @@ let creatAssetModalEl = `
 <div class="modal fade" id="createAssetModal" tabindex="-1" aria-labelledby="createAssetModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      
+        
       <div class="modal-header">
         <h5 class="modal-title" id="createAssetModalLabel">Create Asset</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -242,12 +306,23 @@ let creatAssetModalEl = `
       
       <div class="modal-body">
         <form id="createAssetForm">
-          
+
+          <div class="mb-3">
+            <label for="createAssetCategory" class="form-label">Asset Category</label>
+            <div class="d-flex gap-2">
+              <select id="createAssetCategory" class="form-select" required>
+                <option value="">-- Select a Category --</option>
+              </select>
+              <button type="button" class="btn btn-primary" onclick="addCategory()">+</button>
+              <button type="button" class="btn btn-primary" onclick="EditCategory()">✎</button>
+            </div>
+          </div>
+
           <div class="mb-3">
             <label for="createAssetName" class="form-label">Asset Name</label>
             <input type="text" id="createAssetName" class="form-control" required>
           </div>
-          
+
           <div class="mb-3">
             <label for="createQuantity" class="form-label">Quantity</label>
             <input type="number" id="createQuantity" class="form-control" min="1" required>
@@ -263,6 +338,7 @@ let creatAssetModalEl = `
   </div>
 </div>
 `;
+
 
 let assetEditorModalEl = `
 <div class="modal fade" id="assetEditorModal" tabindex="-1" aria-labelledby="assetEditorModalLabel" aria-hidden="true">

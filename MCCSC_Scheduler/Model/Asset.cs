@@ -7,6 +7,7 @@ namespace MCCSC_Scheduler.Model
         public int AssetID { get; set; }
         public string AssetName { get; set; }
         public int Quantity { get; set; }
+        public int CategoryID { get; set; }
     }
 }
     
