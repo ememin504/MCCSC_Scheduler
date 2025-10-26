@@ -286,6 +286,46 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+        [WebMethod]
+        public static string PrioritizeEvent(int eventID) {
+            try
+            {
+                DBContext dbContext = new DBContext();
+                bool success = dbContext.PrioritizeEvent(eventID); // ✅ pass eventID
 
+                var result = new
+                {
+                    success = success,
+                    message = success ? "Event prioritized successfully." : "Failed to prioritize event."
+                };
+
+                return JsonConvert.SerializeObject(result);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string UnprioritizeEvent(int eventID)
+        {
+            try
+            {
+                DBContext dbContext = new DBContext();
+                bool success = dbContext.UnprioritizeEvent(eventID); // ✅ pass eventID
+
+                var result = new
+                {
+                    success = success,
+                    message = success ? "Event unprioritized successfully." : "Failed to unprioritize event."
+                };
+                return JsonConvert.SerializeObject(result);
+
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
     }
 }

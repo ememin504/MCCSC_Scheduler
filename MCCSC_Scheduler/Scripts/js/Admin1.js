@@ -89,9 +89,13 @@ function getEvents() {
                 tbody.innerHTML = `<tr><td colspan="9" class="text-center">No User found</td></tr>`;
                 return;
             }
-
+            
             // Loop through the data and build table rows
             data.forEach(req => {
+                var actionType = "";
+                var actionType = req.IsPrioritized ? "Unprioritize" : "Prioritize";
+                var buttonClass = actionType === "Prioritize" ? "btn btn-success" : "btn btn-danger";
+
                 let row = `
                     <tr>
                         <td>${req.EventID}</td>
@@ -102,6 +106,11 @@ function getEvents() {
                         <td>${req.OrganizationType}</td>
                         <td>${req.IsPrioritized}</td>
                         <td>${req.IsRecurring}</td>
+                        <td>
+                            <button class="${buttonClass}"  onclick="prioritizeEvent('${actionType}', ${req.EventID}); return false;">
+                                ${actionType}
+                            </button>
+                        </td>
                     </tr>
                 `;
                 tbody.innerHTML += row;
@@ -113,6 +122,34 @@ function getEvents() {
     });
 }
 
+function prioritizeEvent(actionType, eventID) {
+    var webMethodlink = "";
+    if (actionType == "Prioritize") {
+        console.log("prioritizing event", eventID);
+        webMethodlink = "AdminDashboard1.aspx/PrioritizeEvent";
+    }
+    else if (actionType == "Unprioritize") {
+        console.log("unprioritizing event", eventID);
+        webMethodlink = "AdminDashboard1.aspx/UnprioritizeEvent";
+    }
+    else {
+        console.log("Button Action is not determined!");
+    }
+    $.ajax({
+        type: "POST",
+        url: webMethodlink,
+        data: JSON.stringify({ eventID: eventID }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response);
+            getEvents();
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+        });
+}
 function getUsers() {
     $.ajax({
         type: "POST",

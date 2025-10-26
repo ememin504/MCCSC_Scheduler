@@ -1224,5 +1224,35 @@ namespace MCCSC_Scheduler.Database
             return JsonConvert.SerializeObject(events);
         }
 
+        public bool PrioritizeEvent(int eventID) {
+            string query = @"UPDATE Events SET isPrioritized = 1 WHERE event_id = @eventID";
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@eventID", eventID); // ✅ Add parameter
+
+                    int rowsAffected = cmd.ExecuteNonQuery(); // ✅ ExecuteNonQuery for UPDATE
+                    return rowsAffected > 0; // ✅ Return true if update succeeded
+                }
+            }
+        }
+        public bool UnprioritizeEvent(int eventID)
+        {
+            string query = @"UPDATE Events SET isPrioritized = 0 WHERE event_id = @eventID";
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@eventID", eventID); // ✅ Add parameter
+
+                    int rowsAffected = cmd.ExecuteNonQuery(); // ✅ ExecuteNonQuery for UPDATE
+                    return rowsAffected > 0; // ✅ Return true if update succeeded
+                }
+            }
+        }
+
     }
 }
