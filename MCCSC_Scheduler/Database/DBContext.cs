@@ -89,6 +89,9 @@ namespace MCCSC_Scheduler.Database
                 conn.Dispose();
             }
         }
+        
+ //User Section ========================================================================================================================
+
         // Authenticate User
         // Authenticate User (instance method, not static)
         public UserDTO AuthenticateUser(string username, string password)
@@ -167,127 +170,6 @@ namespace MCCSC_Scheduler.Database
                 return user;
             }
         }
-
-
-        /*public UserDTO GetUserInfo(int userId)
-        {
-            UserDTO user = null;
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                conn.Open();
-                string query = "SELECT user_id, username, role_id, email FROM Users WHERE user_id = @userId";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@userId", userId);
-
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            user = new UserDTO
-                            {
-                                UserID = reader.GetInt32(reader.GetOrdinal("user_id")),
-                                UserName = reader.GetString(reader.GetOrdinal("username")),
-                                RoleID = reader.GetInt32(reader.GetOrdinal("role_id")),
-                                Email = reader.GetString(reader.GetOrdinal("email"))
-                            };
-                        }
-                    }
-                }
-            }
-
-            return user;
-        }*/
-
-        public List<AssetDTO> GetAssets()
-        {
-            List<AssetDTO> assets = new List<AssetDTO>();
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                conn.Open();
-                string query = "SELECT asset_id, asset_name, quantity_available, isActive FROM Assets";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                using (SqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        assets.Add(new AssetDTO
-                        {
-                            AssetId = reader.GetInt32(0),
-                            AssetName = reader.GetString(1),
-                            Quantity = reader.GetInt32(2),
-                            IsActive = reader.GetBoolean(3)
-                        });
-                    }
-                }
-            }
-
-            return assets; // ✅ returns List<AssetDTO>
-        }
-
-
-
-
-        public string GenerateOTP(int userID)
-        {
-            Random rnd = new Random();
-            string otpCode = rnd.Next(100000, 999999).ToString();
-
-            // Store OTP
-            string storeResult = StoreOtp(userID, otpCode);
-            // Send OTP via email
-            //string emailResult = OTPtoEmail(userID, otpCode);
-
-            return $"Generated OTP: {otpCode}, Store Result: {storeResult}";
-            // Email Result: { emailResult}
-        }
-
-
-        public string StoreOtp(int userID, string otp)
-        {
-            string checkQuery = "SELECT COUNT(*) FROM UserOTP WHERE otp_code = @otp";
-            string insertQuery = "INSERT INTO UserOTP (user_id, otp_code, expiration_time) VALUES (@userID, @otp, @expire_time)";
-            string expire_time = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-dd HH:mm:ss"); // OTP valid for 5 minutes
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                {
-                    conn.Open();
-
-                    // Step 1: Check if OTP already exists
-                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
-                    {
-                        checkCmd.Parameters.AddWithValue("@otp", otp);
-                        int count = (int)checkCmd.ExecuteScalar();
-
-                        if (count > 0)
-                        {
-                            return "Duplicate OTP detected. Please generate a new one.";
-                        }
-                    }
-
-                    // Step 2: Insert new OTP if not duplicate
-                    using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
-                    {
-                        insertCmd.Parameters.AddWithValue("@userID", userID);
-                        insertCmd.Parameters.AddWithValue("@otp", otp);
-                        insertCmd.Parameters.AddWithValue("@expire_time", expire_time);
-
-                        int rowsAffected = insertCmd.ExecuteNonQuery();
-
-                        return rowsAffected > 0 ? "OTP stored successfully." : "Failed to store OTP.";
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                return $"Error: {ex.Message}";
-            }
-        }
         public string StoreRegistration(UserDTO userDTO) {
             Console.WriteLine(userDTO);
             string query = @"INSERT INTO RegistrationRequests
@@ -357,173 +239,7 @@ namespace MCCSC_Scheduler.Database
                 return $"Error in GetRegistrationRequests: {ex.Message}";
             }
         }
-        public string GetReservationRequest() {
-            string query = @"SELECT * FROM Reservation WHERE status_id = 2";
-            List<object> requests = new List<object>();
 
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                {
-                    conn.Open();
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
-                    {
-                        using (SqlDataReader reader = cmd.ExecuteReader())
-                        {
-
-                            while (reader.Read())
-                            {
-                                requests.Add(new
-                                {
-                                    ReservationID = reader["reservation_id"],
-                                    ClientID = reader["client_id"],
-                                    StatusID = reader["status_id"],
-                                    Remarks = reader["remarks"],
-                                    EventID = reader["event_id"],
-                                    Reference = reader["hashed_reference"]
-                                });                        
-                            }
-                        }
-                    }
-                }
-                return JsonConvert.SerializeObject(requests);
-            }
-            catch (Exception ex)
-            {
-                return $"Error in GetReservationRequest: {ex.Message}";
-            }
-        }
-        public string GetRequestInfo(int reservationID, int clientID, int statusID, int eventID)
-        {
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                conn.Open();
-
-                // 1️⃣ Get user_id using ClientID
-                string getUserIdQuery = @"SELECT user_id FROM Client WHERE client_id = @ClientID";
-                int userID;
-                using (SqlCommand cmd = new SqlCommand(getUserIdQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@ClientID", clientID);
-                    userID = Convert.ToInt32(cmd.ExecuteScalar());
-                }
-
-                // 2️⃣ Get client info using user_id
-                string firstName = "", middleInitial = "", lastName = "";
-                string getClientInfoQuery = @"SELECT first_name, middle_initial, last_name FROM Users WHERE user_id = @UserID";
-                using (SqlCommand cmd = new SqlCommand(getClientInfoQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userID);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            firstName = reader["first_name"].ToString();
-                            middleInitial = reader["middle_initial"].ToString();
-                            lastName = reader["last_name"].ToString();
-                        }
-                    }
-                }
-
-                // 3️⃣ Get organization_id
-                int organizationID;
-                string getOrgIdQuery = @"SELECT organization_id FROM Client WHERE client_id = @ClientID";
-                using (SqlCommand cmd = new SqlCommand(getOrgIdQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@ClientID", clientID);
-                    organizationID = Convert.ToInt32(cmd.ExecuteScalar());
-                }
-
-                // 4️⃣ Get organization_name
-                string organizationName = "";
-                string getOrgNameQuery = @"SELECT organization_name FROM Organization WHERE organization_id = @OrganizationID";
-                using (SqlCommand cmd = new SqlCommand(getOrgNameQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@OrganizationID", organizationID);
-                    organizationName = cmd.ExecuteScalar()?.ToString() ?? "";
-                }
-
-                // 5️⃣ Get status_name
-                string statusName = "";
-                string getStatusNameQuery = @"SELECT status_name FROM reservation_status WHERE status_id = @StatusID";
-                using (SqlCommand cmd = new SqlCommand(getStatusNameQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@StatusID", statusID);
-                    statusName = cmd.ExecuteScalar()?.ToString() ?? "";
-                }
-                // 5️⃣ Get status_name and quantity
-                List<object> assets = new List<object>();
-
-                string query = @"
-                            SELECT a.asset_name, aor.asset_quantity
-                            FROM AssetOnReservation aor
-                            INNER JOIN Assets a ON aor.asset_id = a.asset_id
-                            WHERE aor.reservation_id = @ReservationID";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@ReservationID", reservationID);
-
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            assets.Add(new
-                            {
-                                AssetName = reader["asset_name"].ToString(),
-                                Quantity = Convert.ToInt32(reader["asset_quantity"])
-                            });
-                        }
-                    }
-                }
-
-                List<object> date = new List<object>();
-
-                string dateQuery = @"SELECT date, start_time, end_time FROM Reservation_Dates WHERE reservation_id = @ReservationID";
-
-                 using (SqlCommand cmd = new SqlCommand(dateQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@ReservationID", reservationID);
-
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            date.Add(new
-                            {
-                                Date = reader["date"].ToString(),
-                                StartTime = reader["start_time"].ToString(),
-                                EndTime = reader["end_time"].ToString(),
-                            });
-                        }
-                    }
-                }
-                string eventName = "";
-                string getEventNameQuery = @"SELECT title FROM Events WHERE event_id = @EventID";
-                using (SqlCommand cmd = new SqlCommand(getEventNameQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@EventID", eventID);
-                    eventName = cmd.ExecuteScalar()?.ToString() ?? "";
-                }
-                // ✅ Combine all data into JSON
-                var result = new
-                {
-                    Client = new
-                    {
-                        FirstName = firstName,
-                        MiddleInitial = middleInitial,
-                        LastName = lastName
-                    },
-                    Organization = organizationName,
-                    Status = statusName,
-                    Date = date,
-                    Asset = assets,
-                    Event = eventName
-                };
-
-                return JsonConvert.SerializeObject(result, Formatting.Indented);
-            }
-        }
         public string GetUser()
         {
             string query = @"SELECT user_id, first_name, middle_initial, last_name, role_id, username, email FROM Users";
@@ -681,6 +397,34 @@ namespace MCCSC_Scheduler.Database
             }
         }
 
+//Asset Section========================================================================================================================
+        public List<AssetDTO> GetAssets()
+        {
+            List<AssetDTO> assets = new List<AssetDTO>();
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                string query = "SELECT asset_id, asset_name, quantity_available, isActive FROM Assets";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        assets.Add(new AssetDTO
+                        {
+                            AssetId = reader.GetInt32(0),
+                            AssetName = reader.GetString(1),
+                            Quantity = reader.GetInt32(2),
+                            IsActive = reader.GetBoolean(3)
+                        });
+                    }
+                }
+            }
+
+            return assets; // ✅ returns List<AssetDTO>
+        }
         public string GetAssetRecords()
         {
             string query = "SELECT asset_id, asset_name, quantity_available, isActive FROM Assets";
@@ -875,6 +619,62 @@ namespace MCCSC_Scheduler.Database
             }
         }
 
+ //OTP Section ========================================================================================================================
+        public string GenerateOTP(int userID)
+        {
+            Random rnd = new Random();
+            string otpCode = rnd.Next(100000, 999999).ToString();
+
+            // Store OTP
+            string storeResult = StoreOtp(userID, otpCode);
+            // Send OTP via email
+            //string emailResult = OTPtoEmail(userID, otpCode);
+
+            return $"Generated OTP: {otpCode}, Store Result: {storeResult}";
+            // Email Result: { emailResult}
+        }
+
+        public string StoreOtp(int userID, string otp)
+        {
+            string checkQuery = "SELECT COUNT(*) FROM UserOTP WHERE otp_code = @otp";
+            string insertQuery = "INSERT INTO UserOTP (user_id, otp_code, expiration_time) VALUES (@userID, @otp, @expire_time)";
+            string expire_time = DateTime.Now.AddMinutes(5).ToString("yyyy-MM-dd HH:mm:ss"); // OTP valid for 5 minutes
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    // Step 1: Check if OTP already exists
+                    using (SqlCommand checkCmd = new SqlCommand(checkQuery, conn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@otp", otp);
+                        int count = (int)checkCmd.ExecuteScalar();
+
+                        if (count > 0)
+                        {
+                            return "Duplicate OTP detected. Please generate a new one.";
+                        }
+                    }
+
+                    // Step 2: Insert new OTP if not duplicate
+                    using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
+                    {
+                        insertCmd.Parameters.AddWithValue("@userID", userID);
+                        insertCmd.Parameters.AddWithValue("@otp", otp);
+                        insertCmd.Parameters.AddWithValue("@expire_time", expire_time);
+
+                        int rowsAffected = insertCmd.ExecuteNonQuery();
+
+                        return rowsAffected > 0 ? "OTP stored successfully." : "Failed to store OTP.";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"Error: {ex.Message}";
+            }
+        }
         public string OTPtoEmail(int UserID, string Otp) { 
             string email = "";
             string getEmailQuery = "SELECT email FROM Users WHERE user_id = @UserID";
@@ -943,17 +743,17 @@ namespace MCCSC_Scheduler.Database
             int userId = Convert.ToInt32(data["UserID"]);
 
             string query = @"
-        SELECT 
-            (U.first_name + ' ' + U.middle_initial + ' ' + U.last_name) AS FullName,
-            C.client_id,
-            O.organization_id,
-            O.organization_name,
-            O.organization_type
-        FROM Users U
-        INNER JOIN Client C ON U.user_id = C.user_id
-        INNER JOIN Organization O ON C.organization_id = O.organization_id
-        WHERE U.user_id = @UserID
-    ";
+                            SELECT 
+                                (U.first_name + ' ' + U.middle_initial + ' ' + U.last_name) AS FullName,
+                                C.client_id,
+                                O.organization_id,
+                                O.organization_name,
+                                O.organization_type
+                            FROM Users U
+                            INNER JOIN Client C ON U.user_id = C.user_id
+                            INNER JOIN Organization O ON C.organization_id = O.organization_id
+                            WHERE U.user_id = @UserID
+                        ";
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             using (SqlCommand cmd = new SqlCommand(query, conn))
@@ -984,7 +784,178 @@ namespace MCCSC_Scheduler.Database
             return new JavaScriptSerializer().Serialize(new { error = "Client not found" });
         }
 
+//Reservation Section ========================================================================================================================
+        public string GetReservationRequest()
+        {
+            string query = @"SELECT * FROM Reservation WHERE status_id = 2";
+            List<object> requests = new List<object>();
 
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+
+                            while (reader.Read())
+                            {
+                                requests.Add(new
+                                {
+                                    ReservationID = reader["reservation_id"],
+                                    ClientID = reader["client_id"],
+                                    StatusID = reader["status_id"],
+                                    Remarks = reader["remarks"],
+                                    EventID = reader["event_id"],
+                                    Reference = reader["hashed_reference"]
+                                });
+                            }
+                        }
+                    }
+                }
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return $"Error in GetReservationRequest: {ex.Message}";
+            }
+        }
+        public string GetRequestInfo(int reservationID, int clientID, int statusID, int eventID)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                // 1️⃣ Get user_id using ClientID
+                string getUserIdQuery = @"SELECT user_id FROM Client WHERE client_id = @ClientID";
+                int userID;
+                using (SqlCommand cmd = new SqlCommand(getUserIdQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ClientID", clientID);
+                    userID = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // 2️⃣ Get client info using user_id
+                string firstName = "", middleInitial = "", lastName = "";
+                string getClientInfoQuery = @"SELECT first_name, middle_initial, last_name FROM Users WHERE user_id = @UserID";
+                using (SqlCommand cmd = new SqlCommand(getClientInfoQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@UserID", userID);
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            firstName = reader["first_name"].ToString();
+                            middleInitial = reader["middle_initial"].ToString();
+                            lastName = reader["last_name"].ToString();
+                        }
+                    }
+                }
+
+                // 3️⃣ Get organization_id
+                int organizationID;
+                string getOrgIdQuery = @"SELECT organization_id FROM Client WHERE client_id = @ClientID";
+                using (SqlCommand cmd = new SqlCommand(getOrgIdQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ClientID", clientID);
+                    organizationID = Convert.ToInt32(cmd.ExecuteScalar());
+                }
+
+                // 4️⃣ Get organization_name
+                string organizationName = "";
+                string getOrgNameQuery = @"SELECT organization_name FROM Organization WHERE organization_id = @OrganizationID";
+                using (SqlCommand cmd = new SqlCommand(getOrgNameQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@OrganizationID", organizationID);
+                    organizationName = cmd.ExecuteScalar()?.ToString() ?? "";
+                }
+
+                // 5️⃣ Get status_name
+                string statusName = "";
+                string getStatusNameQuery = @"SELECT status_name FROM reservation_status WHERE status_id = @StatusID";
+                using (SqlCommand cmd = new SqlCommand(getStatusNameQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@StatusID", statusID);
+                    statusName = cmd.ExecuteScalar()?.ToString() ?? "";
+                }
+                // 5️⃣ Get status_name and quantity
+                List<object> assets = new List<object>();
+
+                string query = @"
+                            SELECT a.asset_name, aor.asset_quantity
+                            FROM AssetOnReservation aor
+                            INNER JOIN Assets a ON aor.asset_id = a.asset_id
+                            WHERE aor.reservation_id = @ReservationID";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ReservationID", reservationID);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            assets.Add(new
+                            {
+                                AssetName = reader["asset_name"].ToString(),
+                                Quantity = Convert.ToInt32(reader["asset_quantity"])
+                            });
+                        }
+                    }
+                }
+
+                List<object> date = new List<object>();
+
+                string dateQuery = @"SELECT date, start_time, end_time FROM Reservation_Dates WHERE reservation_id = @ReservationID";
+
+                using (SqlCommand cmd = new SqlCommand(dateQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ReservationID", reservationID);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            date.Add(new
+                            {
+                                Date = reader["date"].ToString(),
+                                StartTime = reader["start_time"].ToString(),
+                                EndTime = reader["end_time"].ToString(),
+                            });
+                        }
+                    }
+                }
+                string eventName = "";
+                string getEventNameQuery = @"SELECT title FROM Events WHERE event_id = @EventID";
+                using (SqlCommand cmd = new SqlCommand(getEventNameQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@EventID", eventID);
+                    eventName = cmd.ExecuteScalar()?.ToString() ?? "";
+                }
+                // ✅ Combine all data into JSON
+                var result = new
+                {
+                    Client = new
+                    {
+                        FirstName = firstName,
+                        MiddleInitial = middleInitial,
+                        LastName = lastName
+                    },
+                    Organization = organizationName,
+                    Status = statusName,
+                    Date = date,
+                    Asset = assets,
+                    Event = eventName
+                };
+
+                return JsonConvert.SerializeObject(result, Formatting.Indented);
+            }
+        }
+        // ============================================================
+        // ===============  SUBMIT RESERVATION METHOD  ================
+        // ============================================================
         public string SubmitReservation(ReservationDTO reservationData)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
@@ -1013,31 +984,128 @@ namespace MCCSC_Scheduler.Database
                 {
                     try
                     {
-                        // 1️⃣ Check or insert event
+                        // 1️⃣ Check for date conflicts (supports overnight)
+                        foreach (var d in dates)
+                        {
+                            DateTime dateOnly = d.Date.Date;
+                            TimeSpan startTime = TimeSpan.Parse(d.StartTime);
+                            TimeSpan endTime = TimeSpan.Parse(d.EndTime);
+
+                            // Split overnight reservations into two checks
+                            if (startTime < endTime)
+                            {
+                                // Normal reservation (same day)
+                                string conflictQuery = @"
+SELECT COUNT(*) FROM Reservation_Dates
+WHERE date = @Date
+AND (
+    (@StartTime < @EndTime AND (
+        (@StartTime BETWEEN start_time AND end_time)
+        OR (@EndTime BETWEEN start_time AND end_time)
+        OR (start_time BETWEEN @StartTime AND @EndTime)
+        OR (end_time BETWEEN @StartTime AND @EndTime)
+    ))
+)";
+                                using (SqlCommand checkCmd = new SqlCommand(conflictQuery, conn, trans))
+                                {
+                                    checkCmd.Parameters.AddWithValue("@Date", dateOnly);
+                                    checkCmd.Parameters.AddWithValue("@StartTime", startTime);
+                                    checkCmd.Parameters.AddWithValue("@EndTime", endTime);
+
+                                    int exists = (int)checkCmd.ExecuteScalar();
+                                    if (exists > 0)
+                                    {
+                                        trans.Rollback();
+                                        return JsonConvert.SerializeObject(new
+                                        {
+                                            success = false,
+                                            error = $"Reservation failed: the date {dateOnly:yyyy-MM-dd} {startTime}-{endTime} is already booked."
+                                        });
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                // Overnight reservation (spans two dates)
+                                // 1️⃣ Part 1: from startTime to 23:59:59 on the same day
+                                string conflictQuery1 = @"
+SELECT COUNT(*) FROM Reservation_Dates
+WHERE date = @Date
+AND (
+    (@StartTime BETWEEN start_time AND end_time)
+    OR (start_time BETWEEN @StartTime AND CAST('23:59:59.9999999' AS TIME))
+)";
+                                using (SqlCommand cmd1 = new SqlCommand(conflictQuery1, conn, trans))
+                                {
+                                    cmd1.Parameters.AddWithValue("@Date", dateOnly);
+                                    cmd1.Parameters.AddWithValue("@StartTime", startTime);
+                                    int exists1 = (int)cmd1.ExecuteScalar();
+                                    if (exists1 > 0)
+                                    {
+                                        trans.Rollback();
+                                        return JsonConvert.SerializeObject(new
+                                        {
+                                            success = false,
+                                            error = $"Reservation failed: the date {dateOnly:yyyy-MM-dd} {startTime}-{endTime} (overnight) is already booked."
+                                        });
+                                    }
+                                }
+
+                                // 2️⃣ Part 2: from 00:00:00 to endTime on the next day
+                                string conflictQuery2 = @"
+SELECT COUNT(*) FROM Reservation_Dates
+WHERE date = @NextDate
+AND (
+    (@EndTime BETWEEN start_time AND end_time)
+    OR (start_time BETWEEN CAST('00:00:00' AS TIME) AND @EndTime)
+)";
+                                using (SqlCommand cmd2 = new SqlCommand(conflictQuery2, conn, trans))
+                                {
+                                    cmd2.Parameters.AddWithValue("@NextDate", dateOnly.AddDays(1));
+                                    cmd2.Parameters.AddWithValue("@EndTime", endTime);
+                                    int exists2 = (int)cmd2.ExecuteScalar();
+                                    if (exists2 > 0)
+                                    {
+                                        trans.Rollback();
+                                        return JsonConvert.SerializeObject(new
+                                        {
+                                            success = false,
+                                            error = $"Reservation failed: the date {dateOnly.AddDays(1):yyyy-MM-dd} 00:00-{endTime} (overnight) is already booked."
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
+                        // 2️⃣ Insert or get Event
                         string checkEventQuery = "SELECT event_id FROM Events WHERE title = @Title";
                         using (SqlCommand checkCmd = new SqlCommand(checkEventQuery, conn, trans))
                         {
                             checkCmd.Parameters.AddWithValue("@Title", eventName);
                             object result = checkCmd.ExecuteScalar();
+                            eventId = result != null ? Convert.ToInt32(result) : 0;
+                        }
 
-                            if (result != null)
-                                eventId = Convert.ToInt32(result);
-                            else
+                        if (eventId == 0)
+                        {
+                            string insertEventQuery = @"
+INSERT INTO Events (title, description, organization_id)
+OUTPUT INSERTED.event_id
+VALUES (@Title, @Description, @OrganizationID)";
+                            using (SqlCommand insertCmd = new SqlCommand(insertEventQuery, conn, trans))
                             {
-                                string insertEventQuery = "INSERT INTO Events (title, description, organization_id) OUTPUT INSERTED.event_id VALUES (@Title, @Description, @OrganizationID)";
-                                using (SqlCommand insertCmd = new SqlCommand(insertEventQuery, conn, trans))
-                                {
-                                    insertCmd.Parameters.AddWithValue("@Title", eventName);
-                                    insertCmd.Parameters.AddWithValue("@Description", eventDesc);
-                                    insertCmd.Parameters.AddWithValue("@OrganizationID", orgID);
-                                    eventId = (int)insertCmd.ExecuteScalar();
-                                }
+                                insertCmd.Parameters.AddWithValue("@Title", eventName);
+                                insertCmd.Parameters.AddWithValue("@Description", eventDesc);
+                                insertCmd.Parameters.AddWithValue("@OrganizationID", orgID);
+                                eventId = (int)insertCmd.ExecuteScalar();
                             }
                         }
 
-                        // 2️⃣ Insert Reservation
-                        string insertReservation = @"INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
-                                           OUTPUT INSERTED.reservation_id VALUES (@ClientID, @StatusID, @EventID, @Reference)";
+                        // 3️⃣ Insert Reservation
+                        string insertReservation = @"
+INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
+OUTPUT INSERTED.reservation_id
+VALUES (@ClientID, @StatusID, @EventID, @Reference)";
                         using (SqlCommand cmd = new SqlCommand(insertReservation, conn, trans))
                         {
                             cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -1049,11 +1117,12 @@ namespace MCCSC_Scheduler.Database
                             reservationId = (int)cmd.ExecuteScalar();
                         }
 
-                        // 3️⃣ Insert Assets
+                        // 4️⃣ Insert Assets
                         foreach (var asset in assets)
                         {
-                            string insertAssetQuery = @"INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
-                                             VALUES (@ReservationID, @AssetID, @Qty)";
+                            string insertAssetQuery = @"
+INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
+VALUES (@ReservationID, @AssetID, @Qty)";
                             using (SqlCommand assetCmd = new SqlCommand(insertAssetQuery, conn, trans))
                             {
                                 assetCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1063,58 +1132,77 @@ namespace MCCSC_Scheduler.Database
                             }
                         }
 
-                        // 4️⃣ Insert Dates (Check if date already exists)
+                        // 5️⃣ Insert Dates (split overnight if needed)
                         foreach (var d in dates)
                         {
-                            string checkDateQuery = @"SELECT COUNT(*) FROM Reservation_Dates 
-                                              WHERE date = @Date 
-                                              AND ((@StartTime BETWEEN start_time AND end_time)
-                                               OR (@EndTime BETWEEN start_time AND end_time)
-                                               OR (start_time BETWEEN @StartTime AND @EndTime)
-                                               OR (end_time BETWEEN @StartTime AND @EndTime))";
-                            using (SqlCommand checkDateCmd = new SqlCommand(checkDateQuery, conn, trans))
-                            {
-                                checkDateCmd.Parameters.AddWithValue("@Date", d.Date);
-                                checkDateCmd.Parameters.AddWithValue("@StartTime", d.StartTime);
-                                checkDateCmd.Parameters.AddWithValue("@EndTime", d.EndTime);
+                            DateTime dateOnly = d.Date.Date;
+                            TimeSpan startTime = TimeSpan.Parse(d.StartTime);
+                            TimeSpan endTime = TimeSpan.Parse(d.EndTime);
 
-                                int exists = (int)checkDateCmd.ExecuteScalar();
-                                if (exists > 0)
+                            if (startTime < endTime)
+                            {
+                                // Normal reservation
+                                string insertDateQuery = @"
+INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
+                                using (SqlCommand dateCmd = new SqlCommand(insertDateQuery, conn, trans))
                                 {
-                                    trans.Rollback();
-                                    return JsonConvert.SerializeObject(new
-                                    {
-                                        success = false,
-                                        error = $"The event date {d.Date:yyyy-MM-dd} ({d.StartTime} - {d.EndTime}) is already booked."
-                                    });
+                                    dateCmd.Parameters.AddWithValue("@ReservationID", reservationId);
+                                    dateCmd.Parameters.AddWithValue("@Date", dateOnly);
+                                    dateCmd.Parameters.AddWithValue("@StartTime", startTime);
+                                    dateCmd.Parameters.AddWithValue("@EndTime", endTime);
+                                    dateCmd.ExecuteNonQuery();
                                 }
                             }
-
-                            string insertDateQuery = @"INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
-                                             VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
-                            using (SqlCommand dateCmd = new SqlCommand(insertDateQuery, conn, trans))
+                            else
                             {
-                                dateCmd.Parameters.AddWithValue("@ReservationID", reservationId);
-                                dateCmd.Parameters.AddWithValue("@Date", d.Date);
-                                dateCmd.Parameters.AddWithValue("@StartTime", d.StartTime);
-                                dateCmd.Parameters.AddWithValue("@EndTime", d.EndTime);
-                                dateCmd.ExecuteNonQuery();
+                                // Overnight: split into two rows
+                                // Day 1: startTime → 23:59:59
+                                string insertDate1 = @"
+INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+VALUES (@ReservationID, @Date, @StartTime, CAST('23:59:59.9999999' AS TIME))";
+                                using (SqlCommand cmd1 = new SqlCommand(insertDate1, conn, trans))
+                                {
+                                    cmd1.Parameters.AddWithValue("@ReservationID", reservationId);
+                                    cmd1.Parameters.AddWithValue("@Date", dateOnly);
+                                    cmd1.Parameters.AddWithValue("@StartTime", startTime);
+                                    cmd1.ExecuteNonQuery();
+                                }
+
+                                // Day 2: 00:00:00 → endTime
+                                string insertDate2 = @"
+INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+VALUES (@ReservationID, @NextDate, CAST('00:00:00' AS TIME), @EndTime)";
+                                using (SqlCommand cmd2 = new SqlCommand(insertDate2, conn, trans))
+                                {
+                                    cmd2.Parameters.AddWithValue("@ReservationID", reservationId);
+                                    cmd2.Parameters.AddWithValue("@NextDate", dateOnly.AddDays(1));
+                                    cmd2.Parameters.AddWithValue("@EndTime", endTime);
+                                    cmd2.ExecuteNonQuery();
+                                }
                             }
                         }
 
+                        // 6️⃣ Commit transaction
                         trans.Commit();
-                        return "{\"success\":true,\"message\":\"Reservation submitted successfully.\"}";
+                        return JsonConvert.SerializeObject(new
+                        {
+                            success = true,
+                            message = "Reservation submitted successfully."
+                        });
                     }
                     catch (Exception ex)
                     {
                         trans.Rollback();
-                        return "{\"success\":false,\"error\":\"" + ex.Message + "\"}";
+                        return JsonConvert.SerializeObject(new
+                        {
+                            success = false,
+                            error = ex.Message
+                        });
                     }
                 }
             }
         }
-
-
         public string AcceptReservation(ReservationDTO reservationData)
         {
             string updateStatus = @"UPDATE Reservation SET status_id = 3 WHERE reservation_id = @reservationID";
@@ -1175,6 +1263,8 @@ namespace MCCSC_Scheduler.Database
                 return $"Error in GetAcceptedReservation: {ex.Message}";
             }
         }
+
+//Event Management ========================================================================================================================
         public string GetEvents()
         {
             List<EventDTO> events = new List<EventDTO>();
