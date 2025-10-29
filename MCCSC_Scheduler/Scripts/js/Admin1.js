@@ -34,11 +34,12 @@ async function loadParentCategoryOptions() {
 
 document.addEventListener('shown.bs.modal', event => {
     if (event.target.id === 'createAssetModal') {
-        loadAssetCategories();
+        let action = "create"
+        loadAssetCategories(action);
     }
 });
 
-async function loadAssetCategories() {
+async function loadAssetCategories(action) {
     try {
         const response = await fetch('AdminDashboard1.aspx/GetAssetCategories', {
             method: 'POST',
@@ -52,7 +53,7 @@ async function loadAssetCategories() {
         const categories = JSON.parse(data.d); // JSON from backend
         categoriesGlobal = categories;
 
-        populateCategoryDropdown(categories);
+        populateCategoryDropdown(categories, action);
         console.log("Categories loaded:", categories);
         console.log("Categories set for global", categoriesGlobal);
 
@@ -74,10 +75,16 @@ async function loadAssetCategories() {
     }
 }
 
-function populateCategoryDropdown(categories) {
-    const select = document.getElementById('populateAssetCategory');
-    select.innerHTML = '<option value="">-- Select a Category --</option>';
-    select.innerHTML += buildCategoryOptions(categories);
+function populateCategoryDropdown(categories, action) {
+    if (action == "create") {
+        const select = document.getElementById('populateAssetCategory');
+        select.innerHTML = '<option value="">-- Select a Category --</option>';
+        select.innerHTML += buildCategoryOptions(categories);
+    } else if (action == "edit"){
+        const select = document.getElementById('populateEditAssetCategory');
+        select.innerHTML = '<option value="">-- Select a Category --</option>';
+        select.innerHTML += buildCategoryOptions(categories);
+    }
 }
 
 function buildCategoryOptions(categories, parentId = null, level = 0) {
@@ -801,7 +808,7 @@ function createAsset() {
 function saveAssetChanges() {
     const asset_name = document.getElementById("editAssetName").value.trim();
     const qty = document.getElementById("editQuantity").value;
-    const categorySelect = document.getElementById("populateAssetCategory");
+    const categorySelect = document.getElementById("populateEditAssetCategory");
     const categoryId = categorySelect && categorySelect.value ? parseInt(categorySelect.value) : null;
 
     if (!asset_name || !qty || !categoryId) {

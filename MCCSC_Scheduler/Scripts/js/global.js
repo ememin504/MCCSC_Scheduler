@@ -353,9 +353,9 @@ let assetEditorModalEl = `
       <div class="modal-body">
         <form id="editAssetForm">
 
-            <label for="populateAssetCategory" class="form-label">Asset Category</label>
+            <label for="populateEditAssetCategory" class="form-label">Asset Category</label>
             <div class="d-flex gap-2">
-              <select id="populateAssetCategory" class="form-select" required>
+              <select id="populateEditAssetCategory" class="form-select" required>
                 <option value="">-- Select a Category --</option>
               </select>
               <button type="button" class="btn btn-primary" onclick="addCategory()">+</button>
@@ -501,7 +501,8 @@ async function openAssetEditorModal(asset_name, asset_quantity, category_id) {
         await loadAssetCategories(); // uses your existing function
     } else {
         console.log("Using cached categories.");
-        populateCategoryDropdown(categoriesGlobal);
+        let action = "edit";
+        populateCategoryDropdown(categoriesGlobal, action);
     }
 
     // 3️⃣ Fill modal fields
@@ -509,7 +510,7 @@ async function openAssetEditorModal(asset_name, asset_quantity, category_id) {
         document.getElementById('editAssetName').value = asset_name;
         document.getElementById('editQuantity').value = asset_quantity;
 
-        const categorySelect = document.getElementById('populateAssetCategory');
+        const categorySelect = document.getElementById('populateEditAssetCategory');
         if (categorySelect) {
             categorySelect.value = category_id;
 
