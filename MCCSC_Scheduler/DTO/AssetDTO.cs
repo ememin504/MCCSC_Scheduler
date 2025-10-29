@@ -7,5 +7,6 @@
         public int Quantity { get; set; }
         public bool IsActive { get; set; }
         public int CategoryID { get; set; }
+        public string CategoryName { get; set; }
     }
 }

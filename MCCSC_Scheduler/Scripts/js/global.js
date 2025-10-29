@@ -308,9 +308,9 @@ let creatAssetModalEl = `
         <form id="createAssetForm">
 
           <div class="mb-3">
-            <label for="createAssetCategory" class="form-label">Asset Category</label>
+            <label for="populateAssetCategory" class="form-label">Asset Category</label>
             <div class="d-flex gap-2">
-              <select id="createAssetCategory" class="form-select" required>
+              <select id="populateAssetCategory" class="form-select" required>
                 <option value="">-- Select a Category --</option>
               </select>
               <button type="button" class="btn btn-primary" onclick="addCategory()">+</button>
@@ -352,7 +352,16 @@ let assetEditorModalEl = `
       
       <div class="modal-body">
         <form id="editAssetForm">
-          
+
+            <label for="populateAssetCategory" class="form-label">Asset Category</label>
+            <div class="d-flex gap-2">
+              <select id="populateAssetCategory" class="form-select" required>
+                <option value="">-- Select a Category --</option>
+              </select>
+              <button type="button" class="btn btn-primary" onclick="addCategory()">+</button>
+              <button type="button" class="btn btn-primary" onclick="EditCategory()">✎</button>
+            </div>
+
           <div class="mb-3">
             <label for="editAssetName" class="form-label">Asset Name</label>
             <input type="text" id="editAssetName" class="form-control" required>
@@ -475,10 +484,10 @@ function openCreateAssetModal() {
     console.log("✅ Modal opened successfully.");
 }
 
-function openAssetEditorModal(asset_name, asset_quantity) {
+async function openAssetEditorModal(asset_name, asset_quantity, category_id) {
     console.log("Opening asset editor modal...");
 
-    // 1️⃣ Check if modal exists
+    // 1️⃣ Ensure modal exists
     let modalElement = document.getElementById('assetEditorModal');
     if (!modalElement) {
         console.warn("Modal not found — inserting into DOM.");
@@ -486,25 +495,37 @@ function openAssetEditorModal(asset_name, asset_quantity) {
         modalElement = document.getElementById('assetEditorModal');
     }
 
+    // 2️⃣ Ensure categories are loaded before showing modal
+    if (categoriesGlobal.length === 0) {
+        console.log("Loading categories first...");
+        await loadAssetCategories(); // uses your existing function
+    } else {
+        console.log("Using cached categories.");
+        populateCategoryDropdown(categoriesGlobal);
+    }
+
+    // 3️⃣ Fill modal fields
     modalElement.addEventListener('shown.bs.modal', () => {
         document.getElementById('editAssetName').value = asset_name;
         document.getElementById('editQuantity').value = asset_quantity;
+
+        const categorySelect = document.getElementById('populateAssetCategory');
+        if (categorySelect) {
+            categorySelect.value = category_id;
+
+            if (categorySelect.value !== category_id.toString()) {
+                console.warn(`Category ID ${category_id} not found in dropdown.`);
+            }
+        }
     }, { once: true });
 
-    // 2️⃣ Verify that insertion succeeded
-    if (!modalElement) {
-        console.error("❌ Failed to insert modal into DOM!");
-        return;
-    }
-
-    // 3️⃣ Create and show modal
-    const modalInstance = new bootstrap.Modal(modalElement, {
-        backdrop: 'static'
-    });
+    // 4️⃣ Show modal
+    const modalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static' });
     modalInstance.show();
 
     console.log("✅ Modal opened successfully.");
 }
+
 
 
 

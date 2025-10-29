@@ -9,7 +9,10 @@ const roleTypeID = sessionStorage.getItem("role_type_id");
 const roleTypeDescription = sessionStorage.getItem("role_type_description");
 
 console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
-
+// categoryLoader.js
+var categoriesGlobal = []; // initialize as array
+let eventID;
+let assetID = 0;
 async function loadParentCategoryOptions() {
     try {
         const response = await fetch('AdminDashboard1.aspx/GetAssetCategories', {
@@ -34,8 +37,6 @@ document.addEventListener('shown.bs.modal', event => {
         loadAssetCategories();
     }
 });
-// categoryLoader.js
-var categoriesGlobal = []; // initialize as array
 
 async function loadAssetCategories() {
     try {
@@ -74,7 +75,7 @@ async function loadAssetCategories() {
 }
 
 function populateCategoryDropdown(categories) {
-    const select = document.getElementById('createAssetCategory');
+    const select = document.getElementById('populateAssetCategory');
     select.innerHTML = '<option value="">-- Select a Category --</option>';
     select.innerHTML += buildCategoryOptions(categories);
 }
@@ -115,7 +116,7 @@ function saveAssetCategory() {
 
     $.ajax({
         type: "POST",
-        url: "AdminDashboard1.aspx/AddCategory",
+        url: "AdminDashboard1.aspx/AddAssetCategory",
         data: JSON.stringify({ categoryName: categoryName, parentCategoryId: parentId }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -328,7 +329,6 @@ function getUsers() {
         }
     });
 }
-let eventID;
 function getReservationRequests() {
     console.log("getting reservation requests!");
     $.ajax({
@@ -727,10 +727,11 @@ function getAssets() {
                         <td>${req.AssetName}</td>
                         <td>${req.Quantity}</td>
                         <td>${req.CategoryID}</td>
+                        <td>${req.CategoryName}</td>
                         <td>${req.IsActive}</td>
                         <td>
                           <button class="btn btn-primary btn-sm"
-                              onclick="editAsset(${req.AssetId}, '${req.AssetName}', ${req.Quantity})">
+                              onclick="editAsset(${req.AssetId}, '${req.AssetName}', ${req.Quantity},${req.CategoryID},'${req.CategoryName}')">
                               Edit
                           </button>
                            ${
@@ -750,17 +751,17 @@ function getAssets() {
         }
     });
 }
-let assetID = 0;
-function editAsset(asset_id, asset_name, asset_quantity) {
-    console.log("Editing asset with ID:", asset_id, asset_name, asset_quantity);
-    openAssetEditorModal(asset_name, asset_quantity);
+
+function editAsset(asset_id, asset_name, asset_quantity, categor_id, category_name) {
+    console.log("Editing asset with ID:", asset_id, asset_name, asset_quantity, categor_id, category_name);
+    openAssetEditorModal(asset_name, asset_quantity, categor_id, category_name);
     assetID = asset_id;
 }
 
 function createAsset() {
     const asset_name = document.getElementById('createAssetName').value.trim();
     const qty = document.getElementById('createQuantity').value;
-    const categorySelect = document.getElementById("assetCategorySelect");
+    const categorySelect = document.getElementById("populateAssetCategory").value.trim();
     const categoryId = categorySelect ? categorySelect.value : null;
 
     if (!asset_name || !qty || !categoryId) {
@@ -800,18 +801,26 @@ function createAsset() {
 function saveAssetChanges() {
     const asset_name = document.getElementById("editAssetName").value.trim();
     const qty = document.getElementById("editQuantity").value;
+    const categorySelect = document.getElementById("populateAssetCategory");
+    const categoryId = categorySelect && categorySelect.value ? parseInt(categorySelect.value) : null;
 
-    // ✅ 1. Create your data object properly
-    let asset_data = {
-        AssetID: assetID,
+    if (!asset_name || !qty || !categoryId) {
+        alert("Please fill in all required fields and select a category.");
+        return;
+    }
+
+    const asset_data = {
+        AssetID: assetID,              // ✅ include this to identify which asset is being updated
         AssetName: asset_name,
-        Quantity: qty
+        Quantity: parseInt(qty),
+        CategoryID: categoryId
     };
-    console.log(asset_data);
-    // ✅ 2. Send it correctly as JSON to your ASP.NET method
+
+    console.log("Updating asset with data:", asset_data);
+
     $.ajax({
         type: "POST",
-        url: "AdminDashboard1.aspx/UpdateAsset", // <-- Use your update method here
+        url: "AdminDashboard1.aspx/UpdateAsset",
         data: JSON.stringify({ assetData: asset_data }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
@@ -820,20 +829,21 @@ function saveAssetChanges() {
             console.log("✅ Asset updated successfully:", response.d);
             alert("Asset updated successfully!");
 
-            // Optional: close modal after success
+            // Close modal after success
             const modalEl = document.getElementById("assetEditorModal");
             const modalInstance = bootstrap.Modal.getInstance(modalEl);
-            modalInstance.hide();
-            getAssets();
+            if (modalInstance) modalInstance.hide();
 
-            // Optionally reload your asset table or update UI
+            // Reload asset list
+            getAssets();
         },
         error: function (xhr, status, error) {
-            console.error("❌ Error updating asset:", error);
+            console.error("❌ Error updating asset:", error, xhr.responseText);
             alert("Failed to update asset. Please try again.");
         }
     });
 }
+
 function activateAsset(asset_id) {
     console.log("Asset to activate:", asset_id);
 

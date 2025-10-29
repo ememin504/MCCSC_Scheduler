@@ -396,7 +396,7 @@ namespace MCCSC_Scheduler.Database
                 }
             }
         }
-
+        
  //Asset Section========================================================================================================================
         public List<object> GetAssetCategories()
         {
@@ -426,7 +426,7 @@ namespace MCCSC_Scheduler.Database
 
             return categories;
         }
-        public int AddCategory(string categoryName, int? parentCategoryId)
+        public int AddAssetCategory(string categoryName, int? parentCategoryId)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -493,6 +493,7 @@ namespace MCCSC_Scheduler.Database
                             Quantity = reader.GetInt32(2),
                             IsActive = reader.GetBoolean(3),
                             CategoryID = reader.GetInt32(4),
+                            CategoryName = reader.GetString(5)
                         });
                     }
                 }
@@ -502,8 +503,18 @@ namespace MCCSC_Scheduler.Database
         }
         public string GetAssetRecords()
         {
-            string query = "SELECT asset_id, asset_name, quantity_available, isActive, category_id FROM Assets";
-            List<object> requests = new List<object>();
+            string query = @"
+                            SELECT 
+                                a.asset_id, 
+                                a.asset_name, 
+                                a.quantity_available, 
+                                a.isActive, 
+                                a.category_id, 
+                                c.category_name
+                            FROM Assets a
+                            LEFT JOIN AssetCategory c ON a.category_id = c.category_id";
+
+            List<object> assets = new List<object>();
 
             try
             {
@@ -516,28 +527,28 @@ namespace MCCSC_Scheduler.Database
                         {
                             while (reader.Read())
                             {
-                                requests.Add(new
+                                assets.Add(new
                                 {
                                     AssetId = reader["asset_id"],
                                     AssetName = reader["asset_name"],
                                     Quantity = reader["quantity_available"] == DBNull.Value ? "" : reader["quantity_available"].ToString(),
                                     CategoryID = reader["category_id"],
-                                    IsActive = reader["isActive"],
+                                    CategoryName = reader["category_name"],
+                                    IsActive = reader["isActive"]
                                 });
                             }
                         }
                     }
                 }
 
-                // Serialize to JSON for easy return to JS
-                return JsonConvert.SerializeObject(requests);
+                return JsonConvert.SerializeObject(assets);
             }
             catch (Exception ex)
             {
-                return $"Error in GetRegistrationRequests: {ex.Message}";
+                return $"Error in GetAssetRecords: {ex.Message}";
             }
-
         }
+
         public string AddAsset(object assetData)
         {
             try
@@ -577,15 +588,19 @@ namespace MCCSC_Scheduler.Database
             {
                 conn.Open();
 
-                string query = @"UPDATE Assets 
-                         SET asset_name = @name, quantity_available = @qty, updated_at = @update_date
-                         WHERE asset_id = @id";
+                string query = @"UPDATE Assets
+                                SET asset_name = @name,
+                                    quantity_available = @qty,
+                                    category_id = @catID,
+                                    updated_at = @update_date
+                                WHERE asset_id = @id";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.Add("@id", SqlDbType.Int).Value = asset.AssetID;
                     cmd.Parameters.Add("@name", SqlDbType.NVarChar, 255).Value = asset.AssetName;
                     cmd.Parameters.Add("@qty", SqlDbType.Int).Value = asset.Quantity;
+                    cmd.Parameters.Add("@catID", SqlDbType.Int).Value = asset.CategoryID;
                     cmd.Parameters.Add("@update_date", SqlDbType.DateTime).Value = DateTime.Now;
 
                     int rowsAffected = cmd.ExecuteNonQuery();
@@ -596,6 +611,7 @@ namespace MCCSC_Scheduler.Database
 
             return "Asset record updated successfully.";
         }
+
 
         public string ActivateAsset(object assetData)
         {

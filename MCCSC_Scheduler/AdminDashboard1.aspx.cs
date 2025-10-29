@@ -214,11 +214,11 @@ namespace MCCSC_Scheduler
             }
         }
         [WebMethod]
-        public static string AddCategory(string categoryName, int? parentCategoryId)
+        public static string AddAssetCategory(string categoryName, int? parentCategoryId)
         {
             try
             {
-                int result = dbContext.AddCategory(categoryName, parentCategoryId);
+                int result = dbContext.AddAssetCategory(categoryName, parentCategoryId);
 
                 if (result == -1)
                 {
