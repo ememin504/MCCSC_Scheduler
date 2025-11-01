@@ -553,7 +553,18 @@ namespace MCCSC_Scheduler.Database
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                string query = "SELECT asset_id, asset_name, quantity_available, isActive category_id FROM Assets";
+
+                string query = @"
+                                SELECT 
+                                    a.asset_id,
+                                    a.asset_name,
+                                    a.quantity_available,
+                                    a.isActive,
+                                    a.category_id,
+                                    c.category_name
+                                FROM Assets a
+                                INNER JOIN AssetCategory c ON a.category_id = c.category_id
+                                WHERE a.isActive = 1 AND c.isActive = 1";
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 using (SqlDataReader reader = cmd.ExecuteReader())
@@ -562,19 +573,20 @@ namespace MCCSC_Scheduler.Database
                     {
                         assets.Add(new AssetDTO
                         {
-                            AssetId = reader.GetInt32(0),
-                            AssetName = reader.GetString(1),
-                            Quantity = reader.GetInt32(2),
-                            IsActive = reader.GetBoolean(3),
-                            CategoryID = reader.GetInt32(4),
-                            CategoryName = reader.GetString(5)
+                            AssetId = reader.GetInt32(reader.GetOrdinal("asset_id")),
+                            AssetName = reader.GetString(reader.GetOrdinal("asset_name")),
+                            Quantity = reader.GetInt32(reader.GetOrdinal("quantity_available")),
+                            IsActive = reader.GetBoolean(reader.GetOrdinal("isActive")),
+                            CategoryID = reader.GetInt32(reader.GetOrdinal("category_id")),
+                            CategoryName = reader.GetString(reader.GetOrdinal("category_name"))
                         });
                     }
                 }
             }
 
-            return assets; // ✅ returns List<AssetDTO>
+            return assets;
         }
+
         public string GetAssetRecords()
         {
             string query = @"

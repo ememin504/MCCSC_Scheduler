@@ -54,24 +54,23 @@ function getClientInfo() {
 function getAsset() {
     console.log("loading assets!");
 
-    fetch("ClientDashboard.aspx/GetAssets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}"
-    })
-        .then(res => res.json())
-        .then(data => {
-            let assets = data.d;
-            let container = document.getElementById("assetContainer");
-
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/GetAssets",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        data: "{}", // Empty body
+        success: function (response) {
+            let assets = response.d;
+            let container = $("#assetContainer");
+            console.log(assets);
             // Hide and clear container
-            container.style.display = "none";
-            container.innerHTML = "";
+            container.hide().empty();
 
             // Populate with checkboxes
             assets.forEach(asset => {
                 if (asset.IsActive != 0) {
-                    container.innerHTML += `
+                    container.append(`
                         <div class="form-check d-flex align-items-center mb-2">
                             <input class="form-check-input me-2 asset-checkbox" 
                                    type="checkbox" 
@@ -86,22 +85,23 @@ function getAsset() {
                                    style="width: 80px;" disabled>
                             <span class="ms-1 text-muted">/ ${asset.Quantity}</span>
                         </div>
-                    `;
+                    `);
                 }
             });
+
             // ✅ Show container once loaded
-            container.style.display = "block";
+            container.show();
 
             // Handle checkbox behavior
             assets.forEach(asset => {
-                const checkbox = document.getElementById(`asset_${asset.AssetId}`);
-                const qtyInput = document.getElementById(`qty_${asset.AssetId}`);
+                const checkbox = $(`#asset_${asset.AssetId}`);
+                const qtyInput = $(`#qty_${asset.AssetId}`);
 
-                checkbox.addEventListener("change", () => {
-                    if (checkbox.checked) {
-                        qtyInput.disabled = false;
+                checkbox.on("change", function () {
+                    if (this.checked) {
+                        qtyInput.prop("disabled", false);
 
-                        // ✅ Add to selectedAsset[]
+                        // ✅ Add to selectedAssets[]
                         selectedAssets.push({
                             AssetId: asset.AssetId,
                             AssetName: asset.AssetName,
@@ -109,25 +109,28 @@ function getAsset() {
                             Qty: 1 // default
                         });
                     } else {
-                        qtyInput.disabled = true;
-                        qtyInput.value = "";
+                        qtyInput.prop("disabled", true).val("");
 
-                        // ✅ Remove from selectedAsset[] when unchecked
+                        // ✅ Remove from selectedAssets[]
                         selectedAssets = selectedAssets.filter(a => a.AssetId !== asset.AssetId);
                     }
 
                     console.log("Selected Assets:", selectedAssets);
                 });
-                qtyInput.addEventListener("input", () => {
+
+                qtyInput.on("input", function () {
                     const selected = selectedAssets.find(a => a.AssetId === asset.AssetId);
                     if (selected) {
-                        selected.Quantity = parseInt(qtyInput.value) || 1;
+                        selected.Quantity = parseInt($(this).val()) || 1;
                     }
                     console.log("Updated Assets:", selectedAssets);
                 });
-            })
-        })
-        .catch(err => console.error("Error fetching assets:", err));
+            });
+        },
+        error: function (xhr, status, error) {
+            console.error("Error fetching assets:", error);
+        }
+    });
 }
 
 function submitReservation() {

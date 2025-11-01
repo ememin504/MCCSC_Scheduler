@@ -43,8 +43,15 @@ namespace MCCSC_Scheduler
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
         public static List<AssetDTO> GetAssets()
         {
-            dbContext = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
-            return dbContext.GetAssets();
+            try
+            {
+                var requests = dbContext.GetAssets(); // should return List<RegistrationRequest>
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return new List<AssetDTO>();
+            }
         }
         [WebMethod]
         public static string GetClientInfo(object clientData) {
