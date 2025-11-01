@@ -1,150 +1,4 @@
-﻿const roleId = sessionStorage.getItem("role_id");
-const userId = sessionStorage.getItem("user_id");
-const userEmail = sessionStorage.getItem("user_email");
-const firstName = sessionStorage.getItem("first_name");
-const middleInitial = sessionStorage.getItem("middle_initial");
-const lastName = sessionStorage.getItem("last_name");
-const roleName = sessionStorage.getItem("role_name");
-const roleTypeID = sessionStorage.getItem("role_type_id");
-const roleTypeDescription = sessionStorage.getItem("role_type_description");
-
-console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
-// categoryLoader.js
-var categoriesGlobal = []; // initialize as array
-let eventID;
-let assetID = 0;
-async function loadParentCategoryOptions() {
-    try {
-        const response = await fetch('AdminDashboard1.aspx/GetAssetCategories', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({})
-        });
-
-        const data = await response.json();
-        const categories = JSON.parse(data.d);
-
-        const select = document.getElementById('parentCategorySelect');
-        select.innerHTML = '<option value="">-- Add as Main Category --</option>';
-        select.innerHTML += buildCategoryOptions(categories);
-    } catch (error) {
-        console.error("Error loading parent categories:", error);
-    }
-}
-
-document.addEventListener('shown.bs.modal', event => {
-    if (event.target.id === 'createAssetModal') {
-        let action = "create"
-        loadAssetCategories(action);
-    }
-});
-
-async function loadAssetCategories(action) {
-    try {
-        const response = await fetch('AdminDashboard1.aspx/GetAssetCategories', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json; charset=utf-8'
-            },
-            body: JSON.stringify({}) // WebMethod requires a body, even if empty
-        });
-
-        const data = await response.json();
-        const categories = JSON.parse(data.d); // JSON from backend
-        categoriesGlobal = categories;
-
-        populateCategoryDropdown(categories, action);
-        console.log("Categories loaded:", categories);
-        console.log("Categories set for global", categoriesGlobal);
-
-        const container = document.getElementById('assetCategories');
-        if (!container) return;
-
-        // Build the dropdown with hierarchical indentation
-        let html = `
-            <label for="assetCategorySelect" class="form-label">Select Category</label>
-            <select id="assetCategorySelect" class="form-select" required>
-                <option value="">-- Choose a Category --</option>
-                ${buildCategoryOptions(categories)}
-            </select>
-        `;
-        container.innerHTML = html;
-        
-    } catch (error) {
-        console.error("Error loading categories:", error);
-    }
-}
-
-function populateCategoryDropdown(categories, action) {
-    if (action == "create") {
-        const select = document.getElementById('populateAssetCategory');
-        select.innerHTML = '<option value="">-- Select a Category --</option>';
-        select.innerHTML += buildCategoryOptions(categories);
-    } else if (action == "edit"){
-        const select = document.getElementById('populateEditAssetCategory');
-        select.innerHTML = '<option value="">-- Select a Category --</option>';
-        select.innerHTML += buildCategoryOptions(categories);
-    }
-}
-
-function buildCategoryOptions(categories, parentId = null, level = 0) {
-    let html = '';
-    categories
-        .filter(cat => cat.parent_category_id === parentId)
-        .forEach(cat => {
-            const indent = '&nbsp;'.repeat(level * 4);
-            html += `<option value="${cat.id}">${indent}${cat.name}</option>`;
-            html += buildCategoryOptions(categories, cat.id, level + 1);
-        });
-    return html;
-}
-function addCategory() {
-    // 1️⃣ Close the createAssetModal if it's open
-    const createModalEl = document.getElementById('createAssetModal');
-    const createModalInstance = bootstrap.Modal.getInstance(createModalEl);
-    if (createModalInstance) {
-        createModalInstance.hide();
-    }
-    // 2️⃣ Open the Add Asset Category modal
-    openAddAssetCategoryModal();
-}
-function EditCategory() {
-    console.log("loading Edit Category Modal");
-    console.log(categoriesGlobal);
-}
-function saveAssetCategory() {
-    const categoryName = document.getElementById("assetCategoryName").value.trim();
-    const parentId = document.getElementById("parentCategorySelect").value || null;
-
-    if (!categoryName) {
-        alert("Please enter a category name.");
-        return;
-    }
-
-    $.ajax({
-        type: "POST",
-        url: "AdminDashboard1.aspx/AddAssetCategory",
-        data: JSON.stringify({ categoryName: categoryName, parentCategoryId: parentId }),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            const result = JSON.parse(response.d);
-            if (result.success) {
-                alert(result.message);
-                $('#addAssetCategoryModal').modal('hide');
-                loadAssetCategories();
-                openCreateAssetModal();
-            } else {
-                alert(result.message || "Error: " + result.error);
-            }
-        },
-        error: function (xhr, status, error) {
-            console.error(error);
-        }
-    });
-}
-
-document.addEventListener("DOMContentLoaded", function () {
+﻿document.addEventListener("DOMContentLoaded", function () {
     setInterval(() => {
         fetch("AdminDashboard1.aspx/CheckForUpdate", {
             method: "POST",
@@ -184,6 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
     document.getElementById("fullname").textContent = firstName + " " + lastName;
     document.getElementById("roles").textContent = roleName + "/" + roleTypeDescription;
     // Initial data load
+    loadAssetCategories();
     getRegistrationRequests();
     getReservationRequests();
     getUsers();
@@ -191,6 +46,308 @@ document.addEventListener("DOMContentLoaded", function () {
     getAcceptedReservation();
     getEvents();
 });
+
+const roleId = sessionStorage.getItem("role_id");
+const userId = sessionStorage.getItem("user_id");
+const userEmail = sessionStorage.getItem("user_email");
+const firstName = sessionStorage.getItem("first_name");
+const middleInitial = sessionStorage.getItem("middle_initial");
+const lastName = sessionStorage.getItem("last_name");
+const roleName = sessionStorage.getItem("role_name");
+const roleTypeID = sessionStorage.getItem("role_type_id");
+const roleTypeDescription = sessionStorage.getItem("role_type_description");
+
+console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
+// categoryLoader.js
+// 🌐 Global Variables
+let eventID;
+let assetID = 0;
+// ==============================
+// Global category cache
+// ==============================
+let categoriesGlobal = [];
+
+// ==============================
+// SAVE CATEGORY CHANGES
+// ==============================
+function saveCategoryChanges(categoryID) {
+    const name = document.getElementById("editCategoryName").value;
+    const parentId = document.getElementById("populateEditCategoryParent").value;
+
+    const categoryInfo = {
+        CategoryID: parseInt(categoryID),
+        CategoryName: name,
+        ParentCategoryID: parentId ? parseInt(parentId) : null
+    };
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/SaveCategoryChanges",
+        data: JSON.stringify({ categoryData: categoryInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            let result;
+            try {
+                result = typeof response.d === "string" ? JSON.parse(response.d) : response.d;
+            } catch (e) {
+                console.error("Error parsing response:", e);
+                alert("An unexpected error occurred.");
+                return;
+            }
+
+            console.log("Server Response:", result);
+            alert(result.message || "Category updated successfully.");
+
+            // Reload categories and update table/dropdowns
+            loadAssetCategories();
+
+            // Close modal
+            const modalEl = document.getElementById("editCategoryModal");
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        },
+        error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Failed to save category changes.");
+        }
+    });
+}
+
+// ==============================
+// LOAD CATEGORIES
+// ==============================
+async function loadAssetCategories(action = "", view = "dropdown") {
+    console.log("📦 Loading asset categories...");
+
+    try {
+        const response = await fetch("AdminDashboard1.aspx/GetAssetCategories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json; charset=utf-8" },
+            body: JSON.stringify({})
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const categories = data.d; // already deserialized
+
+        if (!categories || !Array.isArray(categories)) {
+            throw new Error("Invalid response from server.");
+        }
+
+        // Cache globally
+        categoriesGlobal = categories;
+
+        console.log("✅ Categories loaded successfully:", categories);
+
+        // Populate table
+        populateCategoryTable(categories);
+
+        // Populate dropdowns if needed
+        if (view === "dropdown" || view === "all") {
+            populateCategoryDropdown(categories, action);
+        }
+
+    } catch (error) {
+        console.error("❌ Error loading categories:", error);
+        alert("Failed to load categories. Please try again later.");
+    }
+}
+
+// ==============================
+// POPULATE CATEGORY TABLE
+// ==============================
+function populateCategoryTable(categories) {
+    const tableBody = document.querySelector("#categoryTable tbody");
+    if (!tableBody) return;
+
+    tableBody.innerHTML = "";
+
+    categories.forEach(item => {
+        // Find parent category name, or "-" if none
+        const parentCategory = item.ParentCategoryID
+            ? categoriesGlobal.find(cat => cat.CategoryID === item.ParentCategoryID)
+            : null;
+        const parentName = parentCategory ? parentCategory.CategoryName : "-";
+
+        const safeName = item.CategoryName.replace(/'/g, "\\'").replace(/"/g, '\\"');
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${item.CategoryID}</td>
+            <td>${item.CategoryName}</td>
+            <td>${parentName}</td>
+            <td>
+                <button class="btn btn-sm btn-primary"
+                        onclick="openEditCategoryModal(${item.CategoryID}, '${safeName}', ${item.ParentCategoryID ?? 'null'})">
+                    Edit
+                </button>
+                ${
+                item.IsActive == 1
+            ? `<button class="btn btn-danger btn-sm" onclick="deactivateCategory(${item.CategoryID})">Deactivate</button>`
+                    : `<button class="btn btn-success btn-sm" onclick="activateCategory(${item.CategoryID})">Activate</button>`
+                              }
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function deactivateCategory(categoryID) {
+    if (!confirm("Are you sure you want to deactivate this category?")) return;
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/SetCategoryStatus",
+        data: JSON.stringify({ categoryID: categoryID, isActive: false }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            const result = typeof response.d === "string" ? JSON.parse(response.d) : response.d;
+            alert(result.message || "Category deactivated successfully.");
+            loadAssetCategories(); // refresh table/dropdowns
+        },
+        error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Failed to deactivate category.");
+        }
+    });
+}
+
+function activateCategory(categoryID) {
+    if (!confirm("Are you sure you want to activate this category?")) return;
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/SetCategoryStatus",
+        data: JSON.stringify({ categoryID: categoryID, isActive: true }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            const result = typeof response.d === "string" ? JSON.parse(response.d) : response.d;
+            alert(result.message || "Category activated successfully.");
+            loadAssetCategories(); // refresh table/dropdowns
+        },
+        error: function (xhr, status, error) {
+            console.error("AJAX Error:", error);
+            alert("Failed to activate category.");
+        }
+    });
+}
+
+// ==============================
+// POPULATE CATEGORY DROPDOWN
+// ==============================
+function populateCategoryDropdown(categories, action) {
+    let select = null;
+
+    if (action === "create") {
+        select = document.getElementById("populateAssetCategory");
+    } else if (action === "edit_asset") {
+        select = document.getElementById("populateEditAssetCategory");
+    } else if (action === "add_category") {
+        select = document.getElementById("parentCategorySelect");
+    }else if (action === "edit_category") {
+        select = document.getElementById("populateEditCategoryParent");
+    } 
+
+    if (!select) {
+        console.warn("⚠️ Dropdown element not found for action:", action);
+        return;
+    }
+
+    select.innerHTML = ""; // reset
+    select.innerHTML = `<option value="">-- Select Category --</option>`;
+    select.innerHTML += buildCategoryOptions(categories);
+}
+
+// ==============================
+// BUILD CATEGORY OPTIONS (Recursive, hierarchical)
+// ==============================
+function buildCategoryOptions(categories, parentId = null, level = 0) {
+    let html = "";
+    categories
+        .filter(cat => cat.ParentCategoryID === parentId)
+        .forEach(cat => {
+            const indent = "&nbsp;".repeat(level * 4);
+            const safeName = cat.CategoryName.replace(/'/g, "\\'").replace(/"/g, '\\"');
+            html += `<option value="${cat.CategoryID}">${indent}${safeName}</option>`;
+            html += buildCategoryOptions(categories, cat.CategoryID, level + 1);
+        });
+    return html;
+}
+
+// ==============================
+// MODAL EVENT LISTENER - Auto Load Categories
+// ==============================
+document.addEventListener("shown.bs.modal", event => {
+    let action = "";
+
+    if (event.target.id === "createAssetModal") {
+        action = "create";
+    } else if (event.target.id === "assetEditorModal") {
+        action = "edit_asset";
+    } else if (event.target.id === "addAssetCategoryModal") {
+        action = "add_category";
+    }else if (event.target.id === "editCategoryModal") {
+        action = "edit_category";
+    }
+
+    if (action) {
+        populateCategoryDropdown(categoriesGlobal, action);
+        if (!categoriesGlobal.length) loadAssetCategories(action, "dropdown");
+    }
+});
+
+function addCategory() {
+    // 1️⃣ Close the createAssetModal if it's open
+    const createModalEl = document.getElementById('createAssetModal');
+    const createModalInstance = bootstrap.Modal.getInstance(createModalEl);
+    if (createModalInstance) {
+        createModalInstance.hide();
+    }
+    // 2️⃣ Open the Add Asset Category modal
+    openAddAssetCategoryModal();
+}
+function EditCategory() {
+    console.log("loading Edit Category Modal");
+    console.log(categoriesGlobal);
+    openEditCategoryModal();
+}
+function saveAssetCategory() {
+    const categoryName = document.getElementById("assetCategoryName").value.trim();
+    const parentId = document.getElementById("parentCategorySelect").value || null;
+
+    if (!categoryName) {
+        alert("Please enter a category name.");
+        return;
+    }
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/AddAssetCategory",
+        data: JSON.stringify({ categoryName: categoryName, parentCategoryId: parentId }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            const result = JSON.parse(response.d);
+            if (result.success) {
+                alert(result.message);
+                $('#addAssetCategoryModal').modal('hide');
+                loadAssetCategories();
+                openCreateAssetModal();
+            } else {
+                alert(result.message || "Error: " + result.error);
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error(error);
+        }
+    });
+}
 function getEvents() {
     console.log("Loading Events...");
 
@@ -769,9 +926,9 @@ function createAsset() {
     const asset_name = document.getElementById('createAssetName').value.trim();
     const qty = document.getElementById('createQuantity').value;
     const categorySelect = document.getElementById("populateAssetCategory").value.trim();
-    const categoryId = categorySelect ? categorySelect.value : null;
 
-    if (!asset_name || !qty || !categoryId) {
+    console.log(categorySelect);
+    if (!asset_name || !qty || !categorySelect) {
         alert("Please fill in all required fields and select a category.");
         return;
     }
@@ -779,7 +936,7 @@ function createAsset() {
     let asset_data = {
         AssetName: asset_name,
         Quantity: qty,
-        categoryId: parseInt(categoryId)
+        CategoryID: parseInt(categorySelect)
     }
     console.log("Asset to be added:", asset_data);
     $.ajax({

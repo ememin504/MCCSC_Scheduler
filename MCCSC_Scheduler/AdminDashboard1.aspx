@@ -118,6 +118,22 @@
         <tbody id="assetTableBody">
         </tbody>
     </table>
+
+    <h3>Asset Categories</h3>
+     <button onclick="openAddAssetCategoryModal(); return false">Add Categories</button>
+    <table class="table table-striped table-bordered" id="categoryTable">
+        <thead>
+            <tr>
+                <th>Category ID</th>
+                <th>Category Name</th>
+                <th>Parent Category</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="categoryTableBody">
+        </tbody>
+    </table>
+
     <h3>Event Management</h3>
     <table class="table table-striped table-bordered" id="eventTable">
         <thead>
@@ -136,5 +152,6 @@
         <tbody id="eventTableBody">
         </tbody>
     </table>
+
 </body>
 </html>

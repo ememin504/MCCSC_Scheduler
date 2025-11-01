@@ -200,19 +200,18 @@ namespace MCCSC_Scheduler
             }
         }
         [WebMethod]
-        public static string GetAssetCategories()
+        public static object GetAssetCategories()
         {
             try
             {
-                var categories = dbContext.GetAssetCategories();
-
-                return JsonConvert.SerializeObject(categories);
+                return dbContext.GetAssetCategories(); // will be serialized automatically
             }
             catch (Exception ex)
             {
-                return JsonConvert.SerializeObject(new { error = ex.Message });
+                return new { error = ex.Message };
             }
         }
+
         [WebMethod]
         public static string AddAssetCategory(string categoryName, int? parentCategoryId)
         {
@@ -243,6 +242,32 @@ namespace MCCSC_Scheduler
                     success = false,
                     error = ex.Message
                 });
+            }
+        }
+        [WebMethod]
+        public static string SetCategoryStatus(int categoryID, bool isActive)
+        {
+            try
+            {
+                var result = dbContext.SetCategoryStatus(categoryID, isActive);
+                return JsonConvert.SerializeObject(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
+        [WebMethod]
+        public static string SaveCategoryChanges(CategoryDTO categoryData) {
+            try
+            {
+                var requests = dbContext.SaveCategoryChanges(categoryData);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
 

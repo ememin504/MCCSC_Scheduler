@@ -396,29 +396,67 @@ namespace MCCSC_Scheduler.Database
                 }
             }
         }
-        
- //Asset Section========================================================================================================================
-        public List<object> GetAssetCategories()
-        {
-            var categories = new List<object>();
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+//Asset Section========================================================================================================================
+        public string SaveCategoryChanges(CategoryDTO categoryData) {
+            string query = @"UPDATE AssetCategory 
+                     SET category_name = @categoryName, 
+                         parent_category_id = @parentCategoryID 
+                     WHERE category_id = @categoryID";
+
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@categoryName", categoryData.CategoryName);
+
+                        if (categoryData.ParentCategoryID.HasValue)
+                            cmd.Parameters.AddWithValue("@parentCategoryID", categoryData.ParentCategoryID.Value);
+                        else
+                            cmd.Parameters.AddWithValue("@parentCategoryID", DBNull.Value);
+
+                        cmd.Parameters.AddWithValue("@categoryID", categoryData.CategoryID);
+
+                        conn.Open();
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                            return JsonConvert.SerializeObject(new { success = true, message = "Category updated successfully." });
+                        else
+                            return JsonConvert.SerializeObject(new { success = false, message = "No category found with the provided ID." });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
+            }
+
+        }
+        public List<CategoryDTO> GetAssetCategories()
+        {
+            var categories = new List<CategoryDTO>();
+
+            using (var conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                string query = "SELECT category_id, category_name, parent_category_id FROM AssetCategory";
+                string query = "SELECT category_id, category_name, parent_category_id, isActive FROM AssetCategory";
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                using (SqlDataReader reader = cmd.ExecuteReader())
+                using (var cmd = new SqlCommand(query, conn))
+                using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        categories.Add(new
+                        categories.Add(new CategoryDTO
                         {
-                            id = Convert.ToInt32(reader["category_id"]),
-                            name = reader["category_name"].ToString(),
-                            parent_category_id = reader["parent_category_id"] == DBNull.Value
+                            CategoryID = Convert.ToInt32(reader["category_id"]),
+                            CategoryName = reader["category_name"].ToString(),
+                            ParentCategoryID = reader["parent_category_id"] == DBNull.Value
                                 ? (int?)null
-                                : Convert.ToInt32(reader["parent_category_id"])
+                                : Convert.ToInt32(reader["parent_category_id"]),
+                            IsActive = reader["isActive"] != DBNull.Value && Convert.ToBoolean(reader["isActive"])
                         });
                     }
                 }
@@ -426,6 +464,42 @@ namespace MCCSC_Scheduler.Database
 
             return categories;
         }
+        public string SetCategoryStatus(int categoryID, bool isActive)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    string query = @"UPDATE AssetCategory 
+                             SET IsActive = @status 
+                             WHERE category_id = @categoryID";
+
+                    // Convert bool to int (1 = true, 0 = false)
+                    int statusValue = isActive ? 1 : 0;
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        // Add parameters properly
+                        cmd.Parameters.AddWithValue("@status", statusValue);
+                        cmd.Parameters.AddWithValue("@categoryID", categoryID);
+
+                        conn.Open();
+                        int rowsAffected = cmd.ExecuteNonQuery(); // Execute the UPDATE
+                        conn.Close();
+
+                        return rowsAffected > 0
+                            ? (isActive ? "Category activated" : "Category deactivated")
+                            : "Category not found";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return $"Error: {ex.Message}";
+            }
+        }
+
+
         public int AddAssetCategory(string categoryName, int? parentCategoryId)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))

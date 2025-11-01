@@ -6,6 +6,93 @@ var registrationModal;
 var assetEditorModal;
 var createAssetModal;
 var addAssetCategoryModal;
+var editCategoryModal;
+var categoryID;
+
+function openEditCategoryModal(category_id, category_name, parent_id) {
+    console.log("Opening edit category modal...");
+    categoryID = category_id;
+    // 1️⃣ Check if modal exists
+    let modalElement = document.getElementById('editCategoryModal');
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', editCategoryModalEl);
+        modalElement = document.getElementById('editCategoryModal');
+    }
+
+    // 2️⃣ Verify modal insertion
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static' });
+    console.log("Editing category:", { category_id, category_name, parent_id });
+
+    // 4️⃣ Grab modal inputs
+    const nameInput = document.getElementById("editCategoryName");
+    const parentSelect = document.getElementById("populateEditCategoryParent");
+    const categoryIdHidden = document.getElementById("editCategoryId");
+
+    // 5️⃣ Assign input values
+    if (nameInput) nameInput.value = category_name;
+    if (categoryIdHidden) categoryIdHidden.value = category_id;
+
+    // ✅ Set parent dropdown value
+    if (parentSelect) {
+        // First, enable all options (in case one was disabled before)
+        Array.from(parentSelect.options).forEach(opt => opt.disabled = false);
+
+        // Select the current parent (if any)
+        parentSelect.value = parent_id ? parent_id.toString() : "";
+
+        // 🚫 Disable the category itself to prevent being its own parent
+        const selfOption = Array.from(parentSelect.options).find(opt => opt.value == category_id);
+        if (selfOption) selfOption.disabled = true;
+    }
+
+    // 6️⃣ Show modal
+    modalInstance.show();
+
+    console.log("✅ Modal opened successfully.");
+}
+
+var editCategoryModalEl = `
+<div class="modal fade" id="editCategoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-3 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Category</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="editCategoryForm">
+        <div class="mb-3">
+            <label for="populateEditCategoryParent" class="form-label">Parent Category</label>
+            <select id="populateEditCategoryParent" class="form-select">
+              <option value="">-- No Parent (Main Category) --</option>
+              <!-- dynamically filled -->
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="editCategoryName" class="form-label">Category Name</label>
+            <input type="text" id="editCategoryName" class="form-control" required>
+          </div>
+
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" onclick="saveCategoryChanges(categoryID)">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
 
 var addAssetCategoryModalEl = `
     <div class="modal fade" id="addAssetCategoryModal" tabindex="-1" aria-labelledby="addAssetCategoryModalLabel" aria-hidden="true">
@@ -36,7 +123,7 @@ var addAssetCategoryModalEl = `
 
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-primary" onclick="saveAssetCategory()">Save</button>
+            <button type="button" class="btn btn-primary" onclick="saveAssetCategory(categoryID)">Save</button>
           </div>
 
         </div>
@@ -67,7 +154,6 @@ function openAddAssetCategoryModal() {
     modalInstance.show();
 
     console.log("✅ Modal opened successfully.");
-    loadParentCategoryOptions();
 }
 
 var alertModalEl = "<div class='modal fade' id='alertModal' role='dialog'>" +
@@ -356,7 +442,6 @@ let assetEditorModalEl = `
             <label for="populateEditAssetCategory" class="form-label">Asset Category</label>
             <div class="d-flex gap-2">
               <select id="populateEditAssetCategory" class="form-select" required>
-                <option value="">-- Select a Category --</option>
               </select>
               <button type="button" class="btn btn-primary" onclick="addCategory()">+</button>
               <button type="button" class="btn btn-primary" onclick="EditCategory()">✎</button>
@@ -382,6 +467,38 @@ let assetEditorModalEl = `
   </div>
 </div>
 `;
+function openAssetEditorModal(asset_name, asset_quantity, category_id, category_name) {
+    console.log("Opening edit asset modal...");
+    var catIDInput = document.getElementById("populateEditAssetCategory");
+    var nameInput = document.getElementById("editAssetName");
+    var qtyInput = document.getElementById("editQuantity");
+
+    if (nameInput) nameInput.value = asset_name;
+    if (qtyInput) qtyInput.value = asset_quantity;
+    if (catIDInput) catIDInput.value = category_name;
+    
+    // 1️⃣ Check if modal exists
+    let modalElement = document.getElementById('assetEditorModal');
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', assetEditorModalEl);
+        modalElement = document.getElementById('assetEditorModal');
+    }
+
+    // 2️⃣ Verify that insertion succeeded
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static'
+    });
+    modalInstance.show();
+
+    console.log("✅ Modal opened successfully.");
+}
 
 function initializeTooltip() {
     //initialize tooltips
@@ -483,50 +600,6 @@ function openCreateAssetModal() {
 
     console.log("✅ Modal opened successfully.");
 }
-
-async function openAssetEditorModal(asset_name, asset_quantity, category_id) {
-    console.log("Opening asset editor modal...");
-
-    // 1️⃣ Ensure modal exists
-    let modalElement = document.getElementById('assetEditorModal');
-    if (!modalElement) {
-        console.warn("Modal not found — inserting into DOM.");
-        document.body.insertAdjacentHTML('beforeend', assetEditorModalEl);
-        modalElement = document.getElementById('assetEditorModal');
-    }
-
-    // 2️⃣ Ensure categories are loaded before showing modal
-    if (categoriesGlobal.length === 0) {
-        console.log("Loading categories first...");
-        await loadAssetCategories(); // uses your existing function
-    } else {
-        console.log("Using cached categories.");
-        let action = "edit";
-        populateCategoryDropdown(categoriesGlobal, action);
-    }
-
-    // 3️⃣ Fill modal fields
-    modalElement.addEventListener('shown.bs.modal', () => {
-        document.getElementById('editAssetName').value = asset_name;
-        document.getElementById('editQuantity').value = asset_quantity;
-
-        const categorySelect = document.getElementById('populateEditAssetCategory');
-        if (categorySelect) {
-            categorySelect.value = category_id;
-
-            if (categorySelect.value !== category_id.toString()) {
-                console.warn(`Category ID ${category_id} not found in dropdown.`);
-            }
-        }
-    }, { once: true });
-
-    // 4️⃣ Show modal
-    const modalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static' });
-    modalInstance.show();
-
-    console.log("✅ Modal opened successfully.");
-}
-
 
 
 
