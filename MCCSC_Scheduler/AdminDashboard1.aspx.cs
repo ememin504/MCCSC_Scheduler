@@ -12,6 +12,7 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
 using Newtonsoft.Json;
+using static MCCSC_Scheduler.AdminDashboard1;
 
 namespace MCCSC_Scheduler
 {
@@ -145,6 +146,38 @@ namespace MCCSC_Scheduler
             catch (Exception ex)
             {
                 return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+        public static string SaveCoordinationMeeting(CoordinationMeetingDTO meetingData)
+        {
+            try
+            {
+                // Validate input
+                if (meetingData == null)
+                    throw new Exception("Meeting data is missing.");
+
+                // Set created date/time
+                meetingData.CreatedAt = DateTime.Now;
+
+                // Call database save method
+                var result = dbContext.SaveCoordinationMeeting(meetingData);
+
+                return JsonConvert.SerializeObject(new
+                {
+                    success = true,
+                    message = "Coordination meeting saved successfully.",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
         public class RequestData

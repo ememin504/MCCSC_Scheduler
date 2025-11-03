@@ -48,7 +48,7 @@ namespace MCCSC_Scheduler
                 var requests = dbContext.GetAssets(); // should return List<RegistrationRequest>
                 return requests;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return new List<AssetDTO>();
             }

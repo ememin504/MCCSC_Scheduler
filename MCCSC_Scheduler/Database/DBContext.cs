@@ -1175,16 +1175,16 @@ namespace MCCSC_Scheduler.Database
                             {
                                 // Normal reservation (same day)
                                 string conflictQuery = @"
-SELECT COUNT(*) FROM Reservation_Dates
-WHERE date = @Date
-AND (
-    (@StartTime < @EndTime AND (
-        (@StartTime BETWEEN start_time AND end_time)
-        OR (@EndTime BETWEEN start_time AND end_time)
-        OR (start_time BETWEEN @StartTime AND @EndTime)
-        OR (end_time BETWEEN @StartTime AND @EndTime)
-    ))
-)";
+                                                            SELECT COUNT(*) FROM Reservation_Dates
+                                                            WHERE date = @Date
+                                                            AND (
+                                                                (@StartTime < @EndTime AND (
+                                                                    (@StartTime BETWEEN start_time AND end_time)
+                                                                    OR (@EndTime BETWEEN start_time AND end_time)
+                                                                    OR (start_time BETWEEN @StartTime AND @EndTime)
+                                                                    OR (end_time BETWEEN @StartTime AND @EndTime)
+                                                                ))
+                                                            )";
                                 using (SqlCommand checkCmd = new SqlCommand(conflictQuery, conn, trans))
                                 {
                                     checkCmd.Parameters.AddWithValue("@Date", dateOnly);
@@ -1208,12 +1208,12 @@ AND (
                                 // Overnight reservation (spans two dates)
                                 // 1️⃣ Part 1: from startTime to 23:59:59 on the same day
                                 string conflictQuery1 = @"
-SELECT COUNT(*) FROM Reservation_Dates
-WHERE date = @Date
-AND (
-    (@StartTime BETWEEN start_time AND end_time)
-    OR (start_time BETWEEN @StartTime AND CAST('23:59:59.9999999' AS TIME))
-)";
+                                                            SELECT COUNT(*) FROM Reservation_Dates
+                                                            WHERE date = @Date
+                                                            AND (
+                                                                (@StartTime BETWEEN start_time AND end_time)
+                                                                OR (start_time BETWEEN @StartTime AND CAST('23:59:59.9999999' AS TIME))
+                                                            )";
                                 using (SqlCommand cmd1 = new SqlCommand(conflictQuery1, conn, trans))
                                 {
                                     cmd1.Parameters.AddWithValue("@Date", dateOnly);
@@ -1232,12 +1232,12 @@ AND (
 
                                 // 2️⃣ Part 2: from 00:00:00 to endTime on the next day
                                 string conflictQuery2 = @"
-SELECT COUNT(*) FROM Reservation_Dates
-WHERE date = @NextDate
-AND (
-    (@EndTime BETWEEN start_time AND end_time)
-    OR (start_time BETWEEN CAST('00:00:00' AS TIME) AND @EndTime)
-)";
+                                                            SELECT COUNT(*) FROM Reservation_Dates
+                                                            WHERE date = @NextDate
+                                                            AND (
+                                                                (@EndTime BETWEEN start_time AND end_time)
+                                                                OR (start_time BETWEEN CAST('00:00:00' AS TIME) AND @EndTime)
+                                                            )";
                                 using (SqlCommand cmd2 = new SqlCommand(conflictQuery2, conn, trans))
                                 {
                                     cmd2.Parameters.AddWithValue("@NextDate", dateOnly.AddDays(1));
@@ -1268,9 +1268,9 @@ AND (
                         if (eventId == 0)
                         {
                             string insertEventQuery = @"
-INSERT INTO Events (title, description, organization_id)
-OUTPUT INSERTED.event_id
-VALUES (@Title, @Description, @OrganizationID)";
+                                                        INSERT INTO Events (title, description, organization_id)
+                                                        OUTPUT INSERTED.event_id
+                                                        VALUES (@Title, @Description, @OrganizationID)";
                             using (SqlCommand insertCmd = new SqlCommand(insertEventQuery, conn, trans))
                             {
                                 insertCmd.Parameters.AddWithValue("@Title", eventName);
@@ -1282,9 +1282,9 @@ VALUES (@Title, @Description, @OrganizationID)";
 
                         // 3️⃣ Insert Reservation
                         string insertReservation = @"
-INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
-OUTPUT INSERTED.reservation_id
-VALUES (@ClientID, @StatusID, @EventID, @Reference)";
+                                                        INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
+                                                        OUTPUT INSERTED.reservation_id
+                                                        VALUES (@ClientID, @StatusID, @EventID, @Reference)";
                         using (SqlCommand cmd = new SqlCommand(insertReservation, conn, trans))
                         {
                             cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -1300,8 +1300,8 @@ VALUES (@ClientID, @StatusID, @EventID, @Reference)";
                         foreach (var asset in assets)
                         {
                             string insertAssetQuery = @"
-INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
-VALUES (@ReservationID, @AssetID, @Qty)";
+                                                        INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
+                                                        VALUES (@ReservationID, @AssetID, @Qty)";
                             using (SqlCommand assetCmd = new SqlCommand(insertAssetQuery, conn, trans))
                             {
                                 assetCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1322,8 +1322,8 @@ VALUES (@ReservationID, @AssetID, @Qty)";
                             {
                                 // Normal reservation
                                 string insertDateQuery = @"
-INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
-VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
+                                                            INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+                                                            VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
                                 using (SqlCommand dateCmd = new SqlCommand(insertDateQuery, conn, trans))
                                 {
                                     dateCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1338,8 +1338,8 @@ VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
                                 // Overnight: split into two rows
                                 // Day 1: startTime → 23:59:59
                                 string insertDate1 = @"
-INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
-VALUES (@ReservationID, @Date, @StartTime, CAST('23:59:59.9999999' AS TIME))";
+                                                        INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+                                                        VALUES (@ReservationID, @Date, @StartTime, CAST('23:59:59.9999999' AS TIME))";
                                 using (SqlCommand cmd1 = new SqlCommand(insertDate1, conn, trans))
                                 {
                                     cmd1.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1350,8 +1350,8 @@ VALUES (@ReservationID, @Date, @StartTime, CAST('23:59:59.9999999' AS TIME))";
 
                                 // Day 2: 00:00:00 → endTime
                                 string insertDate2 = @"
-INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
-VALUES (@ReservationID, @NextDate, CAST('00:00:00' AS TIME), @EndTime)";
+                                                        INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+                                                        VALUES (@ReservationID, @NextDate, CAST('00:00:00' AS TIME), @EndTime)";
                                 using (SqlCommand cmd2 = new SqlCommand(insertDate2, conn, trans))
                                 {
                                     cmd2.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1442,8 +1442,65 @@ VALUES (@ReservationID, @NextDate, CAST('00:00:00' AS TIME), @EndTime)";
                 return $"Error in GetAcceptedReservation: {ex.Message}";
             }
         }
+        public bool SaveCoordinationMeeting(CoordinationMeetingDTO meeting)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+                    using (SqlTransaction transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            string insertQuery = @"
+                        INSERT INTO CoordinationMeetingDates 
+                            (reservation_id, meeting_date, meeting_time, remarks, createdAt)
+                        VALUES 
+                            (@ReservationID, @MeetingDate, @MeetingTime, @Remarks, @CreatedAt)";
 
-//Event Management ========================================================================================================================
+                            using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn, transaction))
+                            {
+                                insertCmd.Parameters.AddWithValue("@ReservationID", meeting.ReservationID);
+                                insertCmd.Parameters.AddWithValue("@MeetingDate", meeting.MeetingDate);
+                                insertCmd.Parameters.AddWithValue("@MeetingTime", meeting.MeetingTime);
+                                insertCmd.Parameters.AddWithValue("@Remarks", (object)meeting.Remarks ?? DBNull.Value);
+                                insertCmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
+
+                                int inserted = insertCmd.ExecuteNonQuery();
+                                Console.WriteLine($"Inserted rows: {inserted}, ReservationID={meeting.ReservationID}");
+                            }
+
+                            string updateQuery = "UPDATE Reservation SET status_id = 5 WHERE reservation_id = @ReservationID";
+                            using (SqlCommand updateCmd = new SqlCommand(updateQuery, conn, transaction))
+                            {
+                                updateCmd.Parameters.AddWithValue("@ReservationID", meeting.ReservationID);
+                                int updated = updateCmd.ExecuteNonQuery();
+                                Console.WriteLine($"Updated rows: {updated}");
+                            }
+
+                            transaction.Commit();
+                            return true;
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            Console.WriteLine("Transaction failed: " + ex.Message);
+                            return false;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error saving coordination meeting: " + ex.Message);
+                return false;
+            }
+        }
+
+
+
+        //Event Management ========================================================================================================================
         public string GetEvents()
         {
             List<EventDTO> events = new List<EventDTO>();

@@ -7,8 +7,70 @@ var assetEditorModal;
 var createAssetModal;
 var addAssetCategoryModal;
 var editCategoryModal;
+var coordinationMeetingModal;
 var categoryID;
 
+var coordinationMeetingModalEl = `
+    <div class="modal fade" id="coordinationMeetingModal" tabindex="-1" role="dialog" aria-labelledby="coordinationMeetingModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+
+          <div class="modal-header">
+            <h5 class="modal-title" id="coordinationMeetingModalLabel">Set Coordination Meeting</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body">
+            <form id="coordinationMeetingForm">
+              <div class="mb-3">
+                <label for="meetingDate" class="form-label">Meeting Date</label>
+                <input type="date" class="form-control" id="meetingDate" required>
+              </div>
+
+              <div class="mb-3">
+                <label for="meetingTime" class="form-label">Meeting Time</label>
+                <input type="time" class="form-control" id="meetingTime" required>
+              </div>
+
+              <div class="mb-3">
+                <label for="meetingRemarks" class="form-label">Remarks</label>
+                <textarea class="form-control" id="meetingRemarks" rows="3" placeholder="Enter remarks (optional)"></textarea>
+              </div>
+            </form>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success" onclick="saveCoordinationMeeting()">Save</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          </div>
+
+        </div>
+      </div>
+    </div>`;
+
+
+function openCoordinationMeetingModal() {
+    console.log("Opening coordination meeting setup modal....")
+    let modalElement = document.getElementById('coordinationMeetingModal');
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', coordinationMeetingModalEl);
+        modalElement = document.getElementById('coordinationMeetingModal');
+    }
+
+    // 2️⃣ Verify that insertion succeeded
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static'
+    });
+    modalInstance.show();
+
+    console.log("✅ Modal opened successfully.");
+}
 function openEditCategoryModal(category_id, category_name, parent_id) {
     console.log("Opening edit category modal...");
     categoryID = category_id;

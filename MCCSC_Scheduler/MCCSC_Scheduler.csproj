@@ -2231,6 +2231,7 @@
     <Compile Include="Default.aspx.designer.cs">
       <DependentUpon>Default.aspx</DependentUpon>
     </Compile>
+    <Compile Include="DTO\CoordinationMeetingDTO.cs" />
     <Compile Include="DTO\CategoryDTO.cs" />
     <Compile Include="DTO\EventDTO.cs" />
     <Compile Include="DTO\AssetDTO.cs" />

@@ -61,6 +61,7 @@ console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription
 // categoryLoader.js
 // 🌐 Global Variables
 let eventID;
+let reservationId;
 let assetID = 0;
 // ==============================
 // Global category cache
@@ -583,7 +584,8 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
         dataType: "json",
         success: function (response) {
             console.log("Full server response:", response.d);
-
+            let callFunction;
+            let buttonText = "";
             let data = response.d;
             if (typeof data === "string") {
                 try { data = JSON.parse(data); } catch (e) { console.error("JSON parse error:", e); }
@@ -605,6 +607,14 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
                      <p><strong>Starting Time:</strong> ${d.StartTime}</p>
                      <p><strong>Ending Time:</strong> ${d.EndTime}</p>`;
             });
+            if (data.Status === "Accepted") {
+                callFunction = "coordinationMeetingSetUp";
+                buttonText = "Set Coordination Meeting";
+            } else if (data.Status === "Pending") {
+                callFunction = "acceptReservation";
+                buttonText = "Accept";
+            }
+
             // ✅ Build modal dynamically here
             let modalHTML = `
                 <div class='modal fade' id='viewReservationModal' role='dialog'>
@@ -625,14 +635,14 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
                         <p><strong>Remarks:</strong> ${remarks}</p>
                       </div>
                       <div class='modal-footer'>
-                        <button type='button' class='btn btn-success' onclick="acceptReservation(${reservationID})">Accept</button>
+                        <button type='button' class='btn btn-success' onclick="${callFunction}()">${buttonText}</button>
                         <button type='button' class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
-                    </div>
+                      </div>
                     </div>
                   </div>
                 </div>`;
 
-
+            reservationId = reservationID
             // ✅ Remove existing modal (to avoid duplicates)
             let oldModal = document.getElementById("viewReservationModal");
             if (oldModal) oldModal.remove();
@@ -651,6 +661,43 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
         }
     });
 }
+function coordinationMeetingSetUp() {
+    openCoordinationMeetingModal();
+}
+function saveCoordinationMeeting() {
+    let meetingDate = document.getElementById("meetingDate").value;
+    let meetingTime = document.getElementById("meetingTime").value;
+    if (meetingTime && meetingTime.length === 5) meetingTime += ":00"; // "13:30" → "13:30:00"
+    let meetingRemarks = document.getElementById("meetingRemarks").value.trim();
+
+    let meetingInfo = {
+        ReservationID: reservationId,
+        MeetingDate: meetingDate,
+        MeetingTime: meetingTime,
+        Remarks: meetingRemarks
+    };
+    console.log(meetingInfo);
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/SaveCoordinationMeeting",
+        data: JSON.stringify({ meetingData: meetingInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            const result = JSON.parse(response.d);
+            console.log("Server response:", result);
+            alert(result.message || "Meeting saved!");
+            $("#coordinationMeetingModal").modal("hide");
+            getAcceptedReservation();
+        },
+        error: function (xhr, status, error) {
+            console.error("AJAX Error:", xhr.responseText);
+            alert("Failed to save meeting. Please try again.");
+        }
+    });
+}
+
+
 function acceptReservation(reservationID) {
     let reservationInfo = {
         ReservationID : reservationID
