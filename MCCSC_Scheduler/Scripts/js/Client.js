@@ -23,6 +23,7 @@ let selectedAssets = []; // use array in case multiple assets are checked
 let n = 0;
 
 console.log(roleId, userId, userEmail);
+
 function getClientInfo() {
     
     $.ajax({
@@ -42,6 +43,7 @@ function getClientInfo() {
             console.log(info.roleName);
             clientID = info.clientID;
             organizationID = info.organizationID;
+            //getReservation();
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
@@ -50,6 +52,19 @@ function getClientInfo() {
 
 }
 
+function getReservation() {
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/GetClientReservation",
+        data: JSON.stringify({ clientData: { clientID: clientID } }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            let data = JSON.parse(response.d);
+            console.log(data);
+        }
+    });
+}
 
 function getAsset() {
     console.log("loading assets!");

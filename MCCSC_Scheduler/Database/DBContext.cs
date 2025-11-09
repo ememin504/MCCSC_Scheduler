@@ -1498,6 +1498,160 @@ namespace MCCSC_Scheduler.Database
             }
         }
 
+        public List<ReservationDTO> GetClientReservation(object clientData)
+        {
+            var data = clientData as Dictionary<string, object>;
+            int clientID = Convert.ToInt32(data["clientID"]);
+
+            List<ReservationDTO> reservations = new List<ReservationDTO>();
+
+            string reservationQuery = @"
+        SELECT reservation_id, client_id, status_id, remarks,
+               event_id, hashed_reference
+        FROM Reservation
+        WHERE client_id = @ClientID;
+    ";
+
+            string eventQuery = @"
+        SELECT title, description
+        FROM Events
+        WHERE event_id = @EventID;
+    ";
+
+            string statusQuery = @"
+        SELECT status_name
+        FROM reservation_status
+        WHERE status_id = @StatusID;
+    ";
+
+            string eventDatesQuery = @"
+        SELECT date, start_time, end_time
+        FROM Reservation_Dates
+        WHERE reservation_id = @ReservationID;
+    ";
+
+            string assetsQuery = @"
+        SELECT ra.asset_id, ra.quantity,
+               a.asset_name, a.category_id, a.is_active,
+               c.category_name
+        FROM Reservation_Assets ra
+        INNER JOIN Assets a ON ra.asset_id = a.asset_id
+        INNER JOIN AssetCategory c ON a.category_id = c.category_id
+        WHERE ra.reservation_id = @ReservationID;
+    ";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                //
+                // ✅ STEP 1 — Load ALL basic reservations
+                //
+                using (SqlCommand cmd = new SqlCommand(reservationQuery, conn))
+                {
+                    cmd.Parameters.AddWithValue("@ClientID", clientID);
+
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            reservations.Add(new ReservationDTO
+                            {
+                                ReservationID = (int)reader["reservation_id"],
+                                ClientID = (int)reader["client_id"],
+                                StatusID = (int)reader["status_id"],
+                                Remarks = reader["remarks"].ToString(),
+                                EventID = (int)reader["event_id"],
+                                Reference = reader["hashed_reference"].ToString(),
+                                SelectedAssets = new List<AssetDTO>(),
+                                EventDates = new List<EventDateDTO>()
+                            });
+                        }
+                    }
+                }
+
+                //
+                // ✅ STEP 2 — Load Event Name + Description, Status Name, Event Dates, & Assets
+                //
+                foreach (var reservation in reservations)
+                {
+                    //
+                    // ✅ Load Event title/description
+                    //
+                    using (SqlCommand eventCmd = new SqlCommand(eventQuery, conn))
+                    {
+                        eventCmd.Parameters.AddWithValue("@EventID", reservation.EventID);
+
+                        using (SqlDataReader er = eventCmd.ExecuteReader())
+                        {
+                            if (er.Read())
+                            {
+                                reservation.EventName = er["title"].ToString();
+                                reservation.EventDescription = er["description"].ToString();
+                            }
+                        }
+                    }
+
+                    //
+                    // ✅ Load Status Name
+                    //
+                    using (SqlCommand statusCmd = new SqlCommand(statusQuery, conn))
+                    {
+                        statusCmd.Parameters.AddWithValue("@StatusID", reservation.StatusID);
+                        reservation.StatusName = statusCmd.ExecuteScalar()?.ToString();
+                    }
+
+                    //
+                    // ✅ Load Event Dates
+                    //
+                    using (SqlCommand dateCmd = new SqlCommand(eventDatesQuery, conn))
+                    {
+                        dateCmd.Parameters.AddWithValue("@ReservationID", reservation.ReservationID);
+
+                        using (SqlDataReader dr = dateCmd.ExecuteReader())
+                        {
+                            while (dr.Read())
+                            {
+                                reservation.EventDates.Add(new EventDateDTO
+                                {
+                                    Date = Convert.ToDateTime(dr["date"]),
+                                    StartTime = dr["start_time"].ToString(),
+                                    EndTime = dr["end_time"].ToString()
+                                });
+                            }
+                        }
+                    }
+
+                    //
+                    // ✅ Load Selected Assets
+                    //
+                    using (SqlCommand assetCmd = new SqlCommand(assetsQuery, conn))
+                    {
+                        assetCmd.Parameters.AddWithValue("@ReservationID", reservation.ReservationID);
+
+                        using (SqlDataReader ar = assetCmd.ExecuteReader())
+                        {
+                            while (ar.Read())
+                            {
+                                reservation.SelectedAssets.Add(new AssetDTO
+                                {
+                                    AssetId = (int)ar["asset_id"],
+                                    AssetName = ar["asset_name"].ToString(),
+                                    Quantity = (int)ar["quantity"],
+                                    IsActive = Convert.ToBoolean(ar["is_active"]),
+                                    CategoryID = (int)ar["category_id"],
+                                    CategoryName = ar["category_name"].ToString()
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            return reservations;
+        }
+
+
 
 
         //Event Management ========================================================================================================================

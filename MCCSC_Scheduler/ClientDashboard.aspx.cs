@@ -65,6 +65,22 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+        [WebMethod]
+        public static string GetClientReservation(object clientData)
+        {
+            try
+            {
+                var reservations = dbContext.GetClientReservation(clientData);
+
+                // Return JSON
+                return JsonConvert.SerializeObject(reservations);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
 
         [WebMethod]
         public static string SubmitReservation(ReservationDTO reservationData)

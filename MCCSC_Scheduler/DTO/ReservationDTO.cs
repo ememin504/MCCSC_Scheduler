@@ -10,6 +10,7 @@ namespace MCCSC_Scheduler
         public string EventName { get; set; }
         public int ClientID { get; set; }
         public int StatusID { get; set; }
+        public string StatusName { get; set; }
         public int OrganizationID { get; set; }
         public string Remarks { get; set; }
         public List<AssetDTO> SelectedAssets { get; set; }
