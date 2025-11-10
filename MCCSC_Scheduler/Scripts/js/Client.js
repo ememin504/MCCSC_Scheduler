@@ -43,7 +43,7 @@ function getClientInfo() {
             console.log(info.roleName);
             clientID = info.clientID;
             organizationID = info.organizationID;
-            //getReservation();
+            getReservation();
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
@@ -59,12 +59,82 @@ function getReservation() {
         data: JSON.stringify({ clientData: { clientID: clientID } }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
+
         success: function (response) {
             let data = JSON.parse(response.d);
-            console.log(data);
+            let container = $("#reservationTableBody");
+            container.empty();
+
+            data.forEach(res => {
+
+                // Format all event dates properly without altering original date
+                let dates = res.EventDates.length
+                    ? res.EventDates.map(d => {
+                        // Remove T00:00:00 from date
+                        let formattedDate = d.Date.split('T')[0]; // YYYY-MM-DD
+
+                        // Convert 24-hour time to 12-hour format
+                        function to12Hour(time) {
+                            if (!time) return "";
+                            let [hour, minute] = time.split(':').map(Number);
+                            let ampm = hour >= 12 ? 'PM' : 'AM';
+                            hour = hour % 12 || 12; // Convert 0 => 12
+                            return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+                        }
+
+                        let start = to12Hour(d.StartTime);
+                        let end = to12Hour(d.EndTime);
+
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
+
+
+
+                let row = `<tr>
+                                <td>${res.EventName}</td>
+                                <td>${res.EventDescription}</td>
+                                <td>${formatAssets(res.SelectedAssets)}</td>
+                                <td>${res.StatusName}</td>
+                                <td>${dates}</td>
+                                <td>${res.Reference}</td>
+                            </tr>`;
+
+                container.append(row);
+            });
+        },
+
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
         }
     });
 }
+
+
+function formatDates(dates) {
+    if (!dates || dates.length === 0) return "No Dates";
+
+    return dates
+        .map(d => {
+            let date = new Date(d.date);
+            let formatted = date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric"
+            });
+            return `${formatted} <br><small>${d.startTime} - ${d.endTime}</small>`;
+        })
+        .join("<br><br>");
+}
+function formatAssets(assets) {
+    if (!assets || assets.length === 0) return "No Assets";
+
+    return assets
+        .map(a => `${a.AssetName} (${a.Quantity})`)
+        .join("<br>");
+}
+
+
 
 function getAsset() {
     console.log("loading assets!");
@@ -151,11 +221,27 @@ function getAsset() {
 function submitReservation() {
     console.log("Submitting these assets:", selectedAssets);
 
-    const eventName = document.getElementById("eventName").value;
-    const eventDescription = document.getElementById("eventDescription").value;
-
+    const eventName = document.getElementById("eventName").value.trim();
+    const eventDescription = document.getElementById("eventDescription").value.trim();
     const eventDates = getEventDates();
 
+    // ✅ VALIDATION SECTION
+    if (!eventName) {
+        alert("Please enter the event name.");
+        return;
+    }
+
+    if (!eventDates || eventDates.length === 0) {
+        alert("Please add at least one event date.");
+        return;
+    }
+
+    if (!clientID) {
+        alert("Client ID is missing. Please log in again.");
+        return;
+    }
+
+    // Continue if validation passed
     let reservationInfo = {
         EventName: eventName,
         EventDescription: eventDescription,
@@ -176,17 +262,14 @@ function submitReservation() {
         success: function (response) {
             console.log("Raw response:", response.d);
 
-            // Parse the JSON string returned from the server
             let result = JSON.parse(response.d);
 
             if (result.success) {
                 alert(result.message || "Reservation submitted successfully!");
-                console.log("Reservation success:", result);
-                // Optionally clear form or reload data
-                // location.reload();
+                $('#reservationModal').modal('hide');
+                getReservation();
             } else {
                 alert(result.error || "An error occurred while submitting the reservation.");
-                console.log("Reservation failed:", result.error);
             }
         },
         error: function (xhr, status, error) {
@@ -194,6 +277,7 @@ function submitReservation() {
             alert("A system error occurred. Please try again later.");
         }
     });
+}
 
 
     function connectDB() {
@@ -223,5 +307,4 @@ function submitReservation() {
         };
     }
 
-}
 

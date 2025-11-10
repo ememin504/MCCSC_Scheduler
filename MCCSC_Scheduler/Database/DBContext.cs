@@ -1503,10 +1503,10 @@ namespace MCCSC_Scheduler.Database
             var data = clientData as Dictionary<string, object>;
             int clientID = Convert.ToInt32(data["clientID"]);
 
-            List<ReservationDTO> reservations = new List<ReservationDTO>();
+            var reservations = new List<ReservationDTO>();
 
             string reservationQuery = @"
-        SELECT reservation_id, client_id, status_id, remarks,
+        SELECT reservation_id, client_id, status_id, remarks, 
                event_id, hashed_reference
         FROM Reservation
         WHERE client_id = @ClientID;
@@ -1530,11 +1530,15 @@ namespace MCCSC_Scheduler.Database
         WHERE reservation_id = @ReservationID;
     ";
 
+
             string assetsQuery = @"
-        SELECT ra.asset_id, ra.quantity,
-               a.asset_name, a.category_id, a.is_active,
-               c.category_name
-        FROM Reservation_Assets ra
+        SELECT 
+            ra.asset_id,
+            ra.asset_quantity,
+            a.asset_name,
+            a.category_id,
+            c.category_name
+        FROM AssetOnReservation ra
         INNER JOIN Assets a ON ra.asset_id = a.asset_id
         INNER JOIN AssetCategory c ON a.category_id = c.category_id
         WHERE ra.reservation_id = @ReservationID;
@@ -1544,9 +1548,7 @@ namespace MCCSC_Scheduler.Database
             {
                 conn.Open();
 
-                //
-                // ✅ STEP 1 — Load ALL basic reservations
-                //
+                // ---- Load Basic Reservations ----
                 using (SqlCommand cmd = new SqlCommand(reservationQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@ClientID", clientID);
@@ -1557,12 +1559,13 @@ namespace MCCSC_Scheduler.Database
                         {
                             reservations.Add(new ReservationDTO
                             {
-                                ReservationID = (int)reader["reservation_id"],
-                                ClientID = (int)reader["client_id"],
-                                StatusID = (int)reader["status_id"],
-                                Remarks = reader["remarks"].ToString(),
-                                EventID = (int)reader["event_id"],
-                                Reference = reader["hashed_reference"].ToString(),
+                                ReservationID = reader.GetInt32(reader.GetOrdinal("reservation_id")),
+                                ClientID = reader.GetInt32(reader.GetOrdinal("client_id")),
+                                StatusID = reader.GetInt32(reader.GetOrdinal("status_id")),
+                                Remarks = reader["remarks"]?.ToString(),
+                                EventID = reader.GetInt32(reader.GetOrdinal("event_id")),
+                                Reference = reader["hashed_reference"]?.ToString(),
+
                                 SelectedAssets = new List<AssetDTO>(),
                                 EventDates = new List<EventDateDTO>()
                             });
@@ -1570,14 +1573,10 @@ namespace MCCSC_Scheduler.Database
                     }
                 }
 
-                //
-                // ✅ STEP 2 — Load Event Name + Description, Status Name, Event Dates, & Assets
-                //
+                // ---- Load Related Data for Each Reservation ----
                 foreach (var reservation in reservations)
                 {
-                    //
-                    // ✅ Load Event title/description
-                    //
+                    // ---- Load Event Info ----
                     using (SqlCommand eventCmd = new SqlCommand(eventQuery, conn))
                     {
                         eventCmd.Parameters.AddWithValue("@EventID", reservation.EventID);
@@ -1586,24 +1585,20 @@ namespace MCCSC_Scheduler.Database
                         {
                             if (er.Read())
                             {
-                                reservation.EventName = er["title"].ToString();
-                                reservation.EventDescription = er["description"].ToString();
+                                reservation.EventName = er["title"]?.ToString();
+                                reservation.EventDescription = er["description"]?.ToString();
                             }
                         }
                     }
 
-                    //
-                    // ✅ Load Status Name
-                    //
+                    // ---- Load Status Name ----
                     using (SqlCommand statusCmd = new SqlCommand(statusQuery, conn))
                     {
                         statusCmd.Parameters.AddWithValue("@StatusID", reservation.StatusID);
-                        reservation.StatusName = statusCmd.ExecuteScalar()?.ToString();
+                        reservation.StatusName = statusCmd.ExecuteScalar()?.ToString() ?? "Unknown";
                     }
 
-                    //
-                    // ✅ Load Event Dates
-                    //
+                    // ---- Load Event Dates ----
                     using (SqlCommand dateCmd = new SqlCommand(eventDatesQuery, conn))
                     {
                         dateCmd.Parameters.AddWithValue("@ReservationID", reservation.ReservationID);
@@ -1614,17 +1609,22 @@ namespace MCCSC_Scheduler.Database
                             {
                                 reservation.EventDates.Add(new EventDateDTO
                                 {
-                                    Date = Convert.ToDateTime(dr["date"]),
-                                    StartTime = dr["start_time"].ToString(),
-                                    EndTime = dr["end_time"].ToString()
+                                    Date = Convert.ToDateTime(dr["date"]),       // DATE column → DateTime
+
+                                    StartTime = TimeSpan
+                                        .Parse(dr["start_time"].ToString())
+                                        .ToString(@"hh\:mm"),                    // TIME → "HH:mm"
+
+                                    EndTime = TimeSpan
+                                        .Parse(dr["end_time"].ToString())
+                                        .ToString(@"hh\:mm")                     // TIME → "HH:mm"
                                 });
                             }
                         }
                     }
 
-                    //
-                    // ✅ Load Selected Assets
-                    //
+
+                    // ---- Load Selected Assets ----
                     using (SqlCommand assetCmd = new SqlCommand(assetsQuery, conn))
                     {
                         assetCmd.Parameters.AddWithValue("@ReservationID", reservation.ReservationID);
@@ -1635,12 +1635,11 @@ namespace MCCSC_Scheduler.Database
                             {
                                 reservation.SelectedAssets.Add(new AssetDTO
                                 {
-                                    AssetId = (int)ar["asset_id"],
-                                    AssetName = ar["asset_name"].ToString(),
-                                    Quantity = (int)ar["quantity"],
-                                    IsActive = Convert.ToBoolean(ar["is_active"]),
-                                    CategoryID = (int)ar["category_id"],
-                                    CategoryName = ar["category_name"].ToString()
+                                    AssetId = ar.GetInt32(ar.GetOrdinal("asset_id")),
+                                    AssetName = ar["asset_name"]?.ToString(),
+                                    Quantity = Convert.ToInt32(ar["asset_quantity"]),
+                                    CategoryID = ar.GetInt32(ar.GetOrdinal("category_id")),
+                                    CategoryName = ar["category_name"]?.ToString()
                                 });
                             }
                         }
@@ -1650,8 +1649,6 @@ namespace MCCSC_Scheduler.Database
 
             return reservations;
         }
-
-
 
 
         //Event Management ========================================================================================================================

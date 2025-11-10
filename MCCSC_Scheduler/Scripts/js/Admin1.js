@@ -635,7 +635,7 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
                         <p><strong>Remarks:</strong> ${remarks}</p>
                       </div>
                       <div class='modal-footer'>
-                        <button type='button' class='btn btn-success' onclick="${callFunction}()">${buttonText}</button>
+                        <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)}, ${reservationID})'>${buttonText}</button>
                         <button type='button' class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
                       </div>
                     </div>
@@ -661,8 +661,10 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
         }
     });
 }
-function coordinationMeetingSetUp() {
-    openCoordinationMeetingModal();
+function coordinationMeetingSetUp(data, reservationID) {
+    console.log("Reservation Data", data, reservationID)
+    $("#viewReservationModal").modal("hide");
+    openCoordinationMeetingModal(data, reservationID);
 }
 function saveCoordinationMeeting() {
     let meetingDate = document.getElementById("meetingDate").value;
@@ -698,10 +700,12 @@ function saveCoordinationMeeting() {
 }
 
 
-function acceptReservation(reservationID) {
+function acceptReservation(data ,reservationID) {
+    console.log(reservationID);
     let reservationInfo = {
         ReservationID : reservationID
     }
+    console.log(reservationInfo);
     $.ajax({
         type: "POST",
         url: "AdminDashboard1.aspx/AcceptReservation",
@@ -710,6 +714,7 @@ function acceptReservation(reservationID) {
         dataType: "json",
         success: function (response) {
             console.log(response.d);
+            $('#viewReservationModal').modal('hide');
             getReservationRequests();
             getAcceptedReservation();
         },

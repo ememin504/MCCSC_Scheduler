@@ -43,8 +43,21 @@
         </div>
         <div id="clientProfile">
         </div>
-        <div id="reservationTracking">
-        </div>
+        <h3>Reservation Tracking</h3>
+        <table class="table table-striped table-bordered" id="reservationTable">
+            <thead>
+                <tr>
+                    <th>EventName</th>
+                    <th>Event Description</th>
+                    <th>Assets To be borrowed</th>
+                    <th>Status</th>
+                    <th>Event Dates</th>
+                    <th>Reference</th>
+                </tr>
+            </thead>
+            <tbody id="reservationTableBody">
+            </tbody>
+        </table>
     </form>
 </body>
 </html>
