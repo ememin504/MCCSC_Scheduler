@@ -88,5 +88,23 @@ namespace MCCSC_Scheduler
             DBContext dbContext = new DBContext();
             return dbContext.SubmitReservation(reservationData);
         }
+
+        [WebMethod]
+        [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
+        public static string RequestCancellation(ReservationDTO reservationData)
+        {
+            try
+            {
+                // Call database or mock method
+                var reservations = dbContext.RequestCancellation(reservationData);
+
+                // Return JSON to client
+                return JsonConvert.SerializeObject(reservations);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
     }
 }

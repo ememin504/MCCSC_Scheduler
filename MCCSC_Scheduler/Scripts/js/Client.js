@@ -53,6 +53,15 @@ function getClientInfo() {
 }
 
 function getReservation() {
+    // Helper function: convert 24-hour time to 12-hour format
+    function to12Hour(time) {
+        if (!time) return "";
+        let [hour, minute] = time.split(':').map(Number);
+        let ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12; // Convert 0 => 12
+        return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+    }
+
     $.ajax({
         type: "POST",
         url: "ClientDashboard.aspx/GetClientReservation",
@@ -64,33 +73,64 @@ function getReservation() {
             let data = JSON.parse(response.d);
             let container = $("#reservationTableBody");
             container.empty();
+            console.log(data);
 
             data.forEach(res => {
-
-                // Format all event dates properly without altering original date
+                // Format event dates
                 let dates = res.EventDates.length
                     ? res.EventDates.map(d => {
-                        // Remove T00:00:00 from date
-                        let formattedDate = d.Date.split('T')[0]; // YYYY-MM-DD
-
-                        // Convert 24-hour time to 12-hour format
-                        function to12Hour(time) {
-                            if (!time) return "";
-                            let [hour, minute] = time.split(':').map(Number);
-                            let ampm = hour >= 12 ? 'PM' : 'AM';
-                            hour = hour % 12 || 12; // Convert 0 => 12
-                            return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
-                        }
-
+                        let formattedDate = d.Date.split('T')[0]; // Remove T00:00:00
                         let start = to12Hour(d.StartTime);
                         let end = to12Hour(d.EndTime);
-
                         return `${formattedDate} (${start} - ${end})`;
                     }).join("<br>")
                     : "No dates";
 
+                // Determine button properties
+                let buttonText = "";
+                let buttonFunction = "";
+                let buttonClass = "";
+
+                switch (res.StatusName) { // NOT statusName
+                    case "Accepted":
+                    case "Coordination Meeting":
+                    case "Reschedule":
+                        buttonText = "Request Cancellation";
+                        buttonFunction = "requestCancellation";
+                        buttonClass = "btn btn-warning btn-sm";
+                        break;
+
+                    case "Pending":
+                        buttonText = "Cancel Reservation";
+                        buttonFunction = "cancelReservation"; // optional
+                        buttonClass = "btn btn-danger btn-sm";
+                        break;
+
+                    case "Rejected":
+                    case "Cancelled":
+                    case "Cancellation Request":
+                        buttonText = "View Info";
+                        buttonFunction = "viewInfo";
+                        buttonClass = "btn btn-secondary btn-sm";
+                        break;
+
+                    default:
+                        buttonText = "";
+                        buttonFunction = "";
+                        buttonClass = "";
+                        break;
+                }
 
 
+
+                // Render button even if empty
+                let buttonHTML = `<button class="${buttonClass}" 
+                     ${buttonFunction ? `onclick="${buttonFunction}(${res.ReservationID}); return false;"` : ''}>
+                     ${buttonText}
+                  </button>`;
+
+
+                // Append row to table
                 let row = `<tr>
                                 <td>${res.EventName}</td>
                                 <td>${res.EventDescription}</td>
@@ -98,7 +138,8 @@ function getReservation() {
                                 <td>${res.StatusName}</td>
                                 <td>${dates}</td>
                                 <td>${res.Reference}</td>
-                            </tr>`;
+                                <td>${buttonHTML}</td>
+                           </tr>`;
 
                 container.append(row);
             });
@@ -110,6 +151,43 @@ function getReservation() {
     });
 }
 
+function requestCancellation(reservationID) {
+    // Ask for confirmation first
+    const confirmCancel = confirm("Are you sure you want to send a cancellation request for this reservation?");
+
+    if (!confirmCancel) {
+        console.log("Cancellation request aborted by user.");
+        return; // Stop execution if user clicks Cancel
+    }
+
+    console.log("Sending Cancellation Request...");
+
+    const reservationInfo = { ReservationID: reservationID };
+
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/RequestCancellation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Server response:", response);
+            alert("Your cancellation request has been sent successfully.");
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+            alert("An error occurred while sending your cancellation request. Please try again later.");
+        }
+    });
+}
+
+function cancelReservation() {
+    console.log("Cancelling Reservation Request");
+}
+
+function viewInfo() {
+    console.log("Viewing Reservation Info");
+}
 
 function formatDates(dates) {
     if (!dates || dates.length === 0) return "No Dates";

@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Drawing;
 using System.Runtime.Remoting.Messaging;
 using System.Web.Script.Serialization;
+using System.Web.Services.Description;
 using MCCSC_Scheduler.DTO;
 using MCCSC_Scheduler.Model;
 using MCCSC_Scheduler.ViewModel;
@@ -1649,6 +1650,36 @@ namespace MCCSC_Scheduler.Database
 
             return reservations;
         }
+        public string RequestCancellation(ReservationDTO reservationData)
+        {
+            string message = "";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                string query = @"UPDATE Reservation
+                         SET status_id = 8
+                         WHERE reservation_id = @ReservationID";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    // Use parameterized query
+                    cmd.Parameters.Add("@ReservationID", SqlDbType.Int).Value = reservationData.ReservationID;
+
+                    int rowsAffected = cmd.ExecuteNonQuery();
+
+                    if (rowsAffected > 0)
+                        message = "Cancellation request has been sent.";
+                    else
+                        message = "No matching reservation found.";
+                }
+            }
+
+            return message;
+        }
+
+
 
 
         //Event Management ========================================================================================================================

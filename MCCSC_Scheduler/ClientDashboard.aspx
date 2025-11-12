@@ -53,6 +53,7 @@
                     <th>Status</th>
                     <th>Event Dates</th>
                     <th>Reference</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="reservationTableBody">
