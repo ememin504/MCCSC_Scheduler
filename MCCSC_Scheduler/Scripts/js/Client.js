@@ -157,7 +157,7 @@ function requestCancellation(reservationID) {
 
     if (!confirmCancel) {
         console.log("Cancellation request aborted by user.");
-        return; // Stop execution if user clicks Cancel
+        return; // Stop execution if user clicks Cancel.
     }
 
     console.log("Sending Cancellation Request...");
