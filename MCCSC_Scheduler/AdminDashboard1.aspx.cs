@@ -352,12 +352,16 @@ namespace MCCSC_Scheduler
             return result.ToString();
         }
         [WebMethod]
-        public string CancelReservation(ReservationDTO reservationData) {
-            int reservationID = reservationData.ReservationID;
-
-            string result = dbContext.CancelReservation(reservationData);
-            return result.ToString();
-                
+        public static string CancelReservation(ReservationDTO reservationData) {
+            try
+            {
+                var requests = dbContext.CancelReservation(reservationData);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
         }
         [WebMethod]
         public static string GetReservation(ReservationDTO requestData)

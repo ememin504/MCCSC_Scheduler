@@ -200,8 +200,30 @@ function sendCancellationRequest(reservationID, reason) {
 
 
 
-function cancelReservation() {
+function cancelReservation(reservationID) {
     console.log("Cancelling Reservation Request");
+    let reservationInfo = {
+        ReservationID: reservationID
+    }
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/CancelReservation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response.d);
+            let result = JSON.parse(response.d);
+            //$('#viewReservationModal').modal('hide');
+            if (result.success) {
+                alert("Your reservation is successfully cancelled");
+                getReservation();
+            }
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
 }
 
 function viewInfo() {

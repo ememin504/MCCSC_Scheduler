@@ -979,9 +979,10 @@ namespace MCCSC_Scheduler.Database
                 StatusSearch = 5;
             else if (requestData.ReservationType == "Cancellation Request")
                 StatusSearch = 8;
-
-            // Default query
-            string query = @"SELECT * FROM Reservation WHERE status_id = @StatusSearch";
+            else if (requestData.ReservationType == "Cancelled")
+                StatusSearch = 7;
+                // Default query
+                string query = @"SELECT * FROM Reservation WHERE status_id = @StatusSearch";
 
             // Override query if cancellation
             if (StatusSearch == 8)
@@ -1443,35 +1444,34 @@ namespace MCCSC_Scheduler.Database
                 return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
             }
         }
-        public string CancelReservation(ReservationDTO reservationData)
+        public object CancelReservation(ReservationDTO reservationData)
         {
             string updateStatus = @"UPDATE Reservation SET status_id = 7 WHERE reservation_id = @reservationID";
+
             try
             {
-                // Get the reservation ID from the DTO
                 int reservationID = reservationData.ReservationID;
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
+                using (SqlCommand cmd = new SqlCommand(updateStatus, conn))
                 {
-                    using (SqlCommand cmd = new SqlCommand(updateStatus, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@reservationID", reservationID);
+                    cmd.Parameters.AddWithValue("@reservationID", reservationID);
 
-                        conn.Open();
-                        int rowsAffected = cmd.ExecuteNonQuery();
+                    conn.Open();
+                    int rowsAffected = cmd.ExecuteNonQuery();
 
-                        if (rowsAffected > 0)
-                            return JsonConvert.SerializeObject(new { success = true });
-                        else
-                            return JsonConvert.SerializeObject(new { success = false, error = "Reservation not found." });
-                    }
+                    if (rowsAffected > 0)
+                        return new { success = true };
+
+                    return new { success = false, error = "Reservation not found." };
                 }
             }
             catch (Exception ex)
             {
-                return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
+                return new { success = false, error = ex.Message };
             }
         }
+
         public bool SaveCoordinationMeeting(CoordinationMeetingDTO meeting)
         {
             try

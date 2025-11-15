@@ -45,7 +45,8 @@
     getAssets();
     getAcceptedReservation();
     getStatusCMReservation();
-    getReservationCancellationRequests()
+    getReservationCancellationRequests();
+    getCancelledReservation();
     getEvents();
 });
 
@@ -780,6 +781,78 @@ function getReservationCancellationRequests() {
         }
     })
 }
+function getCancelledReservation() {
+    let reservationType = "Cancelled";
+    let requestInfo = {
+        ReservationType: reservationType
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Raw response:", response);
+            console.log("Response.d:", response.d);
+
+            // Parse the string into a real array
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("CancelledReservationTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Cancelled Reservation found</td></tr>`;
+                return;
+            }
+            // Loop through the data and build table rows
+            data.forEach(res => {
+                let row = `
+                    <tr>
+                        <td>${res.ReservationID}</td>
+                        <td>${res.ClientID}</td>
+                        <td>${res.StatusID}</td>
+                        <td>${res.Remarks}</td>
+                        <td>${res.EventID}</td>
+                        <td>${res.Reason}</td>
+                        <td>${res.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                            onclick="GetRequestInfo(
+                                ${res.ReservationID},
+                                ${res.ClientID}, 
+                                ${res.StatusID}, 
+                                '${res.Remarks}', 
+                                ${res.EventID}, 
+                                '${res.Reference}'
+                            )">
+                            View
+                            </button>
+                        </td>
+
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
+
 
 function openReservationInfoModal() {
     viewReservationModal = new bootstrap.Modal(document.getElementById('vewReservationModal'), {
@@ -889,6 +962,28 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
         }
     });
 }
+function confirmCancellation(data, reservationID) {
+    let reservationInfo = {
+        ReservationID: reservationID
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/CancelReservation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response.d);
+            $('#viewReservationModal').modal('hide');
+            alert("This reservation is successfully cancelled");
+            getReservationRequests();
+            getAcceptedReservation();
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
 function coordinationMeetingSetUp(data, reservationID) {
     console.log("Reservation Data", data, reservationID)
     $("#viewReservationModal").modal("hide");
@@ -965,10 +1060,16 @@ function confirmCancellation(data, reservationID) {
         dataType: "json",
         success: function (response) {
             console.log(response.d);
-            $('#viewReservationModal').modal('hide');
-            getReservationRequests();
-            getAcceptedReservation();
+            let result = JSON.parse(response.d);
+            if (result.success) {
+                $('#viewReservationModal').modal('hide');
+                getReservationRequests();
+                getCancelledReservation();
+            } else {
+                console.error("Failed:", response.d.error);
+            }
         },
+
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
