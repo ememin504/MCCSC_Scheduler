@@ -152,17 +152,30 @@ function getReservation() {
 }
 
 function requestCancellation(reservationID) {
-    // Ask for confirmation first
-    const confirmCancel = confirm("Are you sure you want to send a cancellation request for this reservation?");
 
-    if (!confirmCancel) {
-        console.log("Cancellation request aborted by user.");
-        return; // Stop execution if user clicks Cancel.
-    }
+    openReservationCancellationModal();
 
-    console.log("Sending Cancellation Request...");
+    // Wait for modal to render before binding the button
+    setTimeout(() => {
+        document.getElementById("cancelRequestBtn").onclick = function () {
+            const reason = document.getElementById("cancelReasonInput").value.trim();
 
-    const reservationInfo = { ReservationID: reservationID };
+            if (!reason) {
+                openAlertModal("Missing Reason", "Please provide a reason before submitting.");
+                return;
+            }
+
+            sendCancellationRequest(reservationID, reason);
+        };
+    }, 200);
+}
+function sendCancellationRequest(reservationID, reason) {
+    const reservationInfo = {
+        ReservationID: reservationID,
+        Reason: reason,
+        ClientID: clientID
+    };
+    console.log(reservationInfo);
 
     $.ajax({
         type: "POST",
@@ -170,16 +183,22 @@ function requestCancellation(reservationID) {
         data: JSON.stringify({ reservationData: reservationInfo }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
+
         success: function (response) {
-            console.log("Server response:", response);
-            alert("Your cancellation request has been sent successfully.");
+            $("#reservationCancellationModal").modal("hide");
+
+            openAlertModal("Success", "Your cancellation request has been submitted successfully.");
+            getReservation();
         },
+
         error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
-            alert("An error occurred while sending your cancellation request. Please try again later.");
+            openAlertModal("Error", "An error occurred while sending your request. Please try again.");
+            console.error(xhr.responseText);
         }
     });
 }
+
+
 
 function cancelReservation() {
     console.log("Cancelling Reservation Request");

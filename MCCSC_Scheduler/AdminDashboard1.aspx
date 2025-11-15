@@ -84,8 +84,7 @@
     <tbody id="reservationTableBody">
     </tbody>
     </table>
-
-    <h3>Accepted Reservations</h3>
+    <h3>Accepted Reservation</h3>
     <table class="table table-striped table-bordered" id="acceptedReservationTable">
     <thead>
         <tr>
@@ -99,6 +98,39 @@
         </tr>
     </thead>
     <tbody id="acceptedReservationTableBody">
+    </tbody>
+    </table>
+    <h3>Reservations Bound for Coordination Meeting</h3>
+    <table class="table table-striped table-bordered" id="statusCMReservationTable">
+    <thead>
+        <tr>
+            <th>Reservation ID</th>
+            <th>Client ID</th>
+            <th>Status ID</th>
+            <th>Remarks</th>
+            <th>Event ID</th>
+            <th>Reference</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="statusCMReservationTableBody">
+    </tbody>
+    </table>
+    <h3>Reservation Cancellation Requests</h3>
+    <table class="table table-striped table-bordered" id="ReservationCancellationRequestTable">
+    <thead>
+        <tr>
+            <th>Reservation ID</th>
+            <th>Client ID</th>
+            <th>Status ID</th>
+            <th>Remarks</th>
+            <th>Event ID</th>
+            <th>Reason</th>
+            <th>Reference</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="ReservationCancellationRequestTableBody">
     </tbody>
     </table>
     <h3>Assets</h3>

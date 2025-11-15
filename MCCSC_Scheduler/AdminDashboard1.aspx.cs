@@ -117,19 +117,6 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
-
-        [WebMethod]
-        public static string GetReservationRequest() {
-            try
-            {
-                var requests = dbContext.GetReservationRequest();
-                return requests;
-            }
-            catch (Exception ex)
-            {
-                return JsonConvert.SerializeObject(new { error = ex.Message });
-            }
-        }
         [WebMethod]
         public static string GetRequestInfo(object requestData)
         {
@@ -365,11 +352,19 @@ namespace MCCSC_Scheduler
             return result.ToString();
         }
         [WebMethod]
-        public static string GetAcceptedReservation()
+        public string CancelReservation(ReservationDTO reservationData) {
+            int reservationID = reservationData.ReservationID;
+
+            string result = dbContext.CancelReservation(reservationData);
+            return result.ToString();
+                
+        }
+        [WebMethod]
+        public static string GetReservation(ReservationDTO requestData)
         {
             try
             {
-                var requests = dbContext.GetAcceptedReservation();
+                var requests = dbContext.GetReservation(requestData);
                 return requests;
             }
             catch (Exception ex)
@@ -377,6 +372,7 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+
         [WebMethod]
         public static string GetEvents()
         {

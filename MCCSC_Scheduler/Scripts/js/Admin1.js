@@ -44,6 +44,8 @@
     getUsers();
     getAssets();
     getAcceptedReservation();
+    getStatusCMReservation();
+    getReservationCancellationRequests()
     getEvents();
 });
 
@@ -496,10 +498,14 @@ function getUsers() {
 }
 function getReservationRequests() {
     console.log("getting reservation requests!");
+    let reservationType = "Reservation Request";
+    let requestInfo = {
+        ReservationType: reservationType
+    }
     $.ajax({
         type: "POST",
-        url: "AdminDashboard1.aspx/GetReservationRequest",
-        data: "{}",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
@@ -525,7 +531,7 @@ function getReservationRequests() {
                 tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Reservation Request found</td></tr>`;
                 return;
             }
-            
+
             // Loop through the data and build table rows
             data.forEach(req => {
                 let row = `
@@ -561,6 +567,220 @@ function getReservationRequests() {
         }
     });
 }
+function getAcceptedReservation() {
+    let reservationType = "Accepted Reservation";
+    let requestInfo = {
+        ReservationType: reservationType
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Raw response:", response);
+            console.log("Response.d:", response.d);
+
+            // Parse the string into a real array
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("acceptedReservationTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Accepted Reservation Request found</td></tr>`;
+                return;
+            }
+            // Loop through the data and build table rows
+            data.forEach(res => {
+                let row = `
+                    <tr>
+                        <td>${res.ReservationID}</td>
+                        <td>${res.ClientID}</td>
+                        <td>${res.StatusID}</td>
+                        <td>${res.Remarks}</td>
+                        <td>${res.EventID}</td>
+                        <td>${res.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                            onclick="GetRequestInfo(
+                                ${res.ReservationID},
+                                ${res.ClientID}, 
+                                ${res.StatusID}, 
+                                '${res.Remarks}', 
+                                ${res.EventID}, 
+                                '${res.Reference}'
+                            )">
+                            View
+                            </button>
+                        </td>
+
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
+
+function getStatusCMReservation() {
+    let reservationType = "Coordination Meeting";
+    let requestInfo = {
+        ReservationType: reservationType
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Raw response:", response);
+            console.log("Response.d:", response.d);
+
+            // Parse the string into a real array
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("statusCMReservationTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Accepted Reservation Request found</td></tr>`;
+                return;
+            }
+            // Loop through the data and build table rows
+            data.forEach(res => {
+                let row = `
+                    <tr>
+                        <td>${res.ReservationID}</td>
+                        <td>${res.ClientID}</td>
+                        <td>${res.StatusID}</td>
+                        <td>${res.Remarks}</td>
+                        <td>${res.EventID}</td>
+                        <td>${res.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                            onclick="GetRequestInfo(
+                                ${res.ReservationID},
+                                ${res.ClientID}, 
+                                ${res.StatusID}, 
+                                '${res.Remarks}', 
+                                ${res.EventID}, 
+                                '${res.Reference}'
+                            )">
+                            View
+                            </button>
+                        </td>
+
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
+
+function getReservationCancellationRequests() {
+    let reservationType = "Cancellation Request";
+    let requestInfo = {
+        ReservationType: reservationType
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Raw response:", response);
+            console.log("Response.d:", response.d);
+
+            // Parse the string into a real array
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("ReservationCancellationRequestTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Cancellation Request found</td></tr>`;
+                return;
+            }
+            // Loop through the data and build table rows
+            data.forEach(res => {
+                let row = `
+                    <tr>
+                        <td>${res.ReservationID}</td>
+                        <td>${res.ClientID}</td>
+                        <td>${res.StatusID}</td>
+                        <td>${res.Remarks}</td>
+                        <td>${res.EventID}</td>
+                        <td>${res.Reason}</td>
+                        <td>${res.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                            onclick="GetRequestInfo(
+                                ${res.ReservationID},
+                                ${res.ClientID}, 
+                                ${res.StatusID}, 
+                                '${res.Remarks}', 
+                                ${res.EventID}, 
+                                '${res.Reference}'
+                            )">
+                            View
+                            </button>
+                        </td>
+
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
+
 function openReservationInfoModal() {
     viewReservationModal = new bootstrap.Modal(document.getElementById('vewReservationModal'), {
         backdrop: 'static'
@@ -613,7 +833,15 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
             } else if (data.Status === "Pending") {
                 callFunction = "acceptReservation";
                 buttonText = "Accept";
+            } else if (data.Status == "Coordination Meeting") {
+                callFunction = "editReservationInfo";
+                buttonText = "Edit Reservation";
+            } else if (data.Status == "Cancellation Request") {
+                callFunction = "confirmCancellation";
+                buttonText = "Confirm Cancellation"
             }
+
+
 
             // ✅ Build modal dynamically here
             let modalHTML = `
@@ -691,6 +919,7 @@ function saveCoordinationMeeting() {
             alert(result.message || "Meeting saved!");
             $("#coordinationMeetingModal").modal("hide");
             getAcceptedReservation();
+            getStatusCMReservation();
         },
         error: function (xhr, status, error) {
             console.error("AJAX Error:", xhr.responseText);
@@ -723,74 +952,28 @@ function acceptReservation(data ,reservationID) {
         }
     })
 }
-
-function getAcceptedReservation() {
+function confirmCancellation(data, reservationID) {
+    console.log(reservationID);
+    let reservationInfo = {
+        ReservationID: reservationID
+    }
     $.ajax({
         type: "POST",
-        url: "AdminDashboard1.aspx/GetAcceptedReservation",
-        data: "{}",
+        url: "AdminDashboard1.aspx/CancelReservation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Raw response:", response);
-            console.log("Response.d:", response.d);
-
-            // Parse the string into a real array
-            let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
-
-            try {
-                data = JSON.parse(response.d);
-            } catch (e) {
-                console.error("JSON parse error:", e);
-            }
-
-            console.log("Parsed data:", data);
-
-            let tbody = document.getElementById("acceptedReservationTableBody");
-            tbody.innerHTML = "";
-
-            // Check if there are any records
-            if (!Array.isArray(data) || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Accepted Reservation Request found</td></tr>`;
-                return;
-            }
-            // Loop through the data and build table rows
-            data.forEach(res => {
-                let row = `
-                    <tr>
-                        <td>${res.ReservationID}</td>
-                        <td>${res.ClientID}</td>
-                        <td>${res.StatusID}</td>
-                        <td>${res.Remarks}</td>
-                        <td>${res.EventID}</td>
-                        <td>${res.Reference}</td>
-                        <td>
-                            <button class="btn btn-success btn-sm"
-                            onclick="GetRequestInfo(
-                                ${res.ReservationID},
-                                ${res.ClientID}, 
-                                ${res.StatusID}, 
-                                '${res.Remarks}', 
-                                ${res.EventID}, 
-                                '${res.Reference}'
-                            )">
-                            View
-                            </button>
-                        </td>
-
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-            
+            console.log(response.d);
+            $('#viewReservationModal').modal('hide');
+            getReservationRequests();
+            getAcceptedReservation();
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
     })
 }
-
 function openReservationModal() {
     console.log(roleId, userId, userEmail);
 }

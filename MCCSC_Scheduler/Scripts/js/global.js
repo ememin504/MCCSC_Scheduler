@@ -8,6 +8,7 @@ var createAssetModal;
 var addAssetCategoryModal;
 var editCategoryModal;
 var coordinationMeetingModal;
+let reservationCancellationModal;
 var categoryID;
 
 var coordinationMeetingModalEl = `
@@ -588,7 +589,42 @@ function openAssetEditorModal(asset_name, asset_quantity, category_id, category_
 
     console.log("✅ Modal opened successfully.");
 }
+let reservationCancellationModalEl = `
+<div class='modal fade' id='reservationCancellationModal' role='dialog'>
+    <div class='modal-dialog'>
+        <div class='modal-content'>
+        
+            <div class='modal-header'>
+                <h4 class='modal-title'>Cancellation Request</h4>
+                <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
+            </div>
 
+            <div class='modal-body'>
+                <p>Please provide your reason for cancellation:</p>
+                <textarea id='cancelReasonInput' class='form-control' rows='3' placeholder='Reason...'></textarea>
+            </div>
+
+            <div class='modal-footer'>
+                <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+                <button type='button' id='cancelRequestBtn' class='btn btn-danger'>Submit</button>
+            </div>
+
+        </div>
+    </div>
+</div>`;
+let reservationCancellationModalInserted = false;
+function openReservationCancellationModal() {
+
+    // Insert the modal in the DOM only once
+    if (!reservationCancellationModalInserted) {
+        document.body.insertAdjacentHTML("beforeend", reservationCancellationModalEl);
+        reservationCancellationModalInserted = true;
+    }
+
+    // Open the modal
+    let modal = new bootstrap.Modal(document.getElementById("reservationCancellationModal"));
+    modal.show();
+}
 function initializeTooltip() {
     //initialize tooltips
     //get elements where tooltips will be triggered
@@ -615,7 +651,9 @@ function openAlertModal(title, message) {
     alertModal.show();
     document.getElementById('alertModalTitle').textContent = title;
     var alertModalDiv = document.getElementsByClassName('alert-modal-content');
-    alertModalDiv[0].textContent = message;
+    //alertModalDiv[0].textContent = message;
+    alertModalDiv[0].innerHTML = message;
+
 }
 function openOtpModal(userID) {
     var modalEl = document.getElementById("otpModal");

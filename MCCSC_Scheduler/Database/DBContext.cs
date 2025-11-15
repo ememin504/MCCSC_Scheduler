@@ -130,6 +130,7 @@ namespace MCCSC_Scheduler.Database
                                 UserID = userId,
                                 UserName = reader["username"].ToString(),
                                 RoleID = roleID,
+                                RoleName = roleName,
                                 Email = reader["email"].ToString(),
                                 FirstName = reader["first_name"].ToString(),
                                 MiddleInitial = reader["middle_initial"].ToString(),
@@ -144,7 +145,8 @@ namespace MCCSC_Scheduler.Database
                 }
 
                 // Determine table names based on roleID
-                string typeTable = roleID == 1 ? "Client" : "Admins";
+
+                string typeTable = roleID == 1 ? "Client" : "Admin";
                 string descriptionTable = roleID == 1 ? "Client_type" : "Admin_type";
 
                 // Combined query: get RoleTypeID and its description in one go
@@ -964,10 +966,34 @@ namespace MCCSC_Scheduler.Database
             return new JavaScriptSerializer().Serialize(new { error = "Client not found" });
         }
 
-//Reservation Section ========================================================================================================================
-        public string GetReservationRequest()
+        //Reservation Section ========================================================================================================================
+        public string GetReservation(ReservationDTO requestData)
         {
-            string query = @"SELECT * FROM Reservation WHERE status_id = 2";
+            int StatusSearch = 0;
+
+            if (requestData.ReservationType == "Reservation Request")
+                StatusSearch = 2;
+            else if (requestData.ReservationType == "Accepted Reservation")
+                StatusSearch = 3;
+            else if (requestData.ReservationType == "Coordination Meeting")
+                StatusSearch = 5;
+            else if (requestData.ReservationType == "Cancellation Request")
+                StatusSearch = 8;
+
+            // Default query
+            string query = @"SELECT * FROM Reservation WHERE status_id = @StatusSearch";
+
+            // Override query if cancellation
+            if (StatusSearch == 8)
+            {
+                query = @"
+            SELECT r.*, c.reason
+            FROM Reservation r
+            LEFT JOIN CancellationRequests c 
+                ON r.reservation_id = c.reservation_id
+            WHERE r.status_id = @StatusSearch";
+            }
+
             List<object> requests = new List<object>();
 
             try
@@ -977,9 +1003,10 @@ namespace MCCSC_Scheduler.Database
                     conn.Open();
                     using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
+                        cmd.Parameters.AddWithValue("@StatusSearch", StatusSearch);
+
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
-
                             while (reader.Read())
                             {
                                 requests.Add(new
@@ -989,19 +1016,23 @@ namespace MCCSC_Scheduler.Database
                                     StatusID = reader["status_id"],
                                     Remarks = reader["remarks"],
                                     EventID = reader["event_id"],
-                                    Reference = reader["hashed_reference"]
+                                    Reference = reader["hashed_reference"],
+                                    Reason = StatusSearch == 8 ? reader["reason"]?.ToString() : null
                                 });
                             }
                         }
                     }
                 }
+
                 return JsonConvert.SerializeObject(requests);
             }
             catch (Exception ex)
             {
-                return $"Error in GetReservationRequest: {ex.Message}";
+                return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+
+
         public string GetRequestInfo(int reservationID, int clientID, int statusID, int eventID)
         {
             using (SqlConnection conn = new SqlConnection(connectionString))
@@ -1412,35 +1443,33 @@ namespace MCCSC_Scheduler.Database
                 return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
             }
         }
-        public string GetAcceptedReservation() {
-            try {
-                string query = @"SELECT * FROM Reservation WHERE status_id = 3";
-                List<object> result = new List<object>();
+        public string CancelReservation(ReservationDTO reservationData)
+        {
+            string updateStatus = @"UPDATE Reservation SET status_id = 7 WHERE reservation_id = @reservationID";
+            try
+            {
+                // Get the reservation ID from the DTO
+                int reservationID = reservationData.ReservationID;
 
-                using (SqlConnection conn = new SqlConnection(connectionString)) {
-                    conn.Open();
-                    using (SqlCommand cmd = new SqlCommand(query, conn)) { 
-                        using (SqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                result.Add(new
-                                {
-                                    ReservationID = reader["reservation_id"],
-                                    ClientID = reader["client_id"],
-                                    StatusID = reader["status_id"] == DBNull.Value ? "" : reader["status_id"].ToString(),
-                                    Remarks = reader["remarks"],
-                                    EventID = reader["event_id"],
-                                    Reference = reader["hashed_reference"],
-                                });
-                            }
-                        }
-                        return JsonConvert.SerializeObject(result);
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    using (SqlCommand cmd = new SqlCommand(updateStatus, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@reservationID", reservationID);
+
+                        conn.Open();
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                            return JsonConvert.SerializeObject(new { success = true });
+                        else
+                            return JsonConvert.SerializeObject(new { success = false, error = "Reservation not found." });
                     }
                 }
             }
-            catch (Exception ex) {
-                return $"Error in GetAcceptedReservation: {ex.Message}";
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
             }
         }
         public bool SaveCoordinationMeeting(CoordinationMeetingDTO meeting)
@@ -1658,28 +1687,40 @@ namespace MCCSC_Scheduler.Database
             {
                 conn.Open();
 
-                string query = @"UPDATE Reservation
-                         SET status_id = 8
-                         WHERE reservation_id = @ReservationID";
+                // 1️⃣ Update reservation status (sent request)
+                string updateQuery = @"UPDATE Reservation
+                               SET status_id = 8
+                               WHERE reservation_id = @ReservationID";
 
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                // 2️⃣ Insert into cancellation requests table
+                string insertQuery = @"INSERT INTO CancellationRequests (reservation_id, client_id, reason)
+                               VALUES (@ReservationID, @ClientID, @Reason)";
+
+                // Run update
+                using (SqlCommand cmd = new SqlCommand(updateQuery, conn))
                 {
-                    // Use parameterized query
                     cmd.Parameters.Add("@ReservationID", SqlDbType.Int).Value = reservationData.ReservationID;
-
                     int rowsAffected = cmd.ExecuteNonQuery();
 
-                    if (rowsAffected > 0)
-                        message = "Cancellation request has been sent.";
-                    else
-                        message = "No matching reservation found.";
+                    if (rowsAffected == 0)
+                        return "No matching reservation found.";
                 }
+
+                // Run insert
+                using (SqlCommand cmd = new SqlCommand(insertQuery, conn))
+                {
+                    cmd.Parameters.Add("@ReservationID", SqlDbType.Int).Value = reservationData.ReservationID;
+                    cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = reservationData.ClientID;
+                    cmd.Parameters.Add("@Reason", SqlDbType.NVarChar).Value = reservationData.Reason;
+
+                    cmd.ExecuteNonQuery();
+                }
+
+                message = "Cancellation request has been sent.";
             }
 
             return message;
         }
-
-
 
 
         //Event Management ========================================================================================================================
