@@ -2196,6 +2196,7 @@
     <Content Include="Scripts\css\AdminDashboard1.css" />
     <Content Include="Scripts\css\default.css" />
     <Content Include="Scripts\js\Admin1.js" />
+    <Content Include="Scripts\js\Admin2.js" />
     <Content Include="Scripts\js\Client.js" />
     <Content Include="Scripts\js\default.js" />
     <Content Include="Scripts\js\global.js" />

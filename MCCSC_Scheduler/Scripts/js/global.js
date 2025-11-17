@@ -8,7 +8,8 @@ var createAssetModal;
 var addAssetCategoryModal;
 var editCategoryModal;
 var coordinationMeetingModal;
-let reservationCancellationModal;
+var reservationCancellationModal;
+var editReservationModal;
 var categoryID;
 
 var coordinationMeetingModalEl = `
@@ -634,6 +635,24 @@ function initializeTooltip() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 }
+let editReservationModalEl = `
+<div class="modal fade" id="editReservationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <
+            </div>
+        </div>
+    </div>
+</div>
+`;
+function openEditReservationModal() {
+    console.log("Opening edit reservation modal");
+}
 
 function hideTooltip() {
     var tooltipElement = document.querySelector('[data-bs-toggle="tooltip"]');
@@ -727,6 +746,3 @@ function openCreateAssetModal() {
 
     console.log("✅ Modal opened successfully.");
 }
-
-
-

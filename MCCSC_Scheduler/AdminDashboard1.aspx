@@ -109,6 +109,8 @@
             <th>Status ID</th>
             <th>Remarks</th>
             <th>Event ID</th>
+            <th>Meeting Date</th>
+            <th>Meeting Time</th>
             <th>Reference</th>
             <th>Actions</th>
         </tr>

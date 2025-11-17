@@ -671,7 +671,7 @@ function getStatusCMReservation() {
 
             // Check if there are any records
             if (!Array.isArray(data) || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Accepted Reservation Request found</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Reservation found</td></tr>`;
                 return;
             }
             // Loop through the data and build table rows
@@ -683,6 +683,8 @@ function getStatusCMReservation() {
                         <td>${res.StatusID}</td>
                         <td>${res.Remarks}</td>
                         <td>${res.EventID}</td>
+                        <td>${formatDate(res.MeetingDate)}</td>
+                        <td>${formatTime(res.MeetingTime)}</td>
                         <td>${res.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
@@ -690,9 +692,7 @@ function getStatusCMReservation() {
                                 ${res.ReservationID},
                                 ${res.ClientID}, 
                                 ${res.StatusID}, 
-                                '${res.Remarks}', 
                                 ${res.EventID}, 
-                                '${res.Reference}'
                             )">
                             View
                             </button>
@@ -709,6 +709,27 @@ function getStatusCMReservation() {
         }
     })
 }
+function formatDate(dateString) {
+    if (!dateString) return "";
+
+    // Remove the T and time
+    return dateString.split("T")[0];
+}
+
+function formatTime(timeString) {
+    if (!timeString) return "";
+
+    let [hour, minute] = timeString.split(":");
+
+    hour = parseInt(hour);
+    let suffix = hour >= 12 ? "PM" : "AM";
+
+    if (hour === 0) hour = 12;
+    else if (hour > 12) hour -= 12;
+
+    return `${hour}:${minute} ${suffix}`;
+}
+
 
 function getReservationCancellationRequests() {
     let reservationType = "Cancellation Request";
@@ -961,6 +982,9 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
             console.error("Error:", xhr.responseText);
         }
     });
+}
+function editReservationInfo(data, reservationID) {
+    openEditReservationModal();
 }
 function confirmCancellation(data, reservationID) {
     let reservationInfo = {

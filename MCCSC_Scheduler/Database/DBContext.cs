@@ -981,28 +981,32 @@ namespace MCCSC_Scheduler.Database
                 StatusSearch = 8;
             else if (requestData.ReservationType == "Cancelled")
                 StatusSearch = 7;
-                // Default query
-                string query = @"SELECT * FROM Reservation WHERE status_id = @StatusSearch";
 
-            // Override query if cancellation
-            if (StatusSearch == 8)
-            {
-                query = @"
-            SELECT r.*, c.reason
-            FROM Reservation r
-            LEFT JOIN CancellationRequests c 
-                ON r.reservation_id = c.reservation_id
-            WHERE r.status_id = @StatusSearch";
-            }
-
-            List<object> requests = new List<object>();
+            List<object> result = new List<object>();
 
             try
             {
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
                     conn.Open();
-                    using (SqlCommand cmd = new SqlCommand(query, conn))
+
+                    // -------------------------------------------------------
+                    // MAIN RESERVATION QUERY (always runs)
+                    // -------------------------------------------------------
+                    string queryA = @"
+                SELECT * FROM Reservation WHERE status_id = @StatusSearch";
+
+                    if (StatusSearch == 8)
+                    {
+                        queryA = @"
+                    SELECT r.*, c.reason
+                    FROM Reservation r
+                    LEFT JOIN CancellationRequests c
+                        ON r.reservation_id = c.reservation_id
+                    WHERE r.status_id = @StatusSearch";
+                    }
+
+                    using (SqlCommand cmd = new SqlCommand(queryA, conn))
                     {
                         cmd.Parameters.AddWithValue("@StatusSearch", StatusSearch);
 
@@ -1010,8 +1014,9 @@ namespace MCCSC_Scheduler.Database
                         {
                             while (reader.Read())
                             {
-                                requests.Add(new
+                                result.Add(new
                                 {
+                                    //Type = "Reservation",
                                     ReservationID = reader["reservation_id"],
                                     ClientID = reader["client_id"],
                                     StatusID = reader["status_id"],
@@ -1023,15 +1028,62 @@ namespace MCCSC_Scheduler.Database
                             }
                         }
                     }
+
+                    // -------------------------------------------------------
+                    // SECOND QUERY (Only runs when StatusSearch == 5)
+                    // -------------------------------------------------------
+                    if (StatusSearch == 5)
+                    {
+                        // 1. Load all coordination meeting data first
+                        DateTime? meetingDate = null;
+                        string meetingTime = null;
+                        string meetingRemarks = null;
+
+                        string queryB = @"SELECT TOP 1 meeting_date, meeting_time, remarks 
+                      FROM CoordinationMeetingDates";
+
+                        using (SqlCommand cmd2 = new SqlCommand(queryB, conn))
+                        using (SqlDataReader reader = cmd2.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                meetingDate = reader["meeting_date"] as DateTime?;
+                                meetingTime = reader["meeting_time"]?.ToString();
+                                meetingRemarks = reader["remarks"]?.ToString();
+                            }
+                        }
+
+                        // 2. Attach meeting info to each reservation
+                        for (int i = 0; i < result.Count; i++)
+                        {
+                            var item = result[i];
+
+                            result[i] = new
+                            {
+                                ReservationID = item.GetType().GetProperty("ReservationID")?.GetValue(item),
+                                ClientID = item.GetType().GetProperty("ClientID")?.GetValue(item),
+                                StatusID = item.GetType().GetProperty("StatusID")?.GetValue(item),
+                                Remarks = item.GetType().GetProperty("Remarks")?.GetValue(item),
+                                EventID = item.GetType().GetProperty("EventID")?.GetValue(item),
+                                Reference = item.GetType().GetProperty("Reference")?.GetValue(item),
+
+                                // Add these fields
+                                MeetingDate = meetingDate,
+                                MeetingTime = meetingTime
+                            };
+                        }
+                    }
+
                 }
 
-                return JsonConvert.SerializeObject(requests);
+                return JsonConvert.SerializeObject(result);
             }
             catch (Exception ex)
             {
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+
 
 
         public string GetRequestInfo(int reservationID, int clientID, int statusID, int eventID)
