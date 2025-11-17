@@ -76,7 +76,7 @@ function authenticateUser() {
         UserName: username,
         Password: password
     };
-    
+
     fetch("Default.aspx/AuthenticationResult", {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
@@ -84,7 +84,7 @@ function authenticateUser() {
     })
         .then(response => response.json())
         .then(data => {
-            const user = JSON.parse(data.d); 
+            const user = JSON.parse(data.d);
 
             if (user.Success) {
                 // Assign all the data safely
@@ -112,7 +112,7 @@ function authenticateUser() {
 
 
 }
-function verifyOTP(role_id ,user_id, user_email) {
+function verifyOTP(role_id, user_id, user_email) {
     parseInt(user_id);
     console.log(user_id);
     let otpCode = document.getElementById('otpCode').value;
@@ -152,7 +152,7 @@ function verifyOTP(role_id ,user_id, user_email) {
                     // Redirect to dashboard
                     window.location.href = "ClientDashboard.aspx";
 
-                }   
+                }
                 else if (role_id === 2) {
                     sessionStorage.setItem("role_id", role_id);
                     sessionStorage.setItem("user_id", user_id);
@@ -163,7 +163,7 @@ function verifyOTP(role_id ,user_id, user_email) {
                     sessionStorage.setItem("first_name", first_name);
                     sessionStorage.setItem("middle_initial", middle_initial);
                     sessionStorage.setItem("last_name", last_name);
-                    
+
                     if (role_type_id == 1)
                         window.location.href = "AdminDashboard1.aspx";
                     else
@@ -248,4 +248,123 @@ function connectDB() {
 }
 
 
-           
+// Calendar functionality
+let currentDate = new Date();
+let selectedDate = null;
+
+// Initialize calendar on page load
+document.addEventListener('DOMContentLoaded', function () {
+    generateCalendar(currentDate);
+});
+
+function generateCalendar(date) {
+    const calendar = document.getElementById('calendar');
+    if (!calendar) return;
+
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    // Update month header
+    const monthHeader = document.getElementById('calendarMonth');
+    if (monthHeader) {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        monthHeader.innerHTML = `
+            <button type="button" class="calendar-nav" onclick="previousMonth()">‹</button>
+            ${monthNames[month]} ${year}
+            <button type="button" class="calendar-nav" onclick="nextMonth()">›</button>
+        `;
+    }
+
+    // Get first day of month and number of days
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    // Get today's date for highlighting
+    const today = new Date();
+    const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
+    const todayDate = today.getDate();
+
+    // Create calendar HTML
+    let calendarHTML = '<div class="calendar-grid">';
+
+    // Day headers
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    dayNames.forEach(day => {
+        calendarHTML += `<div class="calendar-day-header">${day}</div>`;
+    });
+
+    // Previous month days
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const day = daysInPrevMonth - i;
+        calendarHTML += `<div class="calendar-day other-month">${day}</div>`;
+    }
+
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = isCurrentMonth && day === todayDate;
+        const isSelected = selectedDate &&
+            selectedDate.getDate() === day &&
+            selectedDate.getMonth() === month &&
+            selectedDate.getFullYear() === year;
+
+        let classes = 'calendar-day';
+        if (isToday) classes += ' today';
+        if (isSelected) classes += ' selected';
+
+        calendarHTML += `<div class="${classes}" onclick="selectDate(${year}, ${month}, ${day})">${day}</div>`;
+    }
+
+    // Next month days
+    const remainingCells = 42 - (firstDay + daysInMonth); // 6 rows × 7 days
+    for (let day = 1; day <= remainingCells; day++) {
+        calendarHTML += `<div class="calendar-day other-month">${day}</div>`;
+    }
+
+    calendarHTML += '</div>';
+    calendar.innerHTML = calendarHTML;
+}
+
+function selectDate(year, month, day) {
+    selectedDate = new Date(year, month, day);
+
+    // Update display
+    const displayDate = document.getElementById('displayDate');
+    if (displayDate) {
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+        displayDate.textContent = `${dayNames[selectedDate.getDay()]}, ${monthNames[month]} ${day}, ${year}`;
+    }
+
+    // Regenerate calendar to show selection
+    generateCalendar(currentDate);
+}
+
+function previousMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    generateCalendar(currentDate);
+}
+
+function nextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    generateCalendar(currentDate);
+}
+
+// Function to get selected date (can be called from other scripts)
+function getSelectedDate() {
+    return selectedDate;
+}
+
+// Function to reset calendar to current month
+function resetCalendar() {
+    currentDate = new Date();
+    selectedDate = null;
+    generateCalendar(currentDate);
+    const displayDate = document.getElementById('displayDate');
+    if (displayDate) {
+        displayDate.textContent = 'Please select a date';
+    }
+}

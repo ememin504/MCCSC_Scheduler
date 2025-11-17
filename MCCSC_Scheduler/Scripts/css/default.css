@@ -5,13 +5,17 @@
 }
 
 :root {
-    --primary-green: #70c446;
-    --primary-yellow: #f4e68c;
+    --primary-red: #e74c3c;
+    --primary-blue: #3498db;
+    --dark-red: #c0392b;
+    --dark-blue: #2980b9;
+    --accent-purple: #9b59b6;
     --dark-text: #333;
     --light-bg: #f9f9f9;
     --white: #ffffff;
     --shadow: rgba(0, 0, 0, 0.1);
-    --hover-green: #5dad32;
+    --gradient-main: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
+    --gradient-hover: linear-gradient(135deg, #c0392b 0%, #8e44ad 50%, #2980b9 100%);
 }
 
 body {
@@ -23,13 +27,13 @@ body {
 
 /* HEADER */
 header {
-    background: linear-gradient(135deg, var(--primary-green) 0%, var(--hover-green) 100%);
+    background: var(--gradient-main);
     color: white;
-    padding: 1.5rem 2rem;
+    padding: 10px 20px;
     box-shadow: 0 4px 6px var(--shadow);
     position: sticky;
     top: 0;
-    z-index: 1000;
+    z-index: 500;
 }
 
 .header-content {
@@ -75,7 +79,7 @@ nav {
 
 .nav-btn {
     background: white;
-    color: var(--primary-green);
+    color: var(--primary-red);
     border: none;
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
@@ -86,13 +90,15 @@ nav {
 }
 
     .nav-btn:hover {
-        background: var(--primary-yellow);
+        background: var(--gradient-main);
+        color: white;
         transform: translateY(-2px);
         box-shadow: 0 4px 8px var(--shadow);
     }
 
     .nav-btn.active {
-        background: var(--primary-yellow);
+        background: var(--gradient-main);
+        color: white;
         box-shadow: 0 4px 8px var(--shadow);
     }
 
@@ -130,23 +136,27 @@ main {
 
 /* WELCOME BANNER */
 .welcome-banner {
-    background: linear-gradient(135deg, var(--primary-green) 0%, var(--hover-green) 100%);
-    color: white;
-    padding: 2rem;
-    border-radius: 10px;
-    text-align: center;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 10px var(--shadow);
+    padding: 2rem 0;
+    text-align: left;
+    margin-bottom: 1rem;
 }
 
     .welcome-banner h2 {
-        font-size: 2rem;
+        font-size: 2.5rem;
         margin-bottom: 0.5rem;
+        color: var(--dark-text);
     }
 
+        .welcome-banner h2 .guest-text {
+            background: var(--gradient-main);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
 .free-notice {
-    background: var(--primary-yellow);
-    color: var(--dark-text);
+    background: var(--gradient-main);
+    color: white;
     display: inline-block;
     padding: 0.5rem 1.5rem;
     border-radius: 25px;
@@ -156,30 +166,64 @@ main {
 
 /* CONTENT GRID */
 .content-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
     gap: 2rem;
     margin-bottom: 2rem;
+    align-items: flex-start;
 }
 
 /* CALENDAR */
 .calendar-container {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px var(--shadow);
+    flex: 1;
+    background: transparent;
+    padding: 0;
 }
 
     .calendar-container h3 {
-        color: var(--primary-green);
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         margin-bottom: 1rem;
-        font-size: 1.3rem;
+        font-size: 2rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+        .calendar-container h3::before {
+            content: '≡';
+            font-size: 1.5rem;
+            background: var(--gradient-main);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+.calendar-nav {
+    background: var(--gradient-main);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+    .calendar-nav:hover {
+        background: var(--gradient-hover);
+        transform: scale(1.1);
     }
 
 #calendar {
-    background: var(--light-bg);
-    padding: 1rem;
-    border-radius: 8px;
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 }
 
 .calendar-header {
@@ -190,12 +234,15 @@ main {
 }
 
     .calendar-header h4 {
-        color: var(--primary-green);
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-size: 1.2rem;
     }
 
 .calendar-nav {
-    background: var(--primary-green);
+    background: var(--gradient-main);
     color: white;
     border: none;
     padding: 0.5rem 1rem;
@@ -205,7 +252,7 @@ main {
 }
 
     .calendar-nav:hover {
-        background: var(--hover-green);
+        background: var(--gradient-hover);
     }
 
 .calendar-grid {
@@ -218,7 +265,10 @@ main {
 .calendar-day-header {
     text-align: center;
     font-weight: bold;
-    color: var(--primary-green);
+    background: var(--gradient-main);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     padding: 0.5rem;
     font-size: 0.9rem;
 }
@@ -237,15 +287,16 @@ main {
 }
 
     .calendar-day:hover {
-        background: var(--primary-yellow);
-        border-color: var(--primary-green);
+        background: var(--gradient-main);
+        color: white;
+        border-color: var(--primary-blue);
         transform: scale(1.05);
     }
 
     .calendar-day.selected {
-        background: var(--primary-green);
+        background: var(--gradient-main);
         color: white;
-        border-color: var(--primary-green);
+        border-color: var(--primary-blue);
     }
 
     .calendar-day.other-month {
@@ -259,31 +310,54 @@ main {
         }
 
     .calendar-day.today {
-        border: 3px solid var(--primary-green);
+        border: 3px solid var(--primary-red);
         font-weight: bold;
     }
 
 .selected-date {
-    margin-top: 1rem;
-    padding: 1rem;
-    background: var(--primary-yellow);
-    border-radius: 5px;
+    margin-top: 1.5rem;
+    padding: 1.2rem;
+    background: var(--gradient-main);
+    color: white;
+    border-radius: 10px;
     text-align: center;
     font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
+
+    .selected-date strong {
+        font-weight: 600;
+    }
+
+    .selected-date #displayDate {
+        font-weight: bold;
+    }
 
 /* REGISTRATION FORM */
 .registration-container {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 10px var(--shadow);
+    width: 420px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    border: 2px solid transparent;
+    background-image: linear-gradient(white, white), linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
 }
 
     .registration-container h3 {
-        color: var(--primary-green);
-        margin-bottom: 1rem;
-        font-size: 1.3rem;
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1.5rem;
+        font-size: 2rem;
+        text-align: center;
+        font-weight: bold;
     }
 
 .form-group {
@@ -303,32 +377,56 @@ main {
         border: 2px solid #e0e0e0;
         border-radius: 5px;
         font-size: 1rem;
-        transition: border-color 0.3s ease;
+        transition: all 0.3s ease;
+        background: white;
     }
 
         .form-group input:focus {
             outline: none;
-            border-color: var(--primary-green);
+            border: 2px solid transparent;
+            background-image: linear-gradient(white, white), linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
         }
 
 .submit-btn {
     width: 100%;
-    background: var(--primary-green);
+    background: var(--gradient-main);
     color: white;
     border: none;
     padding: 1rem;
     font-size: 1.1rem;
     font-weight: bold;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
 
     .submit-btn:hover {
-        background: var(--hover-green);
+        background: var(--gradient-hover);
         transform: translateY(-2px);
         box-shadow: 0 6px 12px var(--shadow);
     }
+
+.login-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 1rem;
+}
+
+    .login-link a {
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
 
 /* FACILITIES SECTION */
 .facilities-section {
@@ -339,7 +437,10 @@ main {
 }
 
     .facilities-section h3 {
-        color: var(--primary-green);
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-size: 1.5rem;
         margin-bottom: 1.5rem;
         text-align: center;
@@ -355,18 +456,22 @@ main {
     background: var(--light-bg);
     padding: 1.5rem;
     border-radius: 8px;
-    border-left: 5px solid var(--primary-green);
+    border-left: 5px solid transparent;
+    border-image: linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%) 1;
     transition: all 0.3s ease;
 }
 
     .facility-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 6px 15px var(--shadow);
-        background: var(--primary-yellow);
+        background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(155, 89, 182, 0.1) 50%, rgba(52, 152, 219, 0.1) 100%);
     }
 
     .facility-card h4 {
-        color: var(--primary-green);
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-size: 1.2rem;
         margin-bottom: 0.5rem;
     }
@@ -379,10 +484,17 @@ main {
     padding: 2rem;
     border-radius: 10px;
     box-shadow: 0 4px 15px var(--shadow);
+    border: 2px solid transparent;
+    background-image: linear-gradient(white, white), linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
 }
 
     .login-box h2 {
-        color: var(--primary-green);
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         margin-bottom: 1.5rem;
         text-align: center;
     }
@@ -393,10 +505,17 @@ main {
     padding: 2rem;
     border-radius: 10px;
     box-shadow: 0 4px 10px var(--shadow);
+    border: 2px solid transparent;
+    background-image: linear-gradient(white, white), linear-gradient(135deg, #e74c3c 0%, #9b59b6 50%, #3498db 100%);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
 }
 
     .about-content h2 {
-        color: var(--primary-green);
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-size: 2rem;
         margin-bottom: 1.5rem;
         text-align: center;
@@ -408,13 +527,19 @@ main {
 }
 
     .about-box h3 {
-        color: var(--primary-green);
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-size: 1.5rem;
         margin-bottom: 1rem;
     }
 
     .about-box h4 {
-        color: var(--hover-green);
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-size: 1.2rem;
         margin-top: 1.5rem;
         margin-bottom: 0.5rem;
@@ -429,16 +554,40 @@ main {
         margin-bottom: 0.5rem;
     }
 
+    .about-box p {
+        line-height: 1.8;
+        margin-bottom: 1rem;
+    }
+
+    .about-box strong {
+        background: var(--gradient-main);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
 /* FOOTER */
 footer {
-    background: var(--dark-text);
+    background: var(--gradient-main);
     color: white;
     text-align: center;
-    padding: 1.5rem;
-    margin-top: 3rem;
+    padding: 10px;
+    margin-top: 10px;
 }
 
 /* RESPONSIVE DESIGN */
+@media (max-width: 1024px) {
+    .content-grid {
+        flex-direction: column;
+    }
+
+    .registration-container {
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+}
+
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;
@@ -457,10 +606,6 @@ footer {
         font-size: 0.8rem;
     }
 
-    .content-grid {
-        grid-template-columns: 1fr;
-    }
-
     nav {
         width: 100%;
         justify-content: center;
@@ -473,5 +618,33 @@ footer {
 
     .facilities-grid {
         grid-template-columns: 1fr;
+    }
+
+    .calendar-container h3 {
+        font-size: 1.5rem;
+    }
+
+        .calendar-container h3::before {
+            font-size: 1.2rem;
+        }
+
+    #calendar {
+        padding: 1rem;
+    }
+
+    .welcome-banner h2 {
+        font-size: 1.8rem;
+    }
+
+    .registration-container {
+        padding: 1.5rem;
+    }
+
+    .calendar-grid {
+        gap: 0.3rem;
+    }
+
+    .calendar-day {
+        font-size: 0.9rem;
     }
 }
