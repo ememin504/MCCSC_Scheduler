@@ -11,28 +11,23 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // Navigation between sections
-function showSection(sectionName) {
+function showSection(sectionName, event) {
     // Hide all sections
     const sections = document.querySelectorAll('.section');
-    sections.forEach(section => {
-        section.classList.remove('active');
-    });
+    sections.forEach(section => section.classList.remove('active'));
 
     // Remove active class from all nav buttons
     const navButtons = document.querySelectorAll('.nav-btn');
-    navButtons.forEach(btn => {
-        btn.classList.remove('active');
-    });
+    navButtons.forEach(btn => btn.classList.remove('active'));
 
     // Show selected section
     const targetSection = document.getElementById(sectionName);
-    if (targetSection) {
-        targetSection.classList.add('active');
-    }
+    if (targetSection) targetSection.classList.add('active');
 
-    // Add active class to clicked button
-    event.target.classList.add('active');
+    // Highlight clicked button
+    if (event) event.target.classList.add('active');
 }
+
 
 // Calendar Generation
 function generateCalendar(date) {

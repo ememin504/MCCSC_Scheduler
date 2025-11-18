@@ -6,11 +6,12 @@
     <title>User Login</title>
     <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
-    <script type="text/javascript" src="Scripts/js/global.js"></script>
     <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
-    <script type="text/javascript" src="Scripts/js/calendar.js"></script>
-    <script type="text/javascript" src="Scripts/js/script.js"></script>
-    <script type="text/javascript" src="Scripts/js/default.js"></script>
+    <script src="Scripts/js/global.js"></script>
+    <script src="Scripts/js/calendar.js"></script>
+    <script src="Scripts/js/default.js"></script> <!-- Must come BEFORE script.js -->
+    <script src="Scripts/js/script.js"></script>
+
 </head>
 <body>
     <header>
@@ -23,9 +24,10 @@
                 </div>
             </div>
             <nav>
-                <button class="nav-btn active" onclick="showSection('home')">HOME</button>
-                <button class="nav-btn" onclick="showSection('login')">LOGIN</button>
-                <button class="nav-btn" onclick="showSection('about')">ABOUT</button>
+                <button class="nav-btn active" onclick="showSection('home', event)">HOME</button>
+                <button class="nav-btn" onclick="showSection('login', event)">LOGIN</button>
+                <button class="nav-btn" onclick="showSection('about', event)">ABOUT</button>
+
             </nav>
         </div>
     </header>
@@ -107,7 +109,7 @@
                             <label for="loginPassword">Password</label>
                             <input type="password" id="loginPassword" required>
                         </div>
-                        <button type="submit" class="submit-btn" onclick="authenticateUser(); return false;">Login</button>
+                        <button class="submit-btn" onclick="authenticateUser(); return false;">Login</button>
                     </form>
                     <div class="login-link">
                         Don't have an account? <a href="javascript:void(0)" onclick="showSection('home')">Register</a>

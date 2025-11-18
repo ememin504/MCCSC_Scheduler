@@ -638,8 +638,8 @@ function getAcceptedReservation() {
         }
     })
 }
-
-function getStatusCMReservation() {
+//Commented out: no table;
+/*function getStatusCMReservation() {
     let reservationType = "Coordination Meeting";
     let requestInfo = {
         ReservationType: reservationType
@@ -708,7 +708,7 @@ function getStatusCMReservation() {
             console.error("Error:", xhr.responseText);
         }
     })
-}
+}*/
 function formatDate(dateString) {
     if (!dateString) return "";
 
@@ -730,8 +730,8 @@ function formatTime(timeString) {
     return `${hour}:${minute} ${suffix}`;
 }
 
-
-function getReservationCancellationRequests() {
+//Commented out: no table;
+/*function getReservationCancellationRequests() {
     let reservationType = "Cancellation Request";
     let requestInfo = {
         ReservationType: reservationType
@@ -802,7 +802,8 @@ function getReservationCancellationRequests() {
         }
     })
 }
-function getCancelledReservation() {
+
+/*function getCancelledReservation() {
     let reservationType = "Cancelled";
     let requestInfo = {
         ReservationType: reservationType
@@ -872,7 +873,7 @@ function getCancelledReservation() {
             console.error("Error:", xhr.responseText);
         }
     })
-}
+}*/
 
 
 function openReservationInfoModal() {
