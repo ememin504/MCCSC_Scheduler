@@ -44,9 +44,9 @@
     getUsers();
     getAssets();
     getAcceptedReservation();
-    getStatusCMReservation();
-    getReservationCancellationRequests();
-    getCancelledReservation();
+    //getStatusCMReservation();
+    //getReservationCancellationRequests();
+    //getCancelledReservation();
     getEvents();
 });
 

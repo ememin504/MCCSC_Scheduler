@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="MCCSC_Scheduler.Default" %>
+<!DOCTYPE html>
 <html>
 <head runat="server">
     <title>User Login</title>

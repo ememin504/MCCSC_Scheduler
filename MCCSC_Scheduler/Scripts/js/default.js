@@ -20,7 +20,13 @@ var last_name = "";
 // ===== PAGE LOAD EVENT =====
 document.addEventListener("DOMContentLoaded", function () {
     console.log("DOM Content Loaded - Initializing...");
-
+    // inject alert modal
+    const alertModalDiv = document.getElementById('form1');
+    if (alertModalDiv) {
+        alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
+        alertModalDiv.insertAdjacentHTML('afterend', otpModalEl); // inject OTP modal too
+        alertModalDiv.insertAdjacentHTML('afterend', registrationModalEl);
+    }
     // Initialize calendar
     generateCalendar(currentDate);
 
@@ -73,7 +79,6 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log('MCCSC Scheduler Loaded Successfully');
     console.log('Current Date:', getTodayDate());
 });
-
 // ===== NAVIGATION BETWEEN SECTIONS =====
 function showSection(sectionName) {
     console.log("Switching to section:", sectionName);
@@ -359,16 +364,13 @@ function resetRegistrationForm() {
 
 // ===== AUTHENTICATION FUNCTIONS =====
 function authenticateUser() {
-    console.log("authenticateUser called");
-
-    let username = document.getElementById("loginUsername").value.trim();
-    let password = document.getElementById("loginPassword").value.trim();
+    let username = document.getElementById("loginUsername").value;
+    let password = document.getElementById("loginPassword").value;
 
     if (!username || !password) {
         alert("Please enter both username and password.");
-        return false;
+        return;
     }
-
     let userData = {
         UserName: username,
         Password: password
@@ -384,6 +386,7 @@ function authenticateUser() {
             const user = JSON.parse(data.d);
 
             if (user.Success) {
+                // Assign all the data safely
                 user_id = user.UserID;
                 role_id = user.RoleID;
                 user_email = user.Email;
@@ -395,43 +398,87 @@ function authenticateUser() {
                 role_type_description = user.RoleTypeDescription;
 
                 console.log("All user data:", user);
+                openOtpModal(user); // pass full object
+            } else {
+                alert("Login failed: " + user.Success);
+                console.log("All user data:", user.Success);
+            }
+        })
+        .catch(error => {
+            console.error("Authentication error:", error);
+            alert("An error occurred while logging in.");
+        });
 
-                alert("Login successful! Welcome " + first_name + " " + last_name);
 
-                setSessionStorage();
+}
+function verifyOTP(role_id, user_id, user_email) {
+    parseInt(user_id);
+    console.log(user_id);
+    let otpCode = document.getElementById('otpCode').value;
 
-                // Redirect based on role
+    let userData = {
+        OtpCode: otpCode,
+        UserID: parseInt(user_id) // use the global userID set in getUserInfo()
+    };
+    console.log("OTP Payload:", userData);
+
+    let submitUrl = 'Default.aspx/SubmitOtp';
+    let options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ otpDto: userData })
+    };
+
+    fetch(submitUrl, options)
+        .then(response => response.json())
+        .then(data => {
+            let result = data.d;
+            console.log("OTP verify result:", result);
+
+            if (result === "OTP Verified Successfully") {
                 if (role_id === 1) {
+                    // After login success
+                    sessionStorage.setItem("role_id", role_id);
+                    sessionStorage.setItem("user_id", user_id);
+                    sessionStorage.setItem("user_email", user_email);
+                    sessionStorage.setItem("role_name", role_name);
+                    console.log(role_name);
+                    sessionStorage.setItem("role_type_id", role_type_id);
+                    sessionStorage.setItem("role_type_description", role_type_description);
+                    sessionStorage.setItem("first_name", first_name);
+                    sessionStorage.setItem("middle_initial", middle_initial);
+                    sessionStorage.setItem("last_name", last_name);
+                    // Redirect to dashboard
                     window.location.href = "ClientDashboard.aspx";
-                } else if (role_id === 2) {
+
+                }
+                else if (role_id === 2) {
+                    sessionStorage.setItem("role_id", role_id);
+                    sessionStorage.setItem("user_id", user_id);
+                    sessionStorage.setItem("user_email", user_email);
+                    sessionStorage.setItem("role_name", role_name);
+                    sessionStorage.setItem("role_type_id", role_type_id);
+                    sessionStorage.setItem("role_type_description", role_type_description);
+                    sessionStorage.setItem("first_name", first_name);
+                    sessionStorage.setItem("middle_initial", middle_initial);
+                    sessionStorage.setItem("last_name", last_name);
+
                     if (role_type_id == 1)
                         window.location.href = "AdminDashboard1.aspx";
                     else
                         window.location.href = "AdminDashboard2.aspx";
                 }
+                else {
+                    console.log("User role is undefined");
+                }
             } else {
-                alert("Login failed: " + (user.Message || "Invalid credentials"));
-                console.log("Login failed:", user);
+                document.getElementById('otpMessage').classList.remove('d-none');
             }
         })
         .catch(error => {
-            console.error("Authentication error:", error);
-
-            // Fallback: Check in-memory users
-            const user = registeredUsers.find(u => u.username === username && u.password === password);
-
-            if (user) {
-                alert(`Welcome back, ${user.firstName} ${user.lastName}!\n\nYour reservation: ${formatDate(user.reservationDate)}\nOrganization: ${user.organization}`);
-                const loginForm = document.getElementById('loginForm');
-                if (loginForm) {
-                    loginForm.reset();
-                }
-            } else {
-                alert("Invalid username or password. Please register first or check your credentials.");
-            }
+            console.error("Error:", error);
+            openAlertModal("App Info", "Error: " + error);
         });
-
-    return false;
 }
 
 function setSessionStorage() {

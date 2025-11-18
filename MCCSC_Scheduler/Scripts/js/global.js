@@ -348,6 +348,21 @@ var otpModalEl =
     "</div>" +
     "</div>";
 
+function openOtpModal(userID) {
+    var modalEl = document.getElementById("otpModal");
+
+    if (!modalEl) {
+        console.error("otpModal not found in DOM!");
+        return;
+    }
+
+    // Optionally show userID inside modal
+    modalEl.setAttribute("data-userid", userID || "");
+
+    var otpModal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+    otpModal.show();
+}
+
 let reservationModalEl =
     "<div class='modal fade' id='reservationModal' tabindex='-1' role='dialog'>" +
     "<div class='modal-dialog modal-lg'>" +
@@ -674,21 +689,6 @@ function openAlertModal(title, message) {
     alertModalDiv[0].innerHTML = message;
 
 }
-function openOtpModal(userID) {
-    var modalEl = document.getElementById("otpModal");
-
-    if (!modalEl) {
-        console.error("otpModal not found in DOM!");
-        return;
-    }
-
-    // Optionally show userID inside modal
-    modalEl.setAttribute("data-userid", userID || "");
-
-    var otpModal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
-    otpModal.show();
-}
-
 function openReservationModal() {
     console.log("Opening reservation modal...");
 
