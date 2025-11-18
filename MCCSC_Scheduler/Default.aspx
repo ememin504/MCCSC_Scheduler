@@ -1,17 +1,12 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="MCCSC_Scheduler.Default" %>
-
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head runat="server">
     <title>User Login</title>
     <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="Scripts/js/global.js"></script>
     <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
-    <script src="Scripts/js/global.js"></script>
-    <script src="Scripts/js/calendar.js"></script>
-    <script src="Scripts/js/default.js"></script> <!-- Must come BEFORE script.js -->
-    <script src="Scripts/js/script.js"></script>
-
+    <script type="text/javascript" src="Scripts/js/default.js" defer></script>
 </head>
 <body>
     <header>
@@ -20,26 +15,25 @@
                 <img src="https://scontent.fmnl9-4.fna.fbcdn.net/v/t39.30808-1/518270094_122152807310398593_2388429758745708161_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=105&ccb=1-7&_nc_sid=2d3e12&_nc_eui2=AeGy2auOgKJ5uPZAbhy7feTGMHVHxYNVZ_gwdUfFg1Vn-N_zuyPYiU4R3CI8Tu9ziVN07H5NQQM4W1Xl6knp-rvI&_nc_ohc=l828_EmUgUMQ7kNvwF71nqv&_nc_oc=AdnM0IbunXXtD8ABTUZ3LtQuHmQleFjCJHpJeSAZZjwUFkBaI1Qub85uUD6zMXUBVvM&_nc_zt=24&_nc_ht=scontent.fmnl9-4.fna&_nc_gid=2YlrydcQBc37LN0jYWeC0A&oh=00_AfbU-vBBCMUbk_4BoGXreEwY-2exFQKKGNnMWKoYclxosA&oe=68DE8D6F" alt="Mandaue City College Logo" class="logo">
                 <div class="title-text">
                     <h1>MCCSC SCHEDULER</h1>
-                    <p class="subtitle">Online Reservation for Mandaue City Sports and Cultural Complex</p>
+                    <p class="subtitle">Online Reservation for Mandaue City College Sports and Cultural Complex</p>
                 </div>
             </div>
             <nav>
-                <button class="nav-btn active" onclick="showSection('home', event)">HOME</button>
-                <button class="nav-btn" onclick="showSection('login', event)">LOGIN</button>
-                <button class="nav-btn" onclick="showSection('about', event)">ABOUT</button>
-
+                <button type="button" class="nav-btn active">HOME</button>
+                <button type="button" class="nav-btn">LOGIN</button>
+                <button type="button" class="nav-btn">ABOUT</button>
             </nav>
         </div>
     </header>
-    
+
     <main>
         <!-- HOME SECTION -->
-        <section id="home" class="section active">
+        <section id="home" class="section" style="display: block;">
             <div class="container">
                 <div class="welcome-banner">
                     <h2>Welcome <span class="guest-text">Guest</span></h2>
                 </div>
-                
+            
                 <div class="content-grid">
                     <!-- Calendar Section -->
                     <div class="calendar-container">
@@ -49,7 +43,7 @@
                             <strong>Selected Date:</strong> <span id="displayDate">Please select a date</span>
                         </div>
                     </div>
-                    
+                
                     <!-- Registration Form -->
                     <div class="registration-container">
                         <h3>Register</h3>
@@ -84,11 +78,11 @@
                                 <input type="password" id="password" required>
                             </div>
 
-                            <button type="button" class="submit-btn" onclick="submitRegistrationRequest(); return false;">Register</button>
+                            <button type="button" class="submit-btn">Register</button>
                         </form>
-                        
+                    
                         <div class="login-link">
-                            Already Registered? <a href="javascript:void(0)" onclick="showSection('login')">Login</a>
+                            Already Registered? <a href="#">Login</a>
                         </div>
                     </div>
                 </div>
@@ -96,7 +90,7 @@
         </section>
 
         <!-- LOGIN SECTION -->
-        <section id="login" class="section">
+        <section id="login" class="section" style="display: none;">
             <div class="container">
                 <div class="login-box">
                     <h2>Login to Your Account</h2>
@@ -109,28 +103,27 @@
                             <label for="loginPassword">Password</label>
                             <input type="password" id="loginPassword" required>
                         </div>
-                        <button class="submit-btn" onclick="authenticateUser(); return false;">Login</button>
+                        <button type="button" class="submit-btn">Login</button>
                     </form>
                     <div class="login-link">
-                        Don't have an account? <a href="javascript:void(0)" onclick="showSection('home')">Register</a>
+                        Don't have an account? <a href="#">Register</a>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- ABOUT SECTION -->
-        <section id="about" class="section">
+        <section id="about" class="section" style="display: none;">
             <div class="container">
                 <div class="about-content">
                     <h2>About MCCSC Scheduler</h2>
                     <div class="about-box">
                         <h3>Mandaue City College Sports and Cultural Complex</h3>
                         <p>The MCCSC Scheduler is a free online reservation system designed to streamline the booking process for Mandaue City College's sports and cultural facilities.</p>
-                        
+                    
                         <h4>Our Mission</h4>
                         <p>To provide easy and accessible booking services for students, faculty, organizations, and community members who wish to utilize our state-of-the-art facilities.</p>
-                 
-
+             
                         <h4>Booking Policy</h4>
                         <p>All reservations are <strong>FREE OF CHARGE</strong>. This system is for booking purposes only. Please ensure you select the correct date and facility for your event.</p>
 
