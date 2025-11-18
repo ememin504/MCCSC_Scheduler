@@ -44,9 +44,9 @@
     getUsers();
     getAssets();
     getAcceptedReservation();
-    //getStatusCMReservation();
-    //getReservationCancellationRequests();
-    //getCancelledReservation();
+    getStatusCMReservation();
+    getReservationCancellationRequests();
+    getCancelledReservation();
     getEvents();
 });
 
@@ -638,8 +638,8 @@ function getAcceptedReservation() {
         }
     })
 }
-//Commented out: no table;
-/*function getStatusCMReservation() {
+
+function getStatusCMReservation() {
     let reservationType = "Coordination Meeting";
     let requestInfo = {
         ReservationType: reservationType
@@ -730,8 +730,8 @@ function formatTime(timeString) {
     return `${hour}:${minute} ${suffix}`;
 }
 
-//Commented out: no table;
-/*function getReservationCancellationRequests() {
+
+function getReservationCancellationRequests() {
     let reservationType = "Cancellation Request";
     let requestInfo = {
         ReservationType: reservationType
@@ -803,7 +803,7 @@ function formatTime(timeString) {
     })
 }
 
-/*function getCancelledReservation() {
+function getCancelledReservation() {
     let reservationType = "Cancelled";
     let requestInfo = {
         ReservationType: reservationType

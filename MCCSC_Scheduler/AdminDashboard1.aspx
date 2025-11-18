@@ -148,6 +148,18 @@
                     <span class="nav-icon">✅</span>
                     <span class="nav-text">Accepted Reservations</span>
                 </button>
+                <button type="button" class="header-nav-item" data-section="cancellationSection" onclick="showSection('cancellationSection')">
+                    <span class="nav-icon">⚠️</span>
+                    <span class="nav-text">Cancellation Request</span>
+                </button>
+                <button type="button" class="header-nav-item" data-section="statusSection" onclick="showSection('statusSection')">
+                    <span class="nav-icon">🤝</span>
+                    <span class="nav-text">Coordination Meeting Reservation</span>
+                </button>
+                <button type="button" class="header-nav-item" data-section="cancelledSection" onclick="showSection('cancelledSection')">
+                    <span class="nav-icon">❌</span>
+                    <span class="nav-text">Cancelled Reservation</span>
+                </button>
                 <button type="button" class="header-nav-item" data-section="assetsSection" onclick="showSection('assetsSection')">
                     <span class="nav-icon">📦</span>
                     <span class="nav-text">Assets</span>
@@ -256,6 +268,79 @@
                             </tr>
                         </thead>
                         <tbody id="acceptedReservationTableBody">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+                        <!-- STATUS RESERVATIONS SECTION -->
+            <div id="statusSection" class="section-card" style="display: none;">
+                <h3>Bound to Coordination Meeting Reservations</h3>
+                <div class="table-container">
+                    <table class="table table-striped table-bordered" id="statusCMReservationTable">
+                        <thead>
+                            <tr>
+                                <th>Reservation ID</th>
+                                <th>Client ID</th>
+                                <th>Status ID</th>
+                                <th>Remarks</th>
+                                <th>Event ID</th>
+                                <th>Meeting Date</th>
+                                <th>Meeting Time</th>
+                                <th>Reference</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stautsCMReservationTableBody">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+                                    <!-- CANCELLATION RESERVATIONS SECTION -->
+            <div id="cancellationSection" class="section-card" style="display: none;">
+                <h3>Cancellation Request</h3>
+                <div class="table-container">
+                    <table class="table table-striped table-bordered" id="cancellationRequestTable">
+                        <thead>
+                            <tr>
+                                <th>Reservation ID</th>
+                                <th>Client ID</th>
+                                <th>Status ID</th>
+                                <th>Remarks</th>
+                                <th>Event ID</th>
+                                <th>Reason</th>
+                                <th>Reference</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cancellationRequestTableBody">
+                            <!-- Data will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+                                                <!-- CANCELLED RESERVATIONS SECTION -->
+            <div id="cancelledSection" class="section-card" style="display: none;">
+                <h3>Cancellation Request</h3>
+                <div class="table-container">
+                    <table class="table table-striped table-bordered" id="cancelledReservationTable">
+                        <thead>
+                            <tr>
+                                <th>Reservation ID</th>
+                                <th>Client ID</th>
+                                <th>Status ID</th>
+                                <th>Remarks</th>
+                                <th>Event ID</th>
+                                <th>Reason</th>
+                                <th>Reference</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cancelledReservationTableBody">
                             <!-- Data will be populated by JavaScript -->
                         </tbody>
                     </table>
