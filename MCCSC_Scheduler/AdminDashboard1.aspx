@@ -325,7 +325,7 @@
 
                                                 <!-- CANCELLED RESERVATIONS SECTION -->
             <div id="cancelledSection" class="section-card" style="display: none;">
-                <h3>Cancellation Request</h3>
+                <h3>Cancelled Reservation</h3>
                 <div class="table-container">
                     <table class="table table-striped table-bordered" id="cancelledReservationTable">
                         <thead>

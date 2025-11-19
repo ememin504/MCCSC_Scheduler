@@ -1745,8 +1745,8 @@ namespace MCCSC_Scheduler.Database
                                WHERE reservation_id = @ReservationID";
 
                 // 2️⃣ Insert into cancellation requests table
-                string insertQuery = @"INSERT INTO CancellationRequests (reservation_id, client_id, reason)
-                               VALUES (@ReservationID, @ClientID, @Reason)";
+                string insertQuery = @"INSERT INTO CancellationRequests (reservation_id, client_id, reason, status_id)
+                               VALUES (@ReservationID, @ClientID, @Reason, @StatusID)";
 
                 // Run update
                 using (SqlCommand cmd = new SqlCommand(updateQuery, conn))
@@ -1764,6 +1764,7 @@ namespace MCCSC_Scheduler.Database
                     cmd.Parameters.Add("@ReservationID", SqlDbType.Int).Value = reservationData.ReservationID;
                     cmd.Parameters.Add("@ClientID", SqlDbType.Int).Value = reservationData.ClientID;
                     cmd.Parameters.Add("@Reason", SqlDbType.NVarChar).Value = reservationData.Reason;
+                    cmd.Parameters.Add("@StatusID", SqlDbType.Int).Value = reservationData.StatusID;
 
                     cmd.ExecuteNonQuery();
                 }

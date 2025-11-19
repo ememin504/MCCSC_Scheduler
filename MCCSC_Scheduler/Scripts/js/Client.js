@@ -107,10 +107,16 @@ function getReservation() {
                         break;
 
                     case "Rejected":
+
                     case "Cancelled":
-                    case "Cancellation Request":
                         buttonText = "View Info";
                         buttonFunction = "viewInfo";
+                        buttonClass = "btn btn-secondary btn-sm";
+                        break;
+
+                    case "Cancellation Request":
+                        buttonText = "Undo Cancellation";
+                        buttonFunction = "UndoCancellation";
                         buttonClass = "btn btn-secondary btn-sm";
                         break;
 
@@ -125,7 +131,7 @@ function getReservation() {
 
                 // Render button even if empty
                 let buttonHTML = `<button class="${buttonClass}" 
-                     ${buttonFunction ? `onclick="${buttonFunction}(${res.ReservationID}); return false;"` : ''}>
+                     ${buttonFunction ? `onclick="${buttonFunction}(${res.ReservationID},${res.StatusID}); return false;"` : ''}>
                      ${buttonText}
                   </button>`;
 
@@ -151,7 +157,7 @@ function getReservation() {
     });
 }
 
-function requestCancellation(reservationID) {
+function requestCancellation(reservationID, statusID) {
 
     openReservationCancellationModal();
 
@@ -165,13 +171,14 @@ function requestCancellation(reservationID) {
                 return;
             }
 
-            sendCancellationRequest(reservationID, reason);
+            sendCancellationRequest(reservationID, statusID, reason);
         };
     }, 200);
 }
-function sendCancellationRequest(reservationID, reason) {
+function sendCancellationRequest(reservationID, statusID, reason) {
     const reservationInfo = {
         ReservationID: reservationID,
+        StatusID: statusID,
         Reason: reason,
         ClientID: clientID
     };
@@ -187,7 +194,7 @@ function sendCancellationRequest(reservationID, reason) {
         success: function (response) {
             $("#reservationCancellationModal").modal("hide");
 
-            openAlertModal("Success", "Your cancellation request has been submitted successfully.");
+            alert("Success", "Your cancellation request has been submitted successfully.");
             getReservation();
         },
 
@@ -370,6 +377,8 @@ function submitReservation() {
         organizationID: organizationID
     };
 
+    reservationInfo = sanitizeObject(reservationInfo);
+
     console.log("Data to be submitted:", reservationInfo);
 
     $.ajax({
@@ -398,6 +407,25 @@ function submitReservation() {
     });
 }
 
+function sanitizeObject(obj) {
+    if (typeof obj === "string") {
+        return obj.replace(/'/g, '`'); // replace all single quotes
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(item => sanitizeObject(item));
+    }
+
+    if (typeof obj === "object" && obj !== null) {
+        let cleanObj = {};
+        for (let key in obj) {
+            cleanObj[key] = sanitizeObject(obj[key]);
+        }
+        return cleanObj;
+    }
+
+    return obj; // numbers, booleans, null
+}
 
     function connectDB() {
         console.log('connecting to DB...');

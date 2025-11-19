@@ -552,7 +552,7 @@ function getReservationRequests() {
                                 '${req.Remarks}', 
                                 ${req.EventID}, 
                                 '${req.Reference}'
-                            )">
+                            ); return false;">
                             View
                             </button>
                         </td>
@@ -622,7 +622,7 @@ function getAcceptedReservation() {
                                 '${res.Remarks}', 
                                 ${res.EventID}, 
                                 '${res.Reference}'
-                            )">
+                            ); return false;">
                             View
                             </button>
                         </td>
@@ -666,7 +666,7 @@ function getStatusCMReservation() {
 
             console.log("Parsed data:", data);
 
-            let tbody = document.getElementById("statusCMReservationTableBody");
+            let tbody = document.getElementById("stautsCMReservationTableBody");
             tbody.innerHTML = "";
 
             // Check if there are any records
@@ -675,6 +675,7 @@ function getStatusCMReservation() {
                 return;
             }
             // Loop through the data and build table rows
+            console.log("Status CM data: ", data);
             data.forEach(res => {
                 let row = `
                     <tr>
@@ -691,9 +692,10 @@ function getStatusCMReservation() {
                             onclick="GetRequestInfo(
                                 ${res.ReservationID},
                                 ${res.ClientID}, 
-                                ${res.StatusID}, 
+                                ${res.StatusID},
+                                ${res.Remarks},
                                 ${res.EventID}, 
-                            )">
+                            ); return false;">
                             View
                             </button>
                         </td>
@@ -708,7 +710,7 @@ function getStatusCMReservation() {
             console.error("Error:", xhr.responseText);
         }
     })
-}*/
+}
 function formatDate(dateString) {
     if (!dateString) return "";
 
@@ -758,7 +760,7 @@ function getReservationCancellationRequests() {
 
             console.log("Parsed data:", data);
 
-            let tbody = document.getElementById("ReservationCancellationRequestTableBody");
+            let tbody = document.getElementById("cancellationRequestTableBody");
             tbody.innerHTML = "";
 
             // Check if there are any records
@@ -786,7 +788,7 @@ function getReservationCancellationRequests() {
                                 '${res.Remarks}', 
                                 ${res.EventID}, 
                                 '${res.Reference}'
-                            )">
+                            ); return false;">
                             View
                             </button>
                         </td>
@@ -830,7 +832,7 @@ function getCancelledReservation() {
 
             console.log("Parsed data:", data);
 
-            let tbody = document.getElementById("CancelledReservationTableBody");
+            let tbody = document.getElementById("cancelledReservationTableBody");
             tbody.innerHTML = "";
 
             // Check if there are any records
@@ -858,7 +860,7 @@ function getCancelledReservation() {
                                 '${res.Remarks}', 
                                 ${res.EventID}, 
                                 '${res.Reference}'
-                            )">
+                            ); return false;">
                             View
                             </button>
                         </td>
@@ -873,7 +875,7 @@ function getCancelledReservation() {
             console.error("Error:", xhr.responseText);
         }
     })
-}*/
+}
 
 
 function openReservationInfoModal() {
@@ -958,7 +960,7 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
                         <p><strong>Remarks:</strong> ${remarks}</p>
                       </div>
                       <div class='modal-footer'>
-                        <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)}, ${reservationID})'>${buttonText}</button>
+                        <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)},${reservationID})'>${buttonText}</button>
                         <button type='button' class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
                       </div>
                     </div>
@@ -984,10 +986,11 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
         }
     });
 }
+
 function editReservationInfo(data, reservationID) {
     openEditReservationModal();
 }
-function confirmCancellation(data, reservationID) {
+function confirmCancellation( reservationID) {
     let reservationInfo = {
         ReservationID: reservationID
     }
@@ -1003,6 +1006,8 @@ function confirmCancellation(data, reservationID) {
             alert("This reservation is successfully cancelled");
             getReservationRequests();
             getAcceptedReservation();
+            getCancelledReservation();
+            getReservationCancellationRequests();
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
@@ -1049,12 +1054,12 @@ function saveCoordinationMeeting() {
 }
 
 
-function acceptReservation(data ,reservationID) {
+function acceptReservation(data, reservationID) {
     console.log(reservationID);
     let reservationInfo = {
         ReservationID : reservationID
     }
-    console.log(reservationInfo);
+    console.log("Reservation Info: ",reservationInfo);
     $.ajax({
         type: "POST",
         url: "AdminDashboard1.aspx/AcceptReservation",
