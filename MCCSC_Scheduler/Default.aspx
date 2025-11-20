@@ -16,7 +16,7 @@
                 <img src="https://scontent.fmnl9-4.fna.fbcdn.net/v/t39.30808-1/518270094_122152807310398593_2388429758745708161_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=105&ccb=1-7&_nc_sid=2d3e12&_nc_eui2=AeGy2auOgKJ5uPZAbhy7feTGMHVHxYNVZ_gwdUfFg1Vn-N_zuyPYiU4R3CI8Tu9ziVN07H5NQQM4W1Xl6knp-rvI&_nc_ohc=l828_EmUgUMQ7kNvwF71nqv&_nc_oc=AdnM0IbunXXtD8ABTUZ3LtQuHmQleFjCJHpJeSAZZjwUFkBaI1Qub85uUD6zMXUBVvM&_nc_zt=24&_nc_ht=scontent.fmnl9-4.fna&_nc_gid=2YlrydcQBc37LN0jYWeC0A&oh=00_AfbU-vBBCMUbk_4BoGXreEwY-2exFQKKGNnMWKoYclxosA&oe=68DE8D6F" alt="Mandaue City College Logo" class="logo">
                 <div class="title-text">
                     <h1>MCCSC SCHEDULER</h1>
-                    <p class="subtitle">Online Reservation for Mandaue City College Sports and Cultural Complex</p>
+                    <p class="subtitle">Online Reservation for Mandaue City Sports and Cultural Complex</p>
                 </div>
             </div>
             <nav>
@@ -119,7 +119,7 @@
                 <div class="about-content">
                     <h2>About MCCSC Scheduler</h2>
                     <div class="about-box">
-                        <h3>Mandaue City College Sports and Cultural Complex</h3>
+                        <h3>Mandaue City Sports and Cultural Complex</h3>
                         <p>The MCCSC Scheduler is a free online reservation system designed to streamline the booking process for Mandaue City College's sports and cultural facilities.</p>
                     
                         <h4>Our Mission</h4>
@@ -129,7 +129,7 @@
                         <p>All reservations are <strong>FREE OF CHARGE</strong>. This system is for booking purposes only. Please ensure you select the correct date and facility for your event.</p>
 
                         <h4>Contact Information</h4>
-                        <p>Mandaue City College<br>
+                        <p>Mandaue City Sports and Cultural Complex<br>
                         Established: 2005<br>
                         For inquiries, please contact the administration office.</p>
                     </div>
@@ -139,7 +139,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2025 Mandaue City College. All rights reserved. | Reservation System</p>
+        <p>&copy; 2025 Mandaue City Sports and Cultural Complex. All rights reserved. | Reservation System</p>
     </footer>
 
     <form id="aspForm" runat="server"></form>
