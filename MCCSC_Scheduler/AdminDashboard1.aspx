@@ -77,6 +77,8 @@
             // Show header tabs if configured
             if (sectionConfigs[submenuId]) {
                 showHeaderTabs(sectionConfigs[submenuId].tabs, submenuId);
+                // Automatically show the first section
+                showSection(sectionConfigs[submenuId].tabs[0].id, submenuId);
             }
         }
 
@@ -87,9 +89,13 @@
 
             tabs.forEach(tab => {
                 const button = document.createElement('button');
+                button.type = 'button'; // Prevent form submission
                 button.className = 'header-nav-item';
                 button.innerHTML = `<span>${tab.icon}</span> <span>${tab.text}</span>`;
-                button.onclick = () => showSection(tab.id, submenuId);
+                button.onclick = (e) => {
+                    e.preventDefault(); // Prevent any default action
+                    showSection(tab.id, submenuId);
+                };
                 headerNav.appendChild(button);
             });
 
