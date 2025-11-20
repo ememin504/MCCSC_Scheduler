@@ -2197,6 +2197,7 @@
     <Content Include="Scripts\css\AdminDashboard2.css" />
     <Content Include="Scripts\css\client.css" />
     <Content Include="Scripts\css\default.css" />
+    <Content Include="Scripts\css\Sidebar.css" />
     <Content Include="Scripts\js\Admin1.js" />
     <Content Include="Scripts\js\Admin2.js" />
     <Content Include="Scripts\js\Client.js" />
