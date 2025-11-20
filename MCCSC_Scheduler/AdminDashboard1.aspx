@@ -201,6 +201,7 @@
                         <a class="sidebar-link" onclick="toggleSubmenu('reservationSubmenu', this)">
                             <span class="sidebar-icon">📅</span>
                             <span>Reservation Management</span>
+                            <span class="arrow">▶</span>
                         </a>
                     </li>
 
@@ -209,6 +210,7 @@
                         <a class="sidebar-link" onclick="toggleSubmenu('assetSubmenu', this)">
                             <span class="sidebar-icon">📦</span>
                             <span>Asset Management</span>
+                            <span class="arrow">▶</span>
                         </a>
                     </li>
 
@@ -217,6 +219,7 @@
                         <a class="sidebar-link" onclick="toggleSubmenu('userSubmenu', this)">
                             <span class="sidebar-icon">👥</span>
                             <span>User Management</span>
+                            <span class="arrow">▶</span>
                         </a>
                     </li>
 
@@ -233,6 +236,7 @@
                         <a class="sidebar-link" onclick="toggleSubmenu('historySubmenu', this)">
                             <span class="sidebar-icon">📋</span>
                             <span>Reservation History</span>
+                            <span class="arrow">▶</span>
                         </a>
                     </li>
                 </ul>
