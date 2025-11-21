@@ -981,8 +981,10 @@ namespace MCCSC_Scheduler.Database
                 StatusSearch = 8;
             else if (requestData.ReservationType == "Cancelled")
                 StatusSearch = 7;
+            else if (requestData.ReservationType == "Approved Reservation")
+                StatusSearch = 9;
 
-            List<object> result = new List<object>();
+                List<object> result = new List<object>();
 
             try
             {
@@ -1083,8 +1085,6 @@ namespace MCCSC_Scheduler.Database
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
-
-
 
         public string GetRequestInfo(int reservationID, int clientID, int statusID, int eventID)
         {
@@ -1619,6 +1619,91 @@ namespace MCCSC_Scheduler.Database
                 return false;
             }
         }
+        public string ApproveReservation(ReservationDTO reservationData)
+        {
+            string message = "";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                // 1️⃣ Get the meeting date and time
+                string checkMeetingDateTime = @"
+            SELECT meeting_date, meeting_time 
+            FROM CoordinationMeetingDates 
+            WHERE reservation_id = @ReservationID";
+
+                DateTime? meetingDateTime = null;
+
+                using (SqlCommand checkCmd = new SqlCommand(checkMeetingDateTime, conn))
+                {
+                    checkCmd.Parameters.AddWithValue("@ReservationID", reservationData.ReservationID);
+                    using (SqlDataReader reader = checkCmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            DateTime datePart = reader.GetDateTime(reader.GetOrdinal("meeting_date"));
+                            TimeSpan timePart = reader.GetTimeSpan(reader.GetOrdinal("meeting_time"));
+                            meetingDateTime = datePart.Date + timePart;
+                        }
+                        else
+                        {
+                            return "No meeting date/time found for this reservation.";
+                        }
+                    }
+                }
+                bool bypassMeetingCheck = true;
+                // 2️⃣ Check if the meeting time has passed
+                // TEMP: Bypassing meeting date/time check for development
+                // if (meetingDateTime <= DateTime.Now)
+                if (bypassMeetingCheck)
+                {
+                    // Begin transaction to ensure both updates happen together
+                    using (SqlTransaction transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            // Approve reservation
+                            string updateReservation = @"UPDATE Reservation 
+                                         SET status_id = 9 
+                                         WHERE reservation_id = @ReservationID";
+
+                            using (SqlCommand cmd = new SqlCommand(updateReservation, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@ReservationID", reservationData.ReservationID);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            // Mark meeting as done
+                            string updateMeeting = @"UPDATE CoordinationMeetingDates
+                                     SET is_done = 1
+                                     WHERE reservation_id = @ReservationID";
+
+                            using (SqlCommand cmd = new SqlCommand(updateMeeting, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@ReservationID", reservationData.ReservationID);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            transaction.Commit();
+                            message = "Reservation Approved Successfully and meeting marked as done.";
+                        }
+                        catch
+                        {
+                            transaction.Rollback();
+                            message = "Failed to approve reservation.";
+                        }
+                    }
+                }
+                else
+                {
+                    message = "Cannot approve yet. Meeting time has not passed.";
+                }
+            }
+
+            return message;
+        }
+
 
         public List<ReservationDTO> GetClientReservation(object clientData)
         {

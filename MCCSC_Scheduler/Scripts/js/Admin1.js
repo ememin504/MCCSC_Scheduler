@@ -47,6 +47,7 @@
     getStatusCMReservation();
     getReservationCancellationRequests();
     getCancelledReservation();
+    getApprovedReservation();
     getEvents();
 });
 
@@ -568,6 +569,77 @@ function getReservationRequests() {
         }
     });
 }
+function getApprovedReservation() {
+    console.log("getting approved reservation!");
+    let reservationType = "Approved Reservation";
+    let requestInfo = {
+        ReservationType: reservationType
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response);
+            let data = [];
+            console.log("Type of response.d:", typeof response.d, response.d);
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+                data = [];
+            }
+
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("approvedReservationTableBodu");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Reservation Request found</td></tr>`;
+                return;
+            }
+
+            // Loop through the data and build table rows
+            data.forEach(req => {
+                let row = `
+                    <tr>
+                        <td>${req.ReservationID}</td>
+                        <td>${req.ClientID}</td>
+                        <td>${req.StatusID}</td>
+                        <td>${req.Remarks}</td>
+                        <td>${req.EventID}</td>
+                        <td>${req.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                            onclick="GetRequestInfo(
+                                ${req.ReservationID},
+                                ${req.ClientID}, 
+                                ${req.StatusID}, 
+                                '${req.Remarks}', 
+                                ${req.EventID}, 
+                                '${req.Reference}'
+                            ); return false;">
+                            View
+                            </button>
+                        </td>
+
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+                console.log(eventID);
+            });
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
 function getAcceptedReservation() {
     let reservationType = "Accepted Reservation";
     let requestInfo = {
@@ -960,12 +1032,18 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
                         <p><strong>Remarks:</strong> ${remarks}</p>
                       </div>
                       <div class='modal-footer'>
-                        <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)},${reservationID})'>${buttonText}</button>
+                        <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)}, ${reservationID})'>${buttonText}</button>
+
+                        ${data.Status === "Coordination Meeting" ? `
+                          <button type='button' class='btn btn-primary' onclick='approveReservation(${reservationID}); return false;'>Approve</button>
+                        ` : ""}
+
                         <button type='button' class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
                       </div>
                     </div>
                   </div>
                 </div>`;
+
 
             reservationId = reservationID
             // ✅ Remove existing modal (to avoid duplicates)
@@ -986,7 +1064,27 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
         }
     });
 }
-
+function approveReservation(reservationID) {
+    let reservationInfo = {
+        ReservationID : reservationID
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/ApproveReservation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            alert(response.d);
+            $('#viewReservationModal').modal('hide');
+            getStatusCMReservation();
+            getApprovedReservation();
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
 function editReservationInfo(data, reservationID) {
     openEditReservationModal();
 }

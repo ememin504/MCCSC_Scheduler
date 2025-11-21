@@ -346,7 +346,7 @@
                     <div id="approvedSection" class="section-card" style="display: none;">
                         <h3>Approved Reservations</h3>
                         <div class="table-container">
-                            <table class="table table-striped table-bordered">
+                            <table class="table table-striped table-bordered" id="approvedReservationTable">
                                 <thead>
                                     <tr>
                                         <th>Reservation ID</th>
@@ -356,7 +356,7 @@
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="approvedReservationTableBodu">
                                     <tr>
                                         <td colspan="5" class="text-center">No approved reservations</td>
                                     </tr>

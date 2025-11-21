@@ -167,6 +167,7 @@ namespace MCCSC_Scheduler
                 });
             }
         }
+
         public class RequestData
         {
             public int ReservationID { get; set; }
@@ -177,6 +178,19 @@ namespace MCCSC_Scheduler
             public int AssetQuantity { get; set; }
             public int EventID { get; set; }
             public string Reference { get; set; }
+        }
+        [WebMethod]
+        public static string ApproveReservation(ReservationDTO reservationData)
+        {
+            try
+            {
+                var requests = dbContext.ApproveReservation(reservationData);
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
         }
 
         [WebMethod]
