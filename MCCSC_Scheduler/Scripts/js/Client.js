@@ -8,7 +8,6 @@
     getAsset();
 });
 var clientID = 0;
-getAsset();
 const roleId = sessionStorage.getItem("role_id");
 const userId = sessionStorage.getItem("user_id");
 const userEmail = sessionStorage.getItem("user_email");
@@ -107,16 +106,10 @@ function getReservation() {
                         break;
 
                     case "Rejected":
-
+                    case "Cancellation Request":
                     case "Cancelled":
                         buttonText = "View Info";
                         buttonFunction = "viewInfo";
-                        buttonClass = "btn btn-secondary btn-sm";
-                        break;
-
-                    case "Cancellation Request":
-                        buttonText = "Undo Cancellation";
-                        buttonFunction = "UndoCancellation";
                         buttonClass = "btn btn-secondary btn-sm";
                         break;
 
@@ -130,10 +123,12 @@ function getReservation() {
 
 
                 // Render button even if empty
-                let buttonHTML = `<button class="${buttonClass}" 
-                     ${buttonFunction ? `onclick="${buttonFunction}(${res.ReservationID},${res.StatusID}); return false;"` : ''}>
-                     ${buttonText}
-                  </button>`;
+                let buttonHTML = `
+                    <button class="${buttonClass}"
+                        ${buttonFunction ? `onclick="${buttonFunction}('${res.ReservationID}','${clientID}','${res.StatusID}','${res.EventID}','${res.Reference}',${res.remarks}); return false;"` : ''}>
+                        ${buttonText}
+                    </button>`;
+
 
 
                 // Append row to table
@@ -156,8 +151,140 @@ function getReservation() {
         }
     });
 }
+function viewInfo(reservationID, clientId, statusID, eventID, reference, remarks) {
+    let requestInfo = {
+        ReservationID: reservationID,
+        ClientID: clientId,
+        StatusID: statusID,
+        EventID: eventID,
+    };
+    console.log(requestInfo);
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/GetRequestInfo",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Full server response:", response.d);
+            let callFunction;
+            let buttonText = "";
+            let data = response.d;
+            if (typeof data === "string") {
+                try { data = JSON.parse(data); } catch (e) { console.error("JSON parse error:", e); }
+            }
 
-function requestCancellation(reservationID, statusID) {
+            if (!data || !data.Client) {
+                console.error("Invalid data structure:", data);
+                alert("Reservation info could not be loaded.");
+                return;
+            }
+            let assetDetails = "";
+            let dateDetails = "";
+            data.Asset.forEach(a => {
+                assetDetails += `<p><strong>Asset:</strong> ${a.AssetName}</p>
+                     <p><strong>Quantity:</strong> ${a.Quantity}</p>`;
+            });
+            data.Date.forEach(d => {
+                dateDetails += `<p><strong>Date:</strong> ${d.Date}</p>
+                     <p><strong>Starting Time:</strong> ${d.StartTime}</p>
+                     <p><strong>Ending Time:</strong> ${d.EndTime}</p>`;
+            });
+            if (data.Status === "Accepted") {
+                callFunction = "coordinationMeetingSetUp";
+                buttonText = "Set Coordination Meeting";
+            } else if (data.Status === "Pending") {
+                callFunction = "acceptReservation";
+                buttonText = "Accept";
+            } else if (data.Status == "Coordination Meeting") {
+                callFunction = "editReservationInfo";
+                buttonText = "Edit Reservation";
+            } else if (data.Status == "Cancellation Request") {
+                callFunction = "undoCancellation";
+                buttonText = "Undo Cancellation"
+            }
+
+
+
+            // ✅ Build modal dynamically here
+            let modalHTML = `
+            <div class='modal fade' id='viewReservationModal' role='dialog'>
+              <div class='modal-dialog'>
+                <div class='modal-content'>
+                  <div class='modal-header'>
+                    <h4 class='modal-title'>Reservation Info</h4>
+                    <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
+                  </div>
+                  <div class='modal-body'>
+                    <p><strong>Event Title:</strong> ${data.Event}</p>
+                    <p><strong>Client:</strong> ${data.Client.FirstName} ${data.Client.MiddleInitial || ""} ${data.Client.LastName}</p>
+                    <p><strong>Organization:</strong> ${data.Organization}</p>
+                    <p><strong>Status:</strong> ${data.Status}</p>
+
+                    ${data.Status === "Cancellation Request"
+                        ? `<p><strong>Previous Status:</strong> ${data.PreviousStatusName}</p>`
+                            : ""
+                        }
+
+                    ${assetDetails}<br>
+                    ${dateDetails}
+                    <p><strong>Reference:</strong> ${reference}</p>
+                    <p><strong>Remarks:</strong> ${remarks}</p>
+                  </div>
+                  <div class='modal-footer'>
+                    <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)},${reservationID})'>${buttonText}</button>
+                    <button type='button' class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+
+
+            reservationId = reservationID
+            // ✅ Remove existing modal (to avoid duplicates)
+            let oldModal = document.getElementById("viewReservationModal");
+            if (oldModal) oldModal.remove();
+
+            // ✅ Add new modal to the DOM
+            document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+            // ✅ Show modal
+            var modalInstance = new bootstrap.Modal(document.getElementById("viewReservationModal"), {
+                backdrop: "static"
+            });
+            modalInstance.show();
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}    
+function undoCancellation(data, reservationID) {
+    console.log("Undoing Cancellation");
+    let reservationInfo = {
+        PreviousStatusID: data.PreviousStatusID,
+        ReservationID: reservationID
+    }
+    console.log(reservationInfo)
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/UndoCancellation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            alert(response.d);
+            $('#viewReservationModal').modal('hide');
+            getReservation();
+        },
+        error: function (xhr, status, error) {
+            openAlertModal("Error", "An error occurred while sending your request. Please try again.");
+            console.error(xhr.responseText);
+        }
+    });
+        
+}
+function requestCancellation(reservationID, clientId, statusID, eventID) {
 
     openReservationCancellationModal();
 
@@ -207,8 +334,8 @@ function sendCancellationRequest(reservationID, statusID, reason) {
 
 
 
-function cancelReservation(reservationID) {
-    console.log("Cancelling Reservation Request");
+function cancelReservation(reservationID, clientId, statusID, eventID, referenc, remarks) {
+    console.log("Cancelling Reservation");
     let reservationInfo = {
         ReservationID: reservationID
     }
@@ -233,9 +360,6 @@ function cancelReservation(reservationID) {
     })
 }
 
-function viewInfo() {
-    console.log("Viewing Reservation Info");
-}
 
 function formatDates(dates) {
     if (!dates || dates.length === 0) return "No Dates";

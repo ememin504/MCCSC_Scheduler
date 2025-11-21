@@ -1092,19 +1092,34 @@ namespace MCCSC_Scheduler.Database
             {
                 conn.Open();
 
-                // 1️⃣ Get user_id using ClientID
-                string getUserIdQuery = @"SELECT user_id FROM Client WHERE client_id = @ClientID";
-                int userID;
-                using (SqlCommand cmd = new SqlCommand(getUserIdQuery, conn))
+                // 1️⃣ Get user_id + organization_id in ONE query
+                int userID = 0, organizationID = 0;
+                string clientQuery = @"
+            SELECT user_id, organization_id 
+            FROM Client 
+            WHERE client_id = @ClientID";
+
+                using (SqlCommand cmd = new SqlCommand(clientQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@ClientID", clientID);
-                    userID = Convert.ToInt32(cmd.ExecuteScalar());
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            userID = Convert.ToInt32(reader["user_id"]);
+                            organizationID = Convert.ToInt32(reader["organization_id"]);
+                        }
+                        else
+                        {
+                            return JsonConvert.SerializeObject(new { error = "Client not found" });
+                        }
+                    }
                 }
 
-                // 2️⃣ Get client info using user_id
+                // 2️⃣ Get Client Name
                 string firstName = "", middleInitial = "", lastName = "";
-                string getClientInfoQuery = @"SELECT first_name, middle_initial, last_name FROM Users WHERE user_id = @UserID";
-                using (SqlCommand cmd = new SqlCommand(getClientInfoQuery, conn))
+                string userQuery = @"SELECT first_name, middle_initial, last_name FROM Users WHERE user_id = @UserID";
+                using (SqlCommand cmd = new SqlCommand(userQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserID", userID);
                     using (SqlDataReader reader = cmd.ExecuteReader())
@@ -1118,45 +1133,65 @@ namespace MCCSC_Scheduler.Database
                     }
                 }
 
-                // 3️⃣ Get organization_id
-                int organizationID;
-                string getOrgIdQuery = @"SELECT organization_id FROM Client WHERE client_id = @ClientID";
-                using (SqlCommand cmd = new SqlCommand(getOrgIdQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@ClientID", clientID);
-                    organizationID = Convert.ToInt32(cmd.ExecuteScalar());
-                }
-
-                // 4️⃣ Get organization_name
+                // 3️⃣ Get Organization Name
                 string organizationName = "";
-                string getOrgNameQuery = @"SELECT organization_name FROM Organization WHERE organization_id = @OrganizationID";
-                using (SqlCommand cmd = new SqlCommand(getOrgNameQuery, conn))
+                string orgQuery = @"SELECT organization_name FROM Organization WHERE organization_id = @OrganizationID";
+                using (SqlCommand cmd = new SqlCommand(orgQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@OrganizationID", organizationID);
                     organizationName = cmd.ExecuteScalar()?.ToString() ?? "";
                 }
 
-                // 5️⃣ Get status_name
+                // 4️⃣ Get Status Name
                 string statusName = "";
-                string getStatusNameQuery = @"SELECT status_name FROM reservation_status WHERE status_id = @StatusID";
-                using (SqlCommand cmd = new SqlCommand(getStatusNameQuery, conn))
+                string statusQuery = @"SELECT status_name FROM reservation_status WHERE status_id = @StatusID";
+                using (SqlCommand cmd = new SqlCommand(statusQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@StatusID", statusID);
                     statusName = cmd.ExecuteScalar()?.ToString() ?? "";
                 }
-                // 5️⃣ Get status_name and quantity
+
+                // 5️⃣ Previous Status (only if statusID = 8)
+                int? previousStatusID = null;
+                string previousStatusName = null;
+
+                if (statusID == 8)
+                {
+                    string prevStatusQuery = @"
+                SELECT previous_status_id 
+                FROM CancellationRequests 
+                WHERE reservation_id = @ReservationID";
+
+                    using (SqlCommand cmd = new SqlCommand(prevStatusQuery, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@ReservationID", reservationID);
+                        var result = cmd.ExecuteScalar();
+                        if (result != null && result != DBNull.Value)
+                            previousStatusID = Convert.ToInt32(result);
+                    }
+
+                    if (previousStatusID.HasValue)
+                    {
+                        string prevStatusNameQuery = @"SELECT status_name FROM reservation_status WHERE status_id = @StatusID";
+                        using (SqlCommand cmd = new SqlCommand(prevStatusNameQuery, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@StatusID", previousStatusID.Value);
+                            previousStatusName = cmd.ExecuteScalar()?.ToString() ?? "";
+                        }
+                    }
+                }
+
+                // 6️⃣ Get Assets
                 List<object> assets = new List<object>();
+                string assetQuery = @"
+            SELECT a.asset_name, aor.asset_quantity
+            FROM AssetOnReservation aor
+            INNER JOIN Assets a ON aor.asset_id = a.asset_id
+            WHERE aor.reservation_id = @ReservationID";
 
-                string query = @"
-                            SELECT a.asset_name, aor.asset_quantity
-                            FROM AssetOnReservation aor
-                            INNER JOIN Assets a ON aor.asset_id = a.asset_id
-                            WHERE aor.reservation_id = @ReservationID";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
+                using (SqlCommand cmd = new SqlCommand(assetQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@ReservationID", reservationID);
-
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -1170,14 +1205,12 @@ namespace MCCSC_Scheduler.Database
                     }
                 }
 
+                // 7️⃣ Get Reservation Dates
                 List<object> date = new List<object>();
-
                 string dateQuery = @"SELECT date, start_time, end_time FROM Reservation_Dates WHERE reservation_id = @ReservationID";
-
                 using (SqlCommand cmd = new SqlCommand(dateQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@ReservationID", reservationID);
-
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -1186,20 +1219,23 @@ namespace MCCSC_Scheduler.Database
                             {
                                 Date = reader["date"].ToString(),
                                 StartTime = reader["start_time"].ToString(),
-                                EndTime = reader["end_time"].ToString(),
+                                EndTime = reader["end_time"].ToString()
                             });
                         }
                     }
                 }
+
+                // 8️⃣ Get Event Name
                 string eventName = "";
-                string getEventNameQuery = @"SELECT title FROM Events WHERE event_id = @EventID";
-                using (SqlCommand cmd = new SqlCommand(getEventNameQuery, conn))
+                string eventQuery = @"SELECT title FROM Events WHERE event_id = @EventID";
+                using (SqlCommand cmd = new SqlCommand(eventQuery, conn))
                 {
                     cmd.Parameters.AddWithValue("@EventID", eventID);
                     eventName = cmd.ExecuteScalar()?.ToString() ?? "";
                 }
-                // ✅ Combine all data into JSON
-                var result = new
+
+                // 9️⃣ Build Final JSON
+                var resultObj = new
                 {
                     Client = new
                     {
@@ -1209,14 +1245,18 @@ namespace MCCSC_Scheduler.Database
                     },
                     Organization = organizationName,
                     Status = statusName,
+                    PreviousStatusID = previousStatusID,
+                    PreviousStatusName = previousStatusName,
                     Date = date,
                     Asset = assets,
                     Event = eventName
                 };
 
-                return JsonConvert.SerializeObject(result, Formatting.Indented);
+                return JsonConvert.SerializeObject(resultObj, Formatting.Indented);
             }
         }
+
+
         // ============================================================
         // ===============  SUBMIT RESERVATION METHOD  ================
         // ============================================================
@@ -1625,6 +1665,7 @@ namespace MCCSC_Scheduler.Database
         INNER JOIN AssetCategory c ON a.category_id = c.category_id
         WHERE ra.reservation_id = @ReservationID;
     ";
+            string previousStatusQuery = @"SELECT previous_status_id FROM CancellationRequests WHERE client_id = @ClientID";
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -1656,8 +1697,8 @@ namespace MCCSC_Scheduler.Database
                 }
 
                 // ---- Load Related Data for Each Reservation ----
-                foreach (var reservation in reservations)
-                {
+                foreach(var reservation in reservations)
+{
                     // ---- Load Event Info ----
                     using (SqlCommand eventCmd = new SqlCommand(eventQuery, conn))
                     {
@@ -1680,6 +1721,28 @@ namespace MCCSC_Scheduler.Database
                         reservation.StatusName = statusCmd.ExecuteScalar()?.ToString() ?? "Unknown";
                     }
 
+                    // ---- Load Previous Status if StatusID == 8 ----
+                    if (reservation.StatusID == 8)
+                    {
+                        using (SqlCommand prevStatusCmd = new SqlCommand(previousStatusQuery, conn))
+                        {
+                            prevStatusCmd.Parameters.AddWithValue("@ClientID", clientID);
+
+                            object result = prevStatusCmd.ExecuteScalar();
+                            if (result != null && result != DBNull.Value)
+                            {
+                                reservation.PreviousStatusID = Convert.ToInt32(result);
+
+                                // ---- Get Previous Status Name using same statusQuery ----
+                                using (SqlCommand prevStatusNameCmd = new SqlCommand(statusQuery, conn))
+                                {
+                                    prevStatusNameCmd.Parameters.AddWithValue("@StatusID", reservation.PreviousStatusID);
+                                    reservation.PreviousStatusName = prevStatusNameCmd.ExecuteScalar()?.ToString() ?? "Unknown";
+                                }
+                            }
+                        }
+                    }
+
                     // ---- Load Event Dates ----
                     using (SqlCommand dateCmd = new SqlCommand(eventDatesQuery, conn))
                     {
@@ -1691,20 +1754,13 @@ namespace MCCSC_Scheduler.Database
                             {
                                 reservation.EventDates.Add(new EventDateDTO
                                 {
-                                    Date = Convert.ToDateTime(dr["date"]),       // DATE column → DateTime
-
-                                    StartTime = TimeSpan
-                                        .Parse(dr["start_time"].ToString())
-                                        .ToString(@"hh\:mm"),                    // TIME → "HH:mm"
-
-                                    EndTime = TimeSpan
-                                        .Parse(dr["end_time"].ToString())
-                                        .ToString(@"hh\:mm")                     // TIME → "HH:mm"
+                                    Date = Convert.ToDateTime(dr["date"]),
+                                    StartTime = TimeSpan.Parse(dr["start_time"].ToString()).ToString(@"hh\:mm"),
+                                    EndTime = TimeSpan.Parse(dr["end_time"].ToString()).ToString(@"hh\:mm")
                                 });
                             }
                         }
                     }
-
 
                     // ---- Load Selected Assets ----
                     using (SqlCommand assetCmd = new SqlCommand(assetsQuery, conn))
@@ -1727,6 +1783,7 @@ namespace MCCSC_Scheduler.Database
                         }
                     }
                 }
+
             }
 
             return reservations;
@@ -1745,7 +1802,7 @@ namespace MCCSC_Scheduler.Database
                                WHERE reservation_id = @ReservationID";
 
                 // 2️⃣ Insert into cancellation requests table
-                string insertQuery = @"INSERT INTO CancellationRequests (reservation_id, client_id, reason, status_id)
+                string insertQuery = @"INSERT INTO CancellationRequests (reservation_id, client_id, reason, previous_status_id)
                                VALUES (@ReservationID, @ClientID, @Reason, @StatusID)";
 
                 // Run update
@@ -1770,6 +1827,55 @@ namespace MCCSC_Scheduler.Database
                 }
 
                 message = "Cancellation request has been sent.";
+            }
+
+            return message;
+        }
+        public string UndoCancellation(ReservationDTO reservationData)
+        {
+            string message = "";
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                SqlTransaction transaction = conn.BeginTransaction();
+
+                try
+                {
+                    // 1️⃣ Update back to previous status
+                    string UpdateStatus = @"
+                UPDATE Reservation 
+                SET status_id = @PreviousStatusID 
+                WHERE reservation_id = @ReservationID";
+
+                    using (SqlCommand cmd = new SqlCommand(UpdateStatus, conn, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@PreviousStatusID", reservationData.PreviousStatusID);
+                        cmd.Parameters.AddWithValue("@ReservationID", reservationData.ReservationID);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 2️⃣ Delete the cancellation request for this reservation
+                    string DeleteCancelRequest = @"
+                DELETE FROM CancellationRequests 
+                WHERE reservation_id = @ReservationID";
+
+                    using (SqlCommand cmd2 = new SqlCommand(DeleteCancelRequest, conn, transaction))
+                    {
+                        cmd2.Parameters.AddWithValue("@ReservationID", reservationData.ReservationID);
+                        cmd2.ExecuteNonQuery();
+                    }
+
+                    // Commit both actions
+                    transaction.Commit();
+                    message = "Cancellation request undone successfully.";
+                }
+                catch (Exception ex)
+                {
+                    // Rollback if anything fails
+                    transaction.Rollback();
+                    message = $"Error undoing cancellation: {ex.Message}";
+                }
             }
 
             return message;
