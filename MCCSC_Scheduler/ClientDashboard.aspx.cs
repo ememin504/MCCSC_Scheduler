@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Configuration;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 using System.Web.Script.Serialization;
@@ -15,6 +18,7 @@ namespace MCCSC_Scheduler
     public partial class ClientDashboard : System.Web.UI.Page
     {
         private static DBContext dbContext;
+
         protected void Page_Load(object sender, EventArgs e)
         {
             dbContext = new DBContext(".\\SQLEXPRESS", "MCCSC_SchedulerDB");
@@ -140,7 +144,53 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+        [WebMethod]
+        public static string CreateNotification(NotificationDTO notificationDTO)
+        {
+            try
+            {
+                // Call database or mock method
+                var notification = dbContext.CreateNotification(notificationDTO);
 
+                // Return JSON to client
+                return JsonConvert.SerializeObject(notification);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
+        [WebMethod]
+        public static object GetNotifications(NotificationDTO notificationDTO)
+        {
+            try
+            {
+                var dbContext = new DBContext();  // ← FIXED
+
+                var json = dbContext.GetNotifications(notificationDTO);
+
+                return json;
+            }
+            catch (Exception ex)
+            {
+                return new { error = ex.Message };
+            }
+        }
+        [WebMethod]
+        public static string MarkAsRead(NotificationDTO notificationDTO) {
+            try
+            {
+
+                var notifications = dbContext.MarkAsRead(notificationDTO);
+
+                return notifications;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
         [WebMethod]
         public static string CancelReservation(ReservationDTO reservationData)

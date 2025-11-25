@@ -26,64 +26,54 @@ namespace MCCSC_Scheduler
             dbContext = new DBContext(@".\SQLEXPRESS", "MCCSC_SchedulerDB");
             ConnectDB();
         }
-
         [WebMethod]
-        public static string GetLatestUpdateTime(string tableName)
+        public static string CreateNotification(NotificationDTO notificationDTO)
         {
-            string latest = string.Empty;
-            string connectionString = ConfigurationManager.ConnectionStrings["MCCSC_SchedulerDB"].ConnectionString;
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                conn.Open();
+                // Call database or mock method
+                var notification = dbContext.CreateNotification(notificationDTO);
 
-                string query;
-
-                if (tableName == "Reservation")
-                {
-                    query = "SELECT MAX(updated_at) FROM Reservation";
-                }
-                else if (tableName == "RegistrationRequests")
-                {
-                    query = @"
-                SELECT MAX(LatestDate)
-                FROM (
-                    SELECT MAX(DateRequested) AS LatestDate FROM RegistrationRequests
-                    UNION ALL
-                    SELECT MAX(DateReviewed) FROM RegistrationRequests WHERE DateReviewed IS NOT NULL
-                ) AS CombinedDates";
-                }
-                else
-                {
-                    throw new ArgumentException("Invalid table name specified.");
-                }
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    object result = cmd.ExecuteScalar();
-
-                    if (result != DBNull.Value && result != null)
-                    {
-                        DateTime latestUpdate = Convert.ToDateTime(result);
-                        latest = latestUpdate.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                    }
-                }
+                // Return JSON to client
+                return JsonConvert.SerializeObject(notification);
             }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
-            // ✅ Return as JSON-safe string
-            var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-            return serializer.Serialize(new { LatestUpdate = latest });
+        [WebMethod]
+        public static object GetNotifications(NotificationDTO notificationDTO)
+        {
+            try
+            {
+                var dbContext = new DBContext();  // ← FIXED
+
+                var json = dbContext.GetNotifications(notificationDTO);
+
+                return json;
+            }
+            catch (Exception ex)
+            {
+                return new { error = ex.Message };
+            }
         }
         [WebMethod]
-        public static object CheckForUpdate()
+        public static string MarkAsRead(NotificationDTO notificationDTO)
         {
-            return new
+            try
             {
-                Reservation = GetLatestUpdateTime("Reservation"),
-                Registration = GetLatestUpdateTime("RegistrationRequests")
-            };
-        }
 
+                var notifications = dbContext.MarkAsRead(notificationDTO);
+
+                return notifications;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
         [WebMethod(Description = "A web method that will check the DB connection")]
         [ScriptMethod(UseHttpGet = true)]

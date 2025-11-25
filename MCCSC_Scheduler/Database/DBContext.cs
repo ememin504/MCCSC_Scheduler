@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Drawing;
 using System.Runtime.Remoting.Messaging;
 using System.Web.Script.Serialization;
+using System.Web.Services;
 using System.Web.Services.Description;
 using MCCSC_Scheduler.DTO;
 using MCCSC_Scheduler.Model;
@@ -1300,16 +1301,16 @@ namespace MCCSC_Scheduler.Database
                             {
                                 // Normal reservation (same day)
                                 string conflictQuery = @"
-                                                            SELECT COUNT(*) FROM Reservation_Dates
-                                                            WHERE date = @Date
-                                                            AND (
-                                                                (@StartTime < @EndTime AND (
-                                                                    (@StartTime BETWEEN start_time AND end_time)
-                                                                    OR (@EndTime BETWEEN start_time AND end_time)
-                                                                    OR (start_time BETWEEN @StartTime AND @EndTime)
-                                                                    OR (end_time BETWEEN @StartTime AND @EndTime)
-                                                                ))
-                                                            )";
+                            SELECT COUNT(*) FROM Reservation_Dates
+                            WHERE date = @Date
+                            AND (
+                                (@StartTime < @EndTime AND (
+                                    (@StartTime BETWEEN start_time AND end_time)
+                                    OR (@EndTime BETWEEN start_time AND end_time)
+                                    OR (start_time BETWEEN @StartTime AND @EndTime)
+                                    OR (end_time BETWEEN @StartTime AND @EndTime)
+                                ))
+                            )";
                                 using (SqlCommand checkCmd = new SqlCommand(conflictQuery, conn, trans))
                                 {
                                     checkCmd.Parameters.AddWithValue("@Date", dateOnly);
@@ -1331,14 +1332,14 @@ namespace MCCSC_Scheduler.Database
                             else
                             {
                                 // Overnight reservation (spans two dates)
-                                // 1️⃣ Part 1: from startTime to 23:59:59 on the same day
+                                // Day 1
                                 string conflictQuery1 = @"
-                                                            SELECT COUNT(*) FROM Reservation_Dates
-                                                            WHERE date = @Date
-                                                            AND (
-                                                                (@StartTime BETWEEN start_time AND end_time)
-                                                                OR (start_time BETWEEN @StartTime AND CAST('23:59:59.9999999' AS TIME))
-                                                            )";
+                            SELECT COUNT(*) FROM Reservation_Dates
+                            WHERE date = @Date
+                            AND (
+                                (@StartTime BETWEEN start_time AND end_time)
+                                OR (start_time BETWEEN @StartTime AND CAST('23:59:59.9999999' AS TIME))
+                            )";
                                 using (SqlCommand cmd1 = new SqlCommand(conflictQuery1, conn, trans))
                                 {
                                     cmd1.Parameters.AddWithValue("@Date", dateOnly);
@@ -1355,14 +1356,14 @@ namespace MCCSC_Scheduler.Database
                                     }
                                 }
 
-                                // 2️⃣ Part 2: from 00:00:00 to endTime on the next day
+                                // Day 2
                                 string conflictQuery2 = @"
-                                                            SELECT COUNT(*) FROM Reservation_Dates
-                                                            WHERE date = @NextDate
-                                                            AND (
-                                                                (@EndTime BETWEEN start_time AND end_time)
-                                                                OR (start_time BETWEEN CAST('00:00:00' AS TIME) AND @EndTime)
-                                                            )";
+                            SELECT COUNT(*) FROM Reservation_Dates
+                            WHERE date = @NextDate
+                            AND (
+                                (@EndTime BETWEEN start_time AND end_time)
+                                OR (start_time BETWEEN CAST('00:00:00' AS TIME) AND @EndTime)
+                            )";
                                 using (SqlCommand cmd2 = new SqlCommand(conflictQuery2, conn, trans))
                                 {
                                     cmd2.Parameters.AddWithValue("@NextDate", dateOnly.AddDays(1));
@@ -1393,9 +1394,9 @@ namespace MCCSC_Scheduler.Database
                         if (eventId == 0)
                         {
                             string insertEventQuery = @"
-                                                        INSERT INTO Events (title, description, organization_id)
-                                                        OUTPUT INSERTED.event_id
-                                                        VALUES (@Title, @Description, @OrganizationID)";
+                        INSERT INTO Events (title, description, organization_id)
+                        OUTPUT INSERTED.event_id
+                        VALUES (@Title, @Description, @OrganizationID)";
                             using (SqlCommand insertCmd = new SqlCommand(insertEventQuery, conn, trans))
                             {
                                 insertCmd.Parameters.AddWithValue("@Title", eventName);
@@ -1407,9 +1408,9 @@ namespace MCCSC_Scheduler.Database
 
                         // 3️⃣ Insert Reservation
                         string insertReservation = @"
-                                                        INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
-                                                        OUTPUT INSERTED.reservation_id
-                                                        VALUES (@ClientID, @StatusID, @EventID, @Reference)";
+                    INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
+                    OUTPUT INSERTED.reservation_id
+                    VALUES (@ClientID, @StatusID, @EventID, @Reference)";
                         using (SqlCommand cmd = new SqlCommand(insertReservation, conn, trans))
                         {
                             cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -1425,8 +1426,8 @@ namespace MCCSC_Scheduler.Database
                         foreach (var asset in assets)
                         {
                             string insertAssetQuery = @"
-                                                        INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
-                                                        VALUES (@ReservationID, @AssetID, @Qty)";
+                        INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
+                        VALUES (@ReservationID, @AssetID, @Qty)";
                             using (SqlCommand assetCmd = new SqlCommand(insertAssetQuery, conn, trans))
                             {
                                 assetCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1445,10 +1446,9 @@ namespace MCCSC_Scheduler.Database
 
                             if (startTime < endTime)
                             {
-                                // Normal reservation
                                 string insertDateQuery = @"
-                                                            INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
-                                                            VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
+                            INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+                            VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
                                 using (SqlCommand dateCmd = new SqlCommand(insertDateQuery, conn, trans))
                                 {
                                     dateCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1460,11 +1460,9 @@ namespace MCCSC_Scheduler.Database
                             }
                             else
                             {
-                                // Overnight: split into two rows
-                                // Day 1: startTime → 23:59:59
                                 string insertDate1 = @"
-                                                        INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
-                                                        VALUES (@ReservationID, @Date, @StartTime, CAST('23:59:59.9999999' AS TIME))";
+                            INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+                            VALUES (@ReservationID, @Date, @StartTime, CAST('23:59:59.9999999' AS TIME))";
                                 using (SqlCommand cmd1 = new SqlCommand(insertDate1, conn, trans))
                                 {
                                     cmd1.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1473,10 +1471,9 @@ namespace MCCSC_Scheduler.Database
                                     cmd1.ExecuteNonQuery();
                                 }
 
-                                // Day 2: 00:00:00 → endTime
                                 string insertDate2 = @"
-                                                        INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
-                                                        VALUES (@ReservationID, @NextDate, CAST('00:00:00' AS TIME), @EndTime)";
+                            INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
+                            VALUES (@ReservationID, @NextDate, CAST('00:00:00' AS TIME), @EndTime)";
                                 using (SqlCommand cmd2 = new SqlCommand(insertDate2, conn, trans))
                                 {
                                     cmd2.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -1487,13 +1484,17 @@ namespace MCCSC_Scheduler.Database
                             }
                         }
 
-                        // 6️⃣ Commit transaction
+                        // ✅ Commit transaction
                         trans.Commit();
+
+                        // Return reservation_id along with success message
                         return JsonConvert.SerializeObject(new
                         {
                             success = true,
+                            reservation_id = reservationId,
                             message = "Reservation submitted successfully."
                         });
+
                     }
                     catch (Exception ex)
                     {
@@ -1507,13 +1508,199 @@ namespace MCCSC_Scheduler.Database
                 }
             }
         }
+
+        public string CreateNotification(NotificationDTO notificationData)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    // Insert notification for client
+                    string insertForClient = @"
+                INSERT INTO Notifications (user_id, reservation_id, status_id, is_read, NoteFor, created_at)
+                VALUES (@UserID, @ReservationID, @StatusID, 0, @NoteFor, GETDATE())";
+
+                    // Insert notification for admin (using client_id)
+                    string insertForAdmin = @"
+                INSERT INTO Notifications (user_id, client_id, reservation_id, status_id, is_read, NoteFor, created_at)
+                VALUES (@UserID, @ClientID, @ReservationID, @StatusID, 0, @NoteFor, GETDATE())";
+
+                    // Query to get client_id from reservation
+                    string getClientID = @"
+                SELECT client_id FROM Reservation WHERE reservation_id = @ReservationID";
+
+                    // =============================
+                    // If Client made changes → Notify Admin
+                    // =============================
+                    if (notificationData.NoteFor == "Admin")
+                    {
+                        using (SqlCommand cmd = new SqlCommand(insertForClient, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@UserID", notificationData.UserID); // Admin's user ID
+                            cmd.Parameters.AddWithValue("@ReservationID", notificationData.ReservationID);
+                            cmd.Parameters.AddWithValue("@StatusID", notificationData.StatusID);
+                            cmd.Parameters.AddWithValue("@NoteFor", notificationData.NoteFor);
+
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    // =============================
+                    // If Admin made changes → Notify Client
+                    // =============================
+                    else if (notificationData.NoteFor == "Client")
+                    {
+                        int clientID = 0;
+
+                        using (SqlCommand getCmd = new SqlCommand(getClientID, conn))
+                        {
+                            getCmd.Parameters.AddWithValue("@ReservationID", notificationData.ReservationID);
+
+                            object result = getCmd.ExecuteScalar();
+                            if (result != null)
+                                clientID = Convert.ToInt32(result);
+                        }
+
+                        using (SqlCommand insertCmd = new SqlCommand(insertForAdmin, conn))
+                        {
+                            insertCmd.Parameters.AddWithValue("@UserID", notificationData.UserID);
+                            insertCmd.Parameters.AddWithValue("@ClientID", clientID);
+                            insertCmd.Parameters.AddWithValue("@ReservationID", notificationData.ReservationID);
+                            insertCmd.Parameters.AddWithValue("@StatusID", notificationData.StatusID);
+                            insertCmd.Parameters.AddWithValue("@NoteFor", notificationData.NoteFor);
+
+                            insertCmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+
+                return JsonConvert.SerializeObject(new
+                {
+                    success = true,
+                    message = "Notification created successfully."
+                }); 
+                //return JsonConvert.SerializeObject(notificationData.UserID);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    error = ex.Message
+                });
+            }
+            //return JsonConvert.SerializeObject(notificationData);
+        }
+        public string GetNotifications(NotificationDTO notificationDTO)
+        {
+            try {
+                List<NotificationDTO> results = new List<NotificationDTO>();
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    string query = "";
+
+                    if (notificationDTO.PageType == "Admin")
+                    {
+                        query = @"SELECT * FROM Notifications 
+                      WHERE NoteFor = 'Admin'
+                      ORDER BY created_at DESC";
+                    }
+                    else if (notificationDTO.PageType == "Client")
+                    {
+                        query = @"SELECT * FROM Notifications 
+                      WHERE NoteFor = 'Client' AND client_id = @ClientID
+                      ORDER BY created_at DESC";
+                    }
+                    if (notificationDTO == null)
+                    {
+                        throw new Exception("notificationDTO IS NULL");
+                    }
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        if (notificationDTO.PageType == "Client")
+                        {
+                            cmd.Parameters.AddWithValue("@ClientID", notificationDTO.ClientID);
+                        }
+
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                results.Add(new NotificationDTO
+                                {
+                                    NotificationID = Convert.ToInt32(reader["notification_id"]),
+                                    UserID = Convert.ToInt32(reader["user_id"]),
+                                    ClientID = reader["client_id"] != DBNull.Value ? Convert.ToInt32(reader["client_id"]) : 0,
+                                    ReservationID = reader["reservation_id"] != DBNull.Value ? Convert.ToInt32(reader["reservation_id"]) : 0,
+                                    StatusID = Convert.ToInt32(reader["status_id"]),
+                                    IsRead = Convert.ToBoolean(reader["is_read"]),
+                                    CreatedAt = Convert.ToDateTime(reader["created_at"]),
+                                    NoteFor = reader["NoteFor"] != DBNull.Value ? reader["NoteFor"].ToString() : ""
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // serialize only the list
+                return JsonConvert.SerializeObject(results);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
+            }
+
+        }
+        public string MarkAsRead(NotificationDTO notificationDTO)
+        {
+            try
+            {
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    string query = @"UPDATE Notifications 
+                             SET is_read = 1 
+                             WHERE notification_id = @NotificationID";
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@NotificationID", notificationDTO.NotificationID);
+
+                        int rowsAffected = cmd.ExecuteNonQuery();
+
+                        if (rowsAffected > 0)
+                        {
+                            return "Notification successfully marked as read";
+                        }
+                        else
+                        {
+                            return "no rows updated";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }
+
+
+
         public string AcceptReservation(ReservationDTO reservationData)
         {
             string updateStatus = @"UPDATE Reservation SET status_id = 3 WHERE reservation_id = @reservationID";
             try
             {
-                // Get the reservation ID from the DTO
                 int reservationID = reservationData.ReservationID;
+                int clientId = reservationData.ClientID;
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
                 {
@@ -1525,9 +1712,14 @@ namespace MCCSC_Scheduler.Database
                         int rowsAffected = cmd.ExecuteNonQuery();
 
                         if (rowsAffected > 0)
+                        {
+
                             return JsonConvert.SerializeObject(new { success = true });
+                        }
                         else
+                        {
                             return JsonConvert.SerializeObject(new { success = false, error = "Reservation not found." });
+                        }
                     }
                 }
             }
@@ -1536,6 +1728,7 @@ namespace MCCSC_Scheduler.Database
                 return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
             }
         }
+
         public object CancelReservation(ReservationDTO reservationData)
         {
             string updateStatus = @"UPDATE Reservation SET status_id = 7 WHERE reservation_id = @reservationID";

@@ -1,42 +1,29 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
-    setInterval(() => {
-        fetch("AdminDashboard1.aspx/CheckForUpdate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: "{}"
-        })
-            .then(res => res.json())
-            .then(data => {
-                const parsed = data.d; // ✅ no need to JSON.parse
+﻿const roleIdStr = sessionStorage.getItem("role_id");
+const roleId = roleIdStr ? Number(roleIdStr) : 0;
+const userIdStr = sessionStorage.getItem("user_id");
+const userId = userIdStr ? Number(userIdStr) : 0;
+const userEmail = sessionStorage.getItem("user_email");
+const firstName = sessionStorage.getItem("first_name");
+const middleInitial = sessionStorage.getItem("middle_initial");
+const lastName = sessionStorage.getItem("last_name");
+const roleName = sessionStorage.getItem("role_name");
+const roleTypeIDStr = sessionStorage.getItem("role_type_id");
+const roleTypeID = roleTypeIDStr ? Number(roleTypeIDStr) : 0;
+const roleTypeDescription = sessionStorage.getItem("role_type_description");
+console.log(userId);
 
-                // Compare each timestamp
-                const storedRes = localStorage.getItem("lastRes");
-                const storedReg = localStorage.getItem("lastReg");
+// ==============================
+document.addEventListener("DOMContentLoaded", function () {
 
-                if (parsed.Reservation !== storedRes) {
-                    localStorage.setItem("lastRes", parsed.Reservation);
-                    console.log("Reservation table changed!");
-                    getReservationRequests();
-                }
-
-                if (parsed.Registration !== storedReg) {
-                    localStorage.setItem("lastReg", parsed.Registration);
-                    console.log("Registration table changed!");
-                    getRegistrationRequests();
-                }
-            })
-            .catch(err => console.error("CheckForUpdate error:", err));
-
-    }, 5000);
-
-    // Inject modals
     const alertModalDiv = document.getElementById('form1');
     if (alertModalDiv) {
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
-    document.getElementById("fullname").textContent = firstName + " " + lastName;
-    document.getElementById("roles").textContent = roleName + "/" + roleTypeDescription;
+
+    document.getElementById("fullname").textContent = `${firstName} ${lastName}`;
+    document.getElementById("roles").textContent = `${roleName}/${roleTypeDescription}`;
+
     // Initial data load
     loadAssetCategories();
     getRegistrationRequests();
@@ -49,18 +36,9 @@
     getCancelledReservation();
     getApprovedReservation();
     getEvents();
+    loadNotifications();
+    startNotificationPolling();
 });
-
-const roleId = sessionStorage.getItem("role_id");
-const userId = sessionStorage.getItem("user_id");
-const userEmail = sessionStorage.getItem("user_email");
-const firstName = sessionStorage.getItem("first_name");
-const middleInitial = sessionStorage.getItem("middle_initial");
-const lastName = sessionStorage.getItem("last_name");
-const roleName = sessionStorage.getItem("role_name");
-const roleTypeID = sessionStorage.getItem("role_type_id");
-const roleTypeDescription = sessionStorage.getItem("role_type_description");
-
 console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
 // categoryLoader.js
 // 🌐 Global Variables
@@ -71,10 +49,138 @@ let assetID = 0;
 // Global category cache
 // ==============================
 let categoriesGlobal = [];
+let noteFor = "Client";
+let pageType = "Admin";
+function addNotification(reservationID, statusID) {
+    if (!reservationID || !userId || !statusID || !noteFor) {
+        console.warn("Missing parameters in addNotification:", { reservationID, userId, statusID, noteFor });
+        return;
+    }
+
+    let notificationInfo = {
+        ReservationID: reservationID,
+        UserID: userId,
+        StatusID: statusID,
+        NoteFor: noteFor
+    };
+
+    console.log("Sending notification:", notificationInfo);
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/CreateNotification",
+        data: JSON.stringify({ notificationDTO: notificationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Notification response:", response.d);
+        },
+        error: function (xhr, status, error) {
+            console.error("AJAX Error:", { status, error, responseText: xhr.responseText });
+            alert("A system error occurred. Please check the console for details.");
+        }
+    });
+}
+function startNotificationPolling() {
+    loadNotifications();
+    setInterval(() => {
+        loadNotifications();
+    }, 5000);
+}
+
+function loadNotifications() {
+    let clientID = 0;
+    let notificationInfo = {
+        PageType: pageType,
+        UserID: userId,
+        ClientID: clientID
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetNotifications",
+        data: JSON.stringify({ notificationDTO: notificationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",   
+        success: function (response) {
+            let notifications = JSON.parse(response.d);
+            console.log("Notifications", notifications);
+            displayNotifications(notifications);
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+function displayNotifications(notifications) {
+    $("#notificationTableBody").empty(); // Clear old rows
+
+    notifications.forEach(n => {
+
+        // Format date (if needed)
+        let formattedDate = new Date(n.CreatedAt).toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        // Determine message by status_id
+        let message = "";
+        switch (n.StatusID) {
+            case 2:
+                message = "A Reservation Request has been added to the waiting list!";
+                break;
+            case 8:
+                message = "A Cancellation Request has been added to the waiting list!";
+                break;
+            default:
+                message = "Status updated.";
+                break;
+        }
+
+        // Build the table row
+        let row = `
+            <tr class="${n.IsRead ? '' : 'table-warning'}">
+
+                <td>${formattedDate}</td>
+                <td>${message}</td>
+                <td>
+                    <button class = "btn btn-primary" onclick="markAsRead(${n.NotificationID}); return false;">
+                    Mark as Read
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        $("#notificationTableBody").append(row);
+    });
+}
 
 // ==============================
 // SAVE CATEGORY CHANGES
 // ==============================
+function markAsRead(notificationID) {
+    console.log("Marking notification as read!", notificationID);
+    let notificationData = {
+        NotificationID: notificationID
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/MarkAsRead",
+        data: JSON.stringify({ notificationDTO: notificationData }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            alert(response.d);
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
+
 function saveCategoryChanges(categoryID) {
     const name = document.getElementById("editCategoryName").value;
     const parentId = document.getElementById("populateEditCategoryParent").value;
@@ -118,7 +224,6 @@ function saveCategoryChanges(categoryID) {
         }
     });
 }
-
 // ==============================
 // LOAD CATEGORIES
 // ==============================
@@ -1032,7 +1137,7 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
                         <p><strong>Remarks:</strong> ${remarks}</p>
                       </div>
                       <div class='modal-footer'>
-                        <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)}, ${reservationID})'>${buttonText}</button>
+                        <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)}, ${reservationID}, ${clientID})'>${buttonText}</button>
 
                         ${data.Status === "Coordination Meeting" ? `
                           <button type='button' class='btn btn-primary' onclick='approveReservation(${reservationID}); return false;'>Approve</button>
@@ -1064,9 +1169,10 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
         }
     });
 }
-function approveReservation(reservationID) {
+function approveReservation(reservationID, clientID) {
     let reservationInfo = {
-        ReservationID : reservationID
+        ReservationID: reservationID,
+        ClientID: clientID
     }
     $.ajax({
         type: "POST",
@@ -1079,6 +1185,7 @@ function approveReservation(reservationID) {
             $('#viewReservationModal').modal('hide');
             getStatusCMReservation();
             getApprovedReservation();
+            addNotification(reservationID, 9);
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
@@ -1088,10 +1195,12 @@ function approveReservation(reservationID) {
 function editReservationInfo(data, reservationID) {
     openEditReservationModal();
 }
-function confirmCancellation( reservationID) {
+function confirmCancellation(data, reservationID, clientID) {
     let reservationInfo = {
-        ReservationID: reservationID
+        ReservationID: reservationID,
+        ClientID: clientID
     }
+    console.log(reservationInfo);
     $.ajax({
         type: "POST",
         url: "AdminDashboard1.aspx/CancelReservation",
@@ -1106,6 +1215,7 @@ function confirmCancellation( reservationID) {
             getAcceptedReservation();
             getCancelledReservation();
             getReservationCancellationRequests();
+            addNotification(reservationID, 7);
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
@@ -1143,6 +1253,7 @@ function saveCoordinationMeeting() {
             $("#coordinationMeetingModal").modal("hide");
             getAcceptedReservation();
             getStatusCMReservation();
+            addNotification(reservationId, 5);
         },
         error: function (xhr, status, error) {
             console.error("AJAX Error:", xhr.responseText);
@@ -1152,10 +1263,11 @@ function saveCoordinationMeeting() {
 }
 
 
-function acceptReservation(data, reservationID) {
+function acceptReservation(data, reservationID, clientID) {
     console.log(reservationID);
     let reservationInfo = {
-        ReservationID : reservationID
+        ReservationID: reservationID,
+        ClientID: clientID
     }
     console.log("Reservation Info: ",reservationInfo);
     $.ajax({
@@ -1169,35 +1281,9 @@ function acceptReservation(data, reservationID) {
             $('#viewReservationModal').modal('hide');
             getReservationRequests();
             getAcceptedReservation();
+            console.log(reservationID, userId);
+            addNotification(reservationID, 3);
         },
-        error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
-        }
-    })
-}
-function confirmCancellation(data, reservationID) {
-    console.log(reservationID);
-    let reservationInfo = {
-        ReservationID: reservationID
-    }
-    $.ajax({
-        type: "POST",
-        url: "AdminDashboard1.aspx/CancelReservation",
-        data: JSON.stringify({ reservationData: reservationInfo }),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            console.log(response.d);
-            let result = JSON.parse(response.d);
-            if (result.success) {
-                $('#viewReservationModal').modal('hide');
-                getReservationRequests();
-                getCancelledReservation();
-            } else {
-                console.error("Failed:", response.d.error);
-            }
-        },
-
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }

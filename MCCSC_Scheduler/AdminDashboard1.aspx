@@ -269,6 +269,25 @@
                         <!-- Tabs will be populated dynamically -->
                     </nav>
                 </header>
+                <div class="dashboard-container">
+                    <!-- RESERVATION REQUESTS -->
+                    <div id="notificationSection" class="section-card" style="display: none;">
+                        <h3>Notifications</h3>
+                        <div class="table-container">
+                            <table class="table table-striped table-bordered" id="notificationTable">
+                                <thead>
+                                    <tr>
+                                        <th>Record Updated/Added</th>
+                                        <th>Message</th>
+                                        <th>View</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="notificationTableBody">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
                 <div class="dashboard-container">
                     <!-- RESERVATION REQUESTS -->

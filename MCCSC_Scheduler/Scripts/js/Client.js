@@ -1,30 +1,34 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
-    // inject alert modal
+﻿
+var clientID = 0;
+const roleId = sessionStorage.getItem("role_id");
+const userIdStr = sessionStorage.getItem("user_id");
+const userId = userIdStr ? Number(userIdStr) : 0;
+const userEmail = sessionStorage.getItem("user_email");
+const roleName = sessionStorage.getItem("role_name");
+const roleTypeIDStr = sessionStorage.getItem("role_type_id");
+const roleTypeID = roleTypeIDStr ? Number(roleTypeIDStr) : 0;
+const roleTypeDescription = sessionStorage.getItem("role_type_description");
+var organizationID = 0;
+console.log(roleId, userId, userEmail);
+let selectedAssets = []; // use array in case multiple assets are checked
+let n = 0;
+let noteFor = "Admin";
+let pageType = "Client"
+
+console.log(roleId, userId, userEmail);
+ 
+document.addEventListener("DOMContentLoaded", function () {
     const alertModalDiv = document.getElementById('form1');
     if (alertModalDiv) {
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
     }
-    getAsset();
+
+    getClientInfo();
+    getAsset(); // if independent
 });
-var clientID = 0;
-const roleId = sessionStorage.getItem("role_id");
-const userId = sessionStorage.getItem("user_id");
-const userEmail = sessionStorage.getItem("user_email");
-const roleName = sessionStorage.getItem("role_name");
-const roleTypeID = sessionStorage.getItem("role_type_id");
-const roleTypeDescription = sessionStorage.getItem("role_type_description");
-var organizationID = 0;
-console.log(roleId, userId, userEmail);
-
-getClientInfo()
-let selectedAssets = []; // use array in case multiple assets are checked
-let n = 0;
-
-console.log(roleId, userId, userEmail);
 
 function getClientInfo() {
-    
     $.ajax({
         type: "POST",
         url: "ClientDashboard.aspx/GetClientInfo",
@@ -32,124 +36,254 @@ function getClientInfo() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            // Parse JSON since C# returns it as string
             let info = JSON.parse(response.d);
-            console.log(info.name);
-            console.log(info.organizationID);
-            console.log(info.organizationName);
-            console.log(info.organizationType); 
-            console.log(info.clientID);
-            console.log(info.roleName);
             clientID = info.clientID;
             organizationID = info.organizationID;
+
             getReservation();
         },
-        error: function (xhr, status, error) {
+        error: function (xhr) {
             console.error("Error:", xhr.responseText);
         }
     });
-
 }
 
 function getReservation() {
-    // Helper function: convert 24-hour time to 12-hour format
-    function to12Hour(time) {
-        if (!time) return "";
-        let [hour, minute] = time.split(':').map(Number);
-        let ampm = hour >= 12 ? 'PM' : 'AM';
-        hour = hour % 12 || 12; // Convert 0 => 12
-        return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
-    }
-
     $.ajax({
         type: "POST",
         url: "ClientDashboard.aspx/GetClientReservation",
         data: JSON.stringify({ clientData: { clientID: clientID } }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
-
         success: function (response) {
             let data = JSON.parse(response.d);
-            let container = $("#reservationTableBody");
-            container.empty();
-            console.log(data);
 
-            data.forEach(res => {
-                // Format event dates
-                let dates = res.EventDates.length
-                    ? res.EventDates.map(d => {
-                        let formattedDate = d.Date.split('T')[0]; // Remove T00:00:00
-                        let start = to12Hour(d.StartTime);
-                        let end = to12Hour(d.EndTime);
-                        return `${formattedDate} (${start} - ${end})`;
-                    }).join("<br>")
-                    : "No dates";
+            if (data.length > 0) {
+                const res = data[0]; // first reservation for demo
+                startNotificationPolling();
+            }
 
-                // Determine button properties
-                let buttonText = "";
-                let buttonFunction = "";
-                let buttonClass = "";
-
-                switch (res.StatusName) { // NOT statusName
-                    case "Accepted":
-                    case "Coordination Meeting":
-                    case "Reschedule":
-                        buttonText = "Request Cancellation";
-                        buttonFunction = "requestCancellation";
-                        buttonClass = "btn btn-warning btn-sm";
-                        break;
-
-                    case "Pending":
-                        buttonText = "Cancel Reservation";
-                        buttonFunction = "cancelReservation"; // optional
-                        buttonClass = "btn btn-danger btn-sm";
-                        break;
-
-                    case "Rejected":
-                    case "Cancellation Request":
-                    case "Cancelled":
-                        buttonText = "View Info";
-                        buttonFunction = "viewInfo";
-                        buttonClass = "btn btn-secondary btn-sm";
-                        break;
-
-                    default:
-                        buttonText = "";
-                        buttonFunction = "";
-                        buttonClass = "";
-                        break;
-                }
-
-
-
-                // Render button even if empty
-                let buttonHTML = `
-                    <button class="${buttonClass}"
-                        ${buttonFunction ? `onclick="${buttonFunction}('${res.ReservationID}','${clientID}','${res.StatusID}','${res.EventID}','${res.Reference}',${res.remarks}); return false;"` : ''}>
-                        ${buttonText}
-                    </button>`;
-
-
-
-                // Append row to table
-                let row = `<tr>
-                                <td>${res.EventName}</td>
-                                <td>${res.EventDescription}</td>
-                                <td>${formatAssets(res.SelectedAssets)}</td>
-                                <td>${res.StatusName}</td>
-                                <td>${dates}</td>
-                                <td>${res.Reference}</td>
-                                <td>${buttonHTML}</td>
-                           </tr>`;
-
-                container.append(row);
-            });
+            // Render reservations table
+            renderReservations(data);
         },
-
-        error: function (xhr, status, error) {
+        error: function (xhr) {
             console.error("Error:", xhr.responseText);
         }
     });
+}
+function renderReservations(data) {
+    // Clear tables first
+    $("#reservationTableBody").empty();
+    $("#reservationHistoryTableBody").empty();
+
+    // Helper to convert 24-hour to 12-hour time
+    function to12Hour(time) {
+        if (!time) return "";
+        let [hour, minute] = time.split(':').map(Number);
+        let ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+    }
+
+    data.forEach(res => {
+        // Format event dates
+        let dates = res.EventDates.length
+            ? res.EventDates.map(d => {
+                let formattedDate = d.Date.split('T')[0];
+                let start = to12Hour(d.StartTime);
+                let end = to12Hour(d.EndTime);
+                return `${formattedDate} (${start} - ${end})`;
+            }).join("<br>")
+            : "No dates";
+
+        // Determine button properties
+        let buttonText = "";
+        let buttonFunction = "";
+        let buttonClass = "";
+        let container = $("#reservationTableBody"); // default
+
+        switch (res.StatusName) {
+            case "Accepted":
+            case "Coordination Meeting":
+            case "Reschedule":
+                buttonText = "Request Cancellation";
+                buttonFunction = "requestCancellation";
+                buttonClass = "btn btn-warning btn-sm";
+                break;
+
+            case "Pending":
+                buttonText = "Cancel Reservation";
+                buttonFunction = "cancelReservation";
+                buttonClass = "btn btn-danger btn-sm";
+                break;
+
+            case "Rejected":
+            case "Cancellation Request":
+                buttonText = "View Info";
+                buttonFunction = "viewInfo";
+                buttonClass = "btn btn-secondary btn-sm";
+                break;
+
+            case "Cancelled":
+                buttonText = "View Info";
+                buttonFunction = "viewInfo";
+                buttonClass = "btn btn-secondary btn-sm";
+                container = $("#reservationHistoryTableBody");
+                break;
+
+            default:
+                buttonText = "";
+                buttonFunction = "";
+                buttonClass = "";
+                break;
+        }
+
+        let buttonHTML = `
+            <button class="${buttonClass}"
+                ${buttonFunction ? `onclick="${buttonFunction}('${res.ReservationID}','${clientID}','${res.StatusID}','${res.EventID}','${res.Reference}',${res.remarks}); return false;"` : ''}>
+                ${buttonText}
+            </button>`;
+
+        // Append row
+        let row = `<tr>
+            <td>${res.EventName}</td>
+            <td>${res.EventDescription}</td>
+            <td>${formatAssets(res.SelectedAssets)}</td>
+            <td>${res.StatusName}</td>
+            <td>${dates}</td>
+            <td>${res.Reference}</td>
+            <td>${buttonHTML}</td>
+        </tr>`;
+
+        container.append(row);
+    });
+}
+
+function startNotificationPolling() {
+    loadNotification();
+    setInterval(() => {
+        loadNotification();
+    }, 5000);
+}
+
+function loadNotification() {
+    console.log("loading notification")
+    if (!userId || !pageType || !clientID) {
+        console.warn("Missing parameters in addNotification:", { userId, pageType, clientID});
+        return;
+    }
+
+    let notificationInfo = {
+        UserID: userId,
+        PageType: pageType,
+        ClientID: clientID
+    };
+
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/GetNotifications",
+        data: JSON.stringify({ notificationDTO: notificationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            let notifications = JSON.parse(response.d);
+            displayNotifications(notifications);
+            notifications.forEach(n => {
+                console.log(n.NotificationID);
+            });
+        },
+        error: function (xhr) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+
+function displayNotifications(notifications) {
+    $("#notificationTableBody").empty(); // Clear old rows
+    if (!Array.isArray(notifications)) {
+        console.error("Notifications is not an array:", notifications);
+        return;
+    }
+    notifications.forEach(n => {
+
+        // Format date (if needed)
+        let formattedDate = new Date(n.CreatedAt).toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        // Determine message by status_id
+        let message = "";
+        console.log(n.StatusID);
+        switch (n.StatusID) {
+            case 2:
+                message = "Your reservation request has been submitted.";
+                break;
+            case 3:
+                message = "Your reservation has been accepted.";
+                break;
+            case 4:
+                message = "Your reservation was rejected.";
+                break;
+            case 5:
+                message = "Coordination has been set for your reservation.";
+                break;
+            case 6:
+                message = "Your reservation has been rescheduled.";
+                break;
+            case 7:
+                message = "Your reservation has been cancelled.";
+                break;
+            case 8:
+                message = "Cancellation request has been sent";
+                break;
+            case 8:
+                message = "Your reservation is now approved";
+                break;
+            default:
+                message = "Status updated.";
+                break;
+        }
+
+        // Build the table row
+        let row = `
+            <tr class="${n.IsRead ? '' : 'table-warning'}">
+
+                <td>${formattedDate}</td>
+                <td>${message}</td>
+                <td>
+                    <button class = "btn btn-primary" onclick="markAsRead(${n.NotificationID}); return false;">
+                    Mark as Read
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        $("#notificationTableBody").append(row);
+    });
+}
+function markAsRead(notificationID) {
+    console.log("Marking notification as read!", notificationID);
+    let notificationData = {
+        NotificationID: notificationID
+    }
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/MarkAsRead",
+        data: JSON.stringify({ notificationDTO: notificationData }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            alert(response.d);
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
 }
 function viewInfo(reservationID, clientId, statusID, eventID, reference, remarks) {
     let requestInfo = {
@@ -323,6 +457,7 @@ function sendCancellationRequest(reservationID, statusID, reason) {
 
             alert("Success", "Your cancellation request has been submitted successfully.");
             getReservation();
+            addNotification(reservationID, userId, 8);
         },
 
         error: function (xhr, status, error) {
@@ -352,6 +487,7 @@ function cancelReservation(reservationID, clientId, statusID, eventID, referenc,
             if (result.success) {
                 alert("Your reservation is successfully cancelled");
                 getReservation();
+                addNotification(reservationID, 7);
             }
         },
         error: function (xhr, status, error) {
@@ -517,9 +653,13 @@ function submitReservation() {
             let result = JSON.parse(response.d);
 
             if (result.success) {
+                let reservationID = parseInt(result.reservation_id); // match server key
                 alert(result.message || "Reservation submitted successfully!");
                 $('#reservationModal').modal('hide');
                 getReservation();
+
+                // ✅ Use the reservation_id returned from the server
+                addNotification(reservationID, userId, 2);
             } else {
                 alert(result.error || "An error occurred while submitting the reservation.");
             }
@@ -530,7 +670,29 @@ function submitReservation() {
         }
     });
 }
+function addNotification(reservationID, userId, statusID) {
+    let notificationInfo = {
+        ReservationID: reservationID,
+        UserID: userId,
+        StatusID: statusID,
+        NoteFor: noteFor
+    }
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/CreateNotification",
+        data: JSON.stringify({ notificationDTO: notificationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response.d);
+        },
+        error: function (xhr, status, error) {
+            console.error("AJAX Error:", xhr.responseText);
+            alert("A system error occurred. Please try again later.");
+        }
+    });
 
+}
 function sanitizeObject(obj) {
     if (typeof obj === "string") {
         return obj.replace(/'/g, '`'); // replace all single quotes
