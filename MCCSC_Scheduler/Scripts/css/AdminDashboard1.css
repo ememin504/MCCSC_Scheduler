@@ -133,7 +133,7 @@ body {
 .header-nav {
     display: flex;
     background: transparent;
-    padding: 0 2rem 1.5rem 2rem;
+    padding: 0 10px 10px 10px;
     overflow-x: auto;
     gap: 0.5rem;
     align-items: center;

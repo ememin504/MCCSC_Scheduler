@@ -89,11 +89,11 @@
 
             tabs.forEach(tab => {
                 const button = document.createElement('button');
-                button.type = 'button'; // Prevent form submission
+                button.type = 'button';
                 button.className = 'header-nav-item';
                 button.innerHTML = `<span>${tab.icon}</span> <span>${tab.text}</span>`;
                 button.onclick = (e) => {
-                    e.preventDefault(); // Prevent any default action
+                    e.preventDefault();
                     showSection(tab.id, submenuId);
                 };
                 headerNav.appendChild(button);
@@ -159,6 +159,144 @@
             document.getElementById('sidebar').classList.toggle('show');
         }
 
+        // Toggle notification sidebar
+        function toggleNotificationSidebar() {
+            const sidebar = document.getElementById('notificationSidebar');
+            const overlay = document.getElementById('notificationOverlay');
+
+            sidebar.classList.toggle('show');
+            overlay.classList.toggle('show');
+
+            // Load notifications when opening
+            if (sidebar.classList.contains('show')) {
+                loadNotificationsUI();
+            }
+        }
+
+        // Load notifications for UI
+        function loadNotificationsUI() {
+            const notificationBody = document.getElementById('notificationBody');
+            notificationBody.innerHTML = '<div class="notification-loading">Loading notifications...</div>';
+
+            // Get notifications from your backend
+            let clientID = 0;
+            let notificationInfo = {
+                PageType: "Admin",
+                UserID: window.AppData.userId,
+                ClientID: clientID
+            }
+
+            $.ajax({
+                type: "POST",
+                url: "AdminDashboard1.aspx/GetNotifications",
+                data: JSON.stringify({ notificationDTO: notificationInfo }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    let notifications = JSON.parse(response.d);
+                    console.log("Notifications", notifications);
+
+                    // Transform to sidebar format
+                    const sidebarNotifications = notifications.map(n => {
+                        let message = "";
+                        switch (n.StatusID) {
+                            case 2:
+                                message = "New reservation request submitted";
+                                break;
+                            case 8:
+                                message = "Cancellation request received";
+                                break;
+                            default:
+                                message = "Status updated";
+                                break;
+                        }
+
+                        let formattedDate = new Date(n.CreatedAt).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+
+                        return {
+                            id: n.NotificationID,
+                            message: message,
+                            time: formattedDate,
+                            isRead: n.IsRead
+                        };
+                    });
+
+                    displayNotificationsInSidebar(sidebarNotifications);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error loading notifications:", xhr.responseText);
+                    notificationBody.innerHTML = '<div class="notification-empty">Failed to load notifications</div>';
+                }
+            });
+        }
+
+        // Display notifications in sidebar
+        function displayNotificationsInSidebar(notifications) {
+            const notificationBody = document.getElementById('notificationBody');
+
+            if (notifications.length === 0) {
+                notificationBody.innerHTML = '<div class="notification-empty">No notifications</div>';
+                updateNotificationBadge(0);
+                return;
+            }
+
+            const unreadCount = notifications.filter(n => !n.isRead).length;
+            updateNotificationBadge(unreadCount);
+
+            notificationBody.innerHTML = notifications.map(notif => `
+                <div class="notification-item ${notif.isRead ? '' : 'unread'}" onclick="markNotificationAsRead(${notif.id})">
+                    <div class="notification-content">
+                        ${!notif.isRead ? '<span class="notification-dot"></span>' : ''}
+                        <div class="notification-message">${notif.message}</div>
+                        <div class="notification-time">${notif.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update notification badge
+        function updateNotificationBadge(count) {
+            const badge = document.getElementById('sidebarNotificationBadge');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+
+        // Mark notification as read
+        function markNotificationAsRead(notificationID) {
+            let notificationData = {
+                NotificationID: notificationID
+            }
+            $.ajax({
+                type: "POST",
+                url: "AdminDashboard1.aspx/MarkAsRead",
+                data: JSON.stringify({ notificationDTO: notificationData }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    console.log('Marked as read:', notificationID);
+                    // Reload notifications
+                    setTimeout(() => {
+                        loadNotificationsUI();
+                    }, 300);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error:", xhr.responseText);
+                }
+            });
+        }
+
         // Initialize
         window.addEventListener('DOMContentLoaded', function () {
             // Set user info in sidebar
@@ -169,7 +307,11 @@
             document.getElementById('fullname').textContent = `${window.AppData.firstName} ${window.AppData.lastName}`;
             document.getElementById('roles').textContent = `${window.AppData.roleName}/${window.AppData.roleTypeDescription}`;
 
-            // DO NOT open any section by default - let user choose
+            // Load initial notification count
+            loadNotificationsUI();
+
+            // Poll for new notifications every 30 seconds
+            setInterval(loadNotificationsUI, 30000);
         });
 
         // Close sidebar when clicking outside on mobile
@@ -204,7 +346,7 @@
                 <ul class="sidebar-menu">
                     <!-- RESERVATION MANAGEMENT -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="toggleSubmenu('reservationSubmenu', this)">
+                        <a class="sidebar-link" onclick="event.preventDefault(); toggleSubmenu('reservationSubmenu', this)">
                             <span class="sidebar-icon">📅</span>
                             <span>Reservation Management</span>
                         </a>
@@ -212,7 +354,7 @@
 
                     <!-- ASSET MANAGEMENT -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="toggleSubmenu('assetSubmenu', this)">
+                        <a class="sidebar-link" onclick="event.preventDefault(); toggleSubmenu('assetSubmenu', this)">
                             <span class="sidebar-icon">📦</span>
                             <span>Asset Management</span>
                         </a>
@@ -220,7 +362,7 @@
 
                     <!-- USER MANAGEMENT -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="toggleSubmenu('userSubmenu', this)">
+                        <a class="sidebar-link" onclick="event.preventDefault(); toggleSubmenu('userSubmenu', this)">
                             <span class="sidebar-icon">👥</span>
                             <span>User Management</span>
                         </a>
@@ -228,7 +370,7 @@
 
                     <!-- EVENT MANAGEMENT -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="showSection('eventsSection')">
+                        <a class="sidebar-link" onclick="event.preventDefault(); showSection('eventsSection')">
                             <span class="sidebar-icon">🎉</span>
                             <span>Event Management</span>
                         </a>
@@ -236,9 +378,18 @@
 
                     <!-- RESERVATION HISTORY -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="toggleSubmenu('historySubmenu', this)">
+                        <a class="sidebar-link" onclick="event.preventDefault(); toggleSubmenu('historySubmenu', this)">
                             <span class="sidebar-icon">📋</span>
                             <span>Reservation History</span>
+                        </a>
+                    </li>
+
+                    <!-- NOTIFICATIONS -->
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" onclick="event.preventDefault(); toggleNotificationSidebar()">
+                            <span class="sidebar-icon">🔔</span>
+                            <span>Notifications</span>
+                            <span class="notification-badge" id="sidebarNotificationBadge" style="display: none; margin-left: auto; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;">0</span>
                         </a>
                     </li>
                 </ul>
@@ -269,25 +420,20 @@
                         <!-- Tabs will be populated dynamically -->
                     </nav>
                 </header>
-                <div class="dashboard-container">
-                    <!-- RESERVATION REQUESTS -->
-                    <div id="notificationSection" class="section-card" style="display: none;">
+
+                <!-- NOTIFICATION SIDEBAR -->
+                <div class="notification-sidebar" id="notificationSidebar">
+                    <div class="notification-header">
                         <h3>Notifications</h3>
-                        <div class="table-container">
-                            <table class="table table-striped table-bordered" id="notificationTable">
-                                <thead>
-                                    <tr>
-                                        <th>Record Updated/Added</th>
-                                        <th>Message</th>
-                                        <th>View</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="notificationTableBody">
-                                    <!-- Data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
+                        <button type="button" class="btn-close-notification" onclick="toggleNotificationSidebar()">×</button>
                     </div>
+                    <div class="notification-body" id="notificationBody">
+                        <div class="notification-loading">Loading notifications...</div>
+                    </div>
+                </div>
+
+                <!-- NOTIFICATION OVERLAY -->
+                <div class="notification-overlay" id="notificationOverlay" onclick="toggleNotificationSidebar()"></div>
 
                 <div class="dashboard-container">
                     <!-- RESERVATION REQUESTS -->
@@ -375,7 +521,7 @@
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="approvedReservationTableBodu">
+                                <tbody id="approvedReservationTableBody">
                                     <tr>
                                         <td colspan="5" class="text-center">No approved reservations</td>
                                     </tr>
