@@ -179,12 +179,11 @@
             notificationBody.innerHTML = '<div class="notification-loading">Loading notifications...</div>';
 
             // Get notifications from your backend
-            let clientID = 0;
             let notificationInfo = {
                 PageType: "Admin",
-                UserID: window.AppData.userId,
-                ClientID: clientID
-            }
+                UserID: parseInt(window.AppData.userId) || 0,
+                ClientID: 0
+            };
 
             $.ajax({
                 type: "POST",
@@ -194,8 +193,7 @@
                 dataType: "json",
                 success: function (response) {
                     let notifications = JSON.parse(response.d);
-                    console.log("Notifications", notifications);
-
+                    console.log(notifications);
                     // Transform to sidebar format
                     const sidebarNotifications = notifications.map(n => {
                         let message = "";
@@ -223,7 +221,8 @@
                             id: n.NotificationID,
                             message: message,
                             time: formattedDate,
-                            isRead: n.IsRead
+                            isRead: n.IsRead,
+                            clientName: n.ClientName
                         };
                     });
 
@@ -254,6 +253,7 @@
                     <div class="notification-content">
                         ${!notif.isRead ? '<span class="notification-dot"></span>' : ''}
                         <div class="notification-message">${notif.message}</div>
+                        <div class="notification-message">${notif.clientName}</div>
                         <div class="notification-time">${notif.time}</div>
                     </div>
                 </div>
@@ -310,8 +310,8 @@
             // Load initial notification count
             loadNotificationsUI();
 
-            // Poll for new notifications every 30 seconds
-            setInterval(loadNotificationsUI, 30000);
+            // Poll for new notifications every 5 seconds
+            setInterval(loadNotificationsUI, 5000);
         });
 
         // Close sidebar when clicking outside on mobile

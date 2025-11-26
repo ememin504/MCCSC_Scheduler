@@ -167,7 +167,6 @@ function startNotificationPolling() {
 }
 
 function loadNotification() {
-    console.log("loading notification")
     if (!userId || !pageType || !clientID) {
         console.warn("Missing parameters in addNotification:", { userId, pageType, clientID});
         return;
@@ -188,9 +187,6 @@ function loadNotification() {
         success: function (response) {
             let notifications = JSON.parse(response.d);
             displayNotifications(notifications);
-            notifications.forEach(n => {
-                console.log(n.NotificationID);
-            });
         },
         error: function (xhr) {
             console.error("Error:", xhr.responseText);
@@ -218,7 +214,6 @@ function displayNotifications(notifications) {
 
         // Determine message by status_id
         let message = "";
-        console.log(n.StatusID);
         switch (n.StatusID) {
             case 2:
                 message = "Your reservation request has been submitted.";

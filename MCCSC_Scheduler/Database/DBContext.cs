@@ -1595,7 +1595,11 @@ namespace MCCSC_Scheduler.Database
         }
         public string GetNotifications(NotificationDTO notificationDTO)
         {
-            try {
+            try
+            {
+                if (notificationDTO == null)
+                    throw new Exception("notificationDTO IS NULL");
+
                 List<NotificationDTO> results = new List<NotificationDTO>();
 
                 using (SqlConnection conn = new SqlConnection(connectionString))
@@ -1607,18 +1611,14 @@ namespace MCCSC_Scheduler.Database
                     if (notificationDTO.PageType == "Admin")
                     {
                         query = @"SELECT * FROM Notifications 
-                      WHERE NoteFor = 'Admin'
-                      ORDER BY created_at DESC";
+                          WHERE NoteFor = 'Admin'
+                          ORDER BY created_at DESC";
                     }
                     else if (notificationDTO.PageType == "Client")
                     {
                         query = @"SELECT * FROM Notifications 
-                      WHERE NoteFor = 'Client' AND client_id = @ClientID
-                      ORDER BY created_at DESC";
-                    }
-                    if (notificationDTO == null)
-                    {
-                        throw new Exception("notificationDTO IS NULL");
+                          WHERE NoteFor = 'Client' AND client_id = @ClientID
+                          ORDER BY created_at DESC";
                     }
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
@@ -1635,28 +1635,56 @@ namespace MCCSC_Scheduler.Database
                                 results.Add(new NotificationDTO
                                 {
                                     NotificationID = Convert.ToInt32(reader["notification_id"]),
-                                    UserID = Convert.ToInt32(reader["user_id"]),
+                                    UserID = Convert.ToInt32(reader["user_id"]),   // ✔ use this value
                                     ClientID = reader["client_id"] != DBNull.Value ? Convert.ToInt32(reader["client_id"]) : 0,
                                     ReservationID = reader["reservation_id"] != DBNull.Value ? Convert.ToInt32(reader["reservation_id"]) : 0,
                                     StatusID = Convert.ToInt32(reader["status_id"]),
                                     IsRead = Convert.ToBoolean(reader["is_read"]),
                                     CreatedAt = Convert.ToDateTime(reader["created_at"]),
-                                    NoteFor = reader["NoteFor"] != DBNull.Value ? reader["NoteFor"].ToString() : ""
+                                    NoteFor = reader["NoteFor"] != DBNull.Value ? reader["NoteFor"].ToString() : "",
+                                    ClientName = ""
                                 });
+                            }
+                        }
+                    }
+
+                    // ✔ ADMIN ONLY: Get client name using stored UserID
+                    if (notificationDTO.PageType == "Admin")
+                    {
+                        foreach (var item in results)
+                        {
+                            if (item.UserID > 0)
+                            {
+                                string queryUser = @"SELECT first_name, last_name 
+                                             FROM Users 
+                                             WHERE user_id = @UserID";
+
+                                using (SqlCommand userCmd = new SqlCommand(queryUser, conn))
+                                {
+                                    userCmd.Parameters.AddWithValue("@UserID", item.UserID);
+
+                                    using (SqlDataReader userReader = userCmd.ExecuteReader())
+                                    {
+                                        if (userReader.Read())
+                                        {
+                                            item.ClientName = $"{userReader["first_name"]} {userReader["last_name"]}";
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
-                // serialize only the list
                 return JsonConvert.SerializeObject(results);
             }
             catch (Exception ex)
             {
                 return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
             }
-
         }
+
+
         public string MarkAsRead(NotificationDTO notificationDTO)
         {
             try

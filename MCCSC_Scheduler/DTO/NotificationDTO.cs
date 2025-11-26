@@ -10,6 +10,7 @@ namespace MCCSC_Scheduler
         public int ReservationID { get; set; }
         public int StatusID { get; set; }
         public int ClientID { get; set; }
+        public string ClientName { get; set; }
         public string StatusName { get; set; }
         public string StatusMessage { get; set; }
         public bool IsRead { get; set; }

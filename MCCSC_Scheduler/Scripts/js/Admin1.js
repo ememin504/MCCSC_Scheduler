@@ -103,8 +103,9 @@ function loadNotifications() {
         dataType: "json",   
         success: function (response) {
             let notifications = JSON.parse(response.d);
-            console.log("Notifications", notifications);
-            displayNotifications(notifications);
+            //console.log(notifications)
+            //displayNotifications(notifications);
+            return notifications;
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
@@ -113,7 +114,10 @@ function loadNotifications() {
 }
 function displayNotifications(notifications) {
     $("#notificationTableBody").empty(); // Clear old rows
-
+    if (!Array.isArray(notifications)) {
+        console.error("Notifications is not an array:", notifications);
+        return;
+    }
     notifications.forEach(n => {
 
         // Format date (if needed)
@@ -701,7 +705,7 @@ function getApprovedReservation() {
 
             console.log("Parsed data:", data);
 
-            let tbody = document.getElementById("approvedReservationTableBodu");
+            let tbody = document.getElementById("approvedReservationTableBody");
             tbody.innerHTML = "";
 
             // Check if there are any records
