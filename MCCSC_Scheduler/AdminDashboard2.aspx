@@ -231,8 +231,25 @@
                         <!-- Tabs will be populated dynamically -->
                     </nav>
                 </header>
-
                 <div class="dashboard-container">
+                    <!-- NOTIFICATION SECTION -->
+                    <div class="section-card">
+                        <h3>Notification</h3>
+                        <div class="table-container">
+                            <table class="table table-striped table-bordered" id="notificationTable">
+                                <thead>
+                                    <tr>
+                                        <th>Record Updated/Added</th>
+                                        <th>Message</th>
+                                        <th>View</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="notificationTableBody">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                     <!-- REGISTRATION REQUESTS SECTION -->
                     <section id="registrationSection" class="section-card" style="display: none;">
                         <h3>Registration Requests</h3>
