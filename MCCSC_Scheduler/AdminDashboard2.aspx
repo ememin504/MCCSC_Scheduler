@@ -240,6 +240,7 @@
                                 <thead>
                                     <tr>
                                         <th>Record Updated/Added</th>
+                                        <th>Name</th>
                                         <th>Message</th>
                                         <th>View</th>
                                     </tr>

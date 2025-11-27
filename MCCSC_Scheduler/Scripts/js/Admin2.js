@@ -1,4 +1,17 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
+﻿const roleIdStr = sessionStorage.getItem("role_id");
+const roleId = roleIdStr ? Number(roleIdStr) : 0;
+const userIdStr = sessionStorage.getItem("user_id");
+const userId = userIdStr ? Number(userIdStr) : 0;
+const userEmail = sessionStorage.getItem("user_email");
+const firstName = sessionStorage.getItem("first_name");
+const middleInitial = sessionStorage.getItem("middle_initial");
+const lastName = sessionStorage.getItem("last_name");
+const roleName = sessionStorage.getItem("role_name");
+const roleTypeIDStr = sessionStorage.getItem("role_type_id");
+const roleTypeID = roleTypeIDStr ? Number(roleTypeIDStr) : 0;
+const roleTypeDescription = sessionStorage.getItem("role_type_description");
+
+document.addEventListener("DOMContentLoaded", function () {
     getRegistrationRequests();
     getReservationRequests();
     getAcceptedReservation();
@@ -6,6 +19,8 @@
     getCancelledReservation();
     getUsers();
 });
+let noteFor = "Client";
+let pageType = "Admin";
 function getRegistrationRequests() {
     $.ajax({
         type: "POST",
@@ -57,13 +72,97 @@ function getRegistrationRequests() {
                     </tr>
                 `;
                 tbody.innerHTML += row;
-            });
+            }); 
+            startNotificationPolling() 
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
     });
 }
+function startNotificationPolling() {
+    loadNotifications();
+    setInterval(() => {
+        loadNotifs();
+    }, 5000);
+}
+
+function loadNotifs() {
+    let clientID = 0;
+    let notificationInfo = {
+        PageType: pageType,
+        UserID: userId,
+        ClientID: clientID
+    }
+    console.log(notificationInfo);
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard2.aspx/GetNotifications",
+        data: JSON.stringify({ notificationDTO: notificationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            let notifications = JSON.parse(response.d);
+            console.log("Notifications: ", notifications)
+            displayNotifications(notifications);
+            return notifications;
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+function displayNotifications(notifications) {
+    $("#notificationTableBody").empty(); // Clear old rows
+    if (!Array.isArray(notifications)) {
+        console.error("Notifications is not an array:", notifications);
+        return;
+    }
+    notifications.forEach(n => {
+
+        // Format date (if needed)
+        let formattedDate = new Date(n.CreatedAt).toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        // Determine message by status_id
+        let message = "";
+        switch (n.StatusID) {
+            case 2:
+                message = "A Reservation Request has been added to the waiting list!";
+                break;
+            case 8:
+                message = "A Cancellation Request has been added to the waiting list!";
+                break;
+            default:
+                message = "Status updated.";
+                break;
+        }
+
+        // Build the table row
+        let row = `
+            <tr class="${n.IsRead ? '' : 'table-warning'}">
+
+                <td>${formattedDate}</td>
+                <td>${notifications.ClientName}</td>
+                <td>${message}</td>
+                <td>
+                    <button class = "btn btn-primary" onclick="markAsRead(${n.NotificationID}); return false;">
+                    Mark as Read
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        $("#notificationTableBody").append(row);
+    });
+}
+
 function getReservationRequests() {
     console.log("getting reservation requests!");
     let reservationType = "Reservation Request";
@@ -127,7 +226,6 @@ function getReservationRequests() {
                     </tr>
                 `;
                 tbody.innerHTML += row;
-                console.log(eventID);
             });
         },
         error: function (xhr, status, error) {

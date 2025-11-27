@@ -22,6 +22,22 @@ namespace MCCSC_Scheduler
             ConnectDB();
         }
         [WebMethod]
+        public static object GetNotifications(NotificationDTO notificationDTO)
+        {
+            try
+            {
+                var dbContext = new DBContext();  // ← FIXED
+
+                var json = dbContext.GetNotifications(notificationDTO);
+
+                return json;
+            }
+            catch (Exception ex)
+            {
+                return new { error = ex.Message };
+            }
+        }
+        [WebMethod]
         public static string ConnectDB()
         {
             string status = "Connected to DB successfully!";

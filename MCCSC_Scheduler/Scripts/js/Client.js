@@ -157,6 +157,7 @@ function renderReservations(data) {
 
         container.append(row);
     });
+    startNotificationPolling()
 }
 
 function startNotificationPolling() {
