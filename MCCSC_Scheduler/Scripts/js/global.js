@@ -694,6 +694,7 @@ function openReservationModal() {
 
     // 1️⃣ Check if modal exists
     let modalElement = document.getElementById('reservationModal');
+    getAsset();
     if (!modalElement) {
         console.warn("Modal not found — inserting into DOM.");
         document.body.insertAdjacentHTML('beforeend', reservationModalEl);

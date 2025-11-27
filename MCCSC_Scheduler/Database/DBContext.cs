@@ -14,7 +14,6 @@ using MCCSC_Scheduler.ViewModel;
 using Newtonsoft.Json;
 
 
-
 namespace MCCSC_Scheduler.Database
 {
     public class DBContext
@@ -91,8 +90,8 @@ namespace MCCSC_Scheduler.Database
                 conn.Dispose();
             }
         }
-        
- //User Section ========================================================================================================================
+
+        //User Section ========================================================================================================================
 
         // Authenticate User
         // Authenticate User (instance method, not static)
@@ -102,36 +101,26 @@ namespace MCCSC_Scheduler.Database
             {
                 conn.Open();
 
-                // First: get user info
-                string queryUser = @"
-                                    SELECT user_id, username, role_id, email, first_name, middle_initial, last_name
-                                    FROM Users 
-                                    WHERE username = @UserName AND hashed_password = @Password;
-                                ";
-
+                // Step 1: Get the stored hashed password for this username
+                string query = "SELECT user_id, username, role_id, email, first_name, middle_initial, last_name, hashed_password FROM Users WHERE username = @UserName";
+                string storedHash = null;
                 UserDTO user = null;
-                int userId = 0;
-                int roleID = 0;
-
-                using (SqlCommand cmd = new SqlCommand(queryUser, conn))
+                
+                using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@UserName", username);
-                    cmd.Parameters.AddWithValue("@Password", password);
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            userId = Convert.ToInt32(reader["user_id"]);
-                            roleID = Convert.ToInt32(reader["role_id"]);
-                            string roleName = roleID == 1 ? "Client" : "Admin";
+                            storedHash = reader["hashed_password"].ToString();
 
                             user = new UserDTO
                             {
-                                UserID = userId,
+                                UserID = Convert.ToInt32(reader["user_id"]),
                                 UserName = reader["username"].ToString(),
-                                RoleID = roleID,
-                                RoleName = roleName,
+                                RoleID = Convert.ToInt32(reader["role_id"]),
                                 Email = reader["email"].ToString(),
                                 FirstName = reader["first_name"].ToString(),
                                 MiddleInitial = reader["middle_initial"].ToString(),
@@ -140,28 +129,35 @@ namespace MCCSC_Scheduler.Database
                         }
                         else
                         {
-                            return null; // user not found
+                            return null; // username not found
                         }
                     }
                 }
 
-                // Determine table names based on roleID
+                // Step 2: Hash the entered password
+                string hashedPasswordInput = GeneralHasher.ComputeSHA512(password); // or PasswordHasher.Hash for Argon2
+                string gagi = "Admin123";
+             
+                // Step 3: Compare hashes
+                if (storedHash != hashedPasswordInput)
+                {
+                    return null; // password incorrect
+                }
 
-                string typeTable = roleID == 1 ? "Client" : "Admin";
-                string descriptionTable = roleID == 1 ? "Client_type" : "Admin_type";
+                // Step 4: Get RoleTypeID and description (same as your current logic)
+                string typeTable = user.RoleID == 1 ? "Client" : "Admin";
+                string descriptionTable = user.RoleID == 1 ? "Client_type" : "Admin_type";
 
-                // Combined query: get RoleTypeID and its description in one go
                 string queryType = $@"
-                                        SELECT t.type_id, d.type_description
-                                        FROM {typeTable} t
-                                        INNER JOIN {descriptionTable} d ON t.type_id = d.type_id
-                                        WHERE t.user_id = @UserID;
-                                    ";
+            SELECT t.type_id, d.type_description
+            FROM {typeTable} t
+            INNER JOIN {descriptionTable} d ON t.type_id = d.type_id
+            WHERE t.user_id = @UserID;
+        ";
 
                 using (SqlCommand cmd = new SqlCommand(queryType, conn))
                 {
-                    cmd.Parameters.AddWithValue("@UserID", userId);
-
+                    cmd.Parameters.AddWithValue("@UserID", user.UserID);
                     using (SqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
@@ -171,9 +167,11 @@ namespace MCCSC_Scheduler.Database
                         }
                     }
                 }
-                return user;
+
+                return user; // successful login
             }
         }
+
         public string StoreRegistration(UserDTO userDTO) {
             Console.WriteLine(userDTO);
             string query = @"INSERT INTO RegistrationRequests
@@ -183,6 +181,7 @@ namespace MCCSC_Scheduler.Database
             {
                 using (SqlConnection conn = new SqlConnection(connectionString)) {
                     conn.Open() ;
+                    
                     using (SqlCommand cmd = new SqlCommand(query, conn)) {
                         cmd.Parameters.AddWithValue("@FirstName", userDTO.FirstName);
                         cmd.Parameters.AddWithValue("@MiddleInitial", userDTO.MiddleInitial ?? (object)DBNull.Value);
@@ -190,7 +189,8 @@ namespace MCCSC_Scheduler.Database
                         cmd.Parameters.AddWithValue("@Email", userDTO.Email);
                         cmd.Parameters.AddWithValue("@Organization", userDTO.Organization ?? (object)DBNull.Value);
                         cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
-                        cmd.Parameters.AddWithValue("@PassWord", userDTO.PassWord);
+                        cmd.Parameters.AddWithValue("@PassWord", GeneralHasher.ComputeSHA512(userDTO.PassWord));
+
                         int rows = cmd.ExecuteNonQuery();
 
                         return rows > 0 ? "Registration request stored successfully!" : "Failed to store registration.";
