@@ -1,5 +1,4 @@
-﻿
-var clientID = 0;
+﻿var clientID = 0;
 const roleId = sessionStorage.getItem("role_id");
 const userIdStr = sessionStorage.getItem("user_id");
 const userId = userIdStr ? Number(userIdStr) : 0;
@@ -16,7 +15,7 @@ let noteFor = "Admin";
 let pageType = "Client"
 
 console.log(roleId, userId, userEmail);
- 
+
 document.addEventListener("DOMContentLoaded", function () {
     const alertModalDiv = document.getElementById('form1');
     if (alertModalDiv) {
@@ -58,11 +57,6 @@ function getReservation() {
         success: function (response) {
             let data = JSON.parse(response.d);
 
-            if (data.length > 0) {
-                const res = data[0]; // first reservation for demo
-                startNotificationPolling();
-            }
-
             // Render reservations table
             renderReservations(data);
         },
@@ -71,6 +65,7 @@ function getReservation() {
         }
     });
 }
+
 function renderReservations(data) {
     // Clear tables first
     $("#reservationTableBody").empty();
@@ -157,130 +152,8 @@ function renderReservations(data) {
 
         container.append(row);
     });
-    startNotificationPolling()
 }
 
-function startNotificationPolling() {
-    loadNotification();
-    setInterval(() => {
-        loadNotification();
-    }, 5000);
-}
-
-function loadNotification() {
-    if (!userId || !pageType || !clientID) {
-        console.warn("Missing parameters in addNotification:", { userId, pageType, clientID});
-        return;
-    }
-
-    let notificationInfo = {
-        UserID: userId,
-        PageType: pageType,
-        ClientID: clientID
-    };
-
-    $.ajax({
-        type: "POST",
-        url: "ClientDashboard.aspx/GetNotifications",
-        data: JSON.stringify({ notificationDTO: notificationInfo }),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            let notifications = JSON.parse(response.d);
-            displayNotifications(notifications);
-        },
-        error: function (xhr) {
-            console.error("Error:", xhr.responseText);
-        }
-    });
-}
-
-function displayNotifications(notifications) {
-    $("#notificationTableBody").empty(); // Clear old rows
-    if (!Array.isArray(notifications)) {
-        console.error("Notifications is not an array:", notifications);
-        return;
-    }
-    notifications.forEach(n => {
-
-        // Format date (if needed)
-        let formattedDate = new Date(n.CreatedAt).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-
-        // Determine message by status_id
-        let message = "";
-        switch (n.StatusID) {
-            case 2:
-                message = "Your reservation request has been submitted.";
-                break;
-            case 3:
-                message = "Your reservation has been accepted.";
-                break;
-            case 4:
-                message = "Your reservation was rejected.";
-                break;
-            case 5:
-                message = "Coordination has been set for your reservation.";
-                break;
-            case 6:
-                message = "Your reservation has been rescheduled.";
-                break;
-            case 7:
-                message = "Your reservation has been cancelled.";
-                break;
-            case 8:
-                message = "Cancellation request has been sent";
-                break;
-            case 8:
-                message = "Your reservation is now approved";
-                break;
-            default:
-                message = "Status updated.";
-                break;
-        }
-
-        // Build the table row
-        let row = `
-            <tr class="${n.IsRead ? '' : 'table-warning'}">
-
-                <td>${formattedDate}</td>
-                <td>${message}</td>
-                <td>
-                    <button class = "btn btn-primary" onclick="markAsRead(${n.NotificationID}); return false;">
-                    Mark as Read
-                    </button>
-                </td>
-            </tr>
-        `;
-
-        $("#notificationTableBody").append(row);
-    });
-}
-function markAsRead(notificationID) {
-    console.log("Marking notification as read!", notificationID);
-    let notificationData = {
-        NotificationID: notificationID
-    }
-    $.ajax({
-        type: "POST",
-        url: "ClientDashboard.aspx/MarkAsRead",
-        data: JSON.stringify({ notificationDTO: notificationData }),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            alert(response.d);
-        },
-        error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
-        }
-    })
-}
 function viewInfo(reservationID, clientId, statusID, eventID, reference, remarks) {
     let requestInfo = {
         ReservationID: reservationID,
@@ -334,8 +207,6 @@ function viewInfo(reservationID, clientId, statusID, eventID, reference, remarks
                 buttonText = "Undo Cancellation"
             }
 
-
-
             // ✅ Build modal dynamically here
             let modalHTML = `
             <div class='modal fade' id='viewReservationModal' role='dialog'>
@@ -352,9 +223,9 @@ function viewInfo(reservationID, clientId, statusID, eventID, reference, remarks
                     <p><strong>Status:</strong> ${data.Status}</p>
 
                     ${data.Status === "Cancellation Request"
-                        ? `<p><strong>Previous Status:</strong> ${data.PreviousStatusName}</p>`
-                            : ""
-                        }
+                    ? `<p><strong>Previous Status:</strong> ${data.PreviousStatusName}</p>`
+                    : ""
+                }
 
                     ${assetDetails}<br>
                     ${dateDetails}
@@ -368,7 +239,6 @@ function viewInfo(reservationID, clientId, statusID, eventID, reference, remarks
                 </div>
               </div>
             </div>`;
-
 
             reservationId = reservationID
             // ✅ Remove existing modal (to avoid duplicates)
@@ -388,7 +258,8 @@ function viewInfo(reservationID, clientId, statusID, eventID, reference, remarks
             console.error("Error:", xhr.responseText);
         }
     });
-}    
+}
+
 function undoCancellation(data, reservationID) {
     console.log("Undoing Cancellation");
     let reservationInfo = {
@@ -412,10 +283,9 @@ function undoCancellation(data, reservationID) {
             console.error(xhr.responseText);
         }
     });
-        
 }
-function requestCancellation(reservationID, clientId, statusID, eventID) {
 
+function requestCancellation(reservationID, clientId, statusID, eventID) {
     openReservationCancellationModal();
 
     // Wait for modal to render before binding the button
@@ -432,6 +302,7 @@ function requestCancellation(reservationID, clientId, statusID, eventID) {
         };
     }, 200);
 }
+
 function sendCancellationRequest(reservationID, statusID, reason) {
     const reservationInfo = {
         ReservationID: reservationID,
@@ -463,8 +334,6 @@ function sendCancellationRequest(reservationID, statusID, reason) {
     });
 }
 
-
-
 function cancelReservation(reservationID, clientId, statusID, eventID, referenc, remarks) {
     console.log("Cancelling Reservation");
     let reservationInfo = {
@@ -479,7 +348,6 @@ function cancelReservation(reservationID, clientId, statusID, eventID, referenc,
         success: function (response) {
             console.log(response.d);
             let result = JSON.parse(response.d);
-            //$('#viewReservationModal').modal('hide');
             if (result.success) {
                 alert("Your reservation is successfully cancelled");
                 getReservation();
@@ -491,7 +359,6 @@ function cancelReservation(reservationID, clientId, statusID, eventID, referenc,
         }
     })
 }
-
 
 function formatDates(dates) {
     if (!dates || dates.length === 0) return "No Dates";
@@ -508,6 +375,7 @@ function formatDates(dates) {
         })
         .join("<br><br>");
 }
+
 function formatAssets(assets) {
     if (!assets || assets.length === 0) return "No Assets";
 
@@ -515,8 +383,6 @@ function formatAssets(assets) {
         .map(a => `${a.AssetName} (${a.Quantity})`)
         .join("<br>");
 }
-
-
 
 function getAsset() {
     console.log("loading assets!");
@@ -666,6 +532,7 @@ function submitReservation() {
         }
     });
 }
+
 function addNotification(reservationID, userId, statusID) {
     let notificationInfo = {
         ReservationID: reservationID,
@@ -687,8 +554,8 @@ function addNotification(reservationID, userId, statusID) {
             alert("A system error occurred. Please try again later.");
         }
     });
-
 }
+
 function sanitizeObject(obj) {
     if (typeof obj === "string") {
         return obj.replace(/'/g, '`'); // replace all single quotes
@@ -709,31 +576,29 @@ function sanitizeObject(obj) {
     return obj; // numbers, booleans, null
 }
 
-    function connectDB() {
-        console.log('connecting to DB...');
-        var xhr = new XMLHttpRequest();
-        //initiate a request to the server asynchronously (AJAX)
-        xhr.open('GET', 'ClientDashboard.aspx/ConnectDB', true);
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        //send the request
-        xhr.send();
-        //implement the onreadystatechange callback function
-        xhr.onreadystatechange = function () {
-            //check if the request is complete (readyState 4) and was successful (HTTP status 200)
-            if (xhr.readyState == 4 && xhr.status == 200) {
-                //get server response
-                var response = JSON.parse(xhr.responseText);
-                console.log('Server response: ', response);
-                openAlertModal('App Info', 'DB connection status: ' + response.d);
-            }
-        };
-        //implement onerror callback function
-        xhr.onerror = function () {
+function connectDB() {
+    console.log('connecting to DB...');
+    var xhr = new XMLHttpRequest();
+    //initiate a request to the server asynchronously (AJAX)
+    xhr.open('GET', 'ClientDashboard.aspx/ConnectDB', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    //send the request
+    xhr.send();
+    //implement the onreadystatechange callback function
+    xhr.onreadystatechange = function () {
+        //check if the request is complete (readyState 4) and was successful (HTTP status 200)
+        if (xhr.readyState == 4 && xhr.status == 200) {
             //get server response
             var response = JSON.parse(xhr.responseText);
             console.log('Server response: ', response);
             openAlertModal('App Info', 'DB connection status: ' + response.d);
-        };
-    }
-
-
+        }
+    };
+    //implement onerror callback function
+    xhr.onerror = function () {
+        //get server response
+        var response = JSON.parse(xhr.responseText);
+        console.log('Server response: ', response);
+        openAlertModal('App Info', 'DB connection status: ' + response.d);
+    };
+}

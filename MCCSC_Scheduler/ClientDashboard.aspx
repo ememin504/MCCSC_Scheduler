@@ -1,4 +1,4 @@
-﻿    <%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ClientDashboard.aspx.cs" Inherits="MCCSC_Scheduler.ClientDashboard" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="ClientDashboard.aspx.cs" Inherits="MCCSC_Scheduler.ClientDashboard" %>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
@@ -73,14 +73,6 @@
             }
         });
 
-        // Sidebar toggle
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            const mainContent = document.querySelector('.main-content');
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('expanded');
-        }
-
         // Navigate sections
         function showSection(sectionId) {
             // Hide all sections
@@ -100,6 +92,161 @@
             });
             event.target.closest('li').classList.add('active');
         }
+
+        // Toggle notification sidebar
+        function toggleNotificationSidebar() {
+            const sidebar = document.getElementById('notificationSidebar');
+            const overlay = document.getElementById('notificationOverlay');
+
+            sidebar.classList.toggle('show');
+            overlay.classList.toggle('show');
+
+            // Load notifications when opening
+            if (sidebar.classList.contains('show')) {
+                loadNotificationsUI();
+            }
+        }
+
+        // Load notifications for UI
+        function loadNotificationsUI() {
+            const notificationBody = document.getElementById('notificationBody');
+            notificationBody.innerHTML = '<div class="notification-loading">Loading notifications...</div>';
+
+            // Get notifications from your backend
+            let notificationInfo = {
+                PageType: "Client",
+                UserID: parseInt(window.AppData.userId) || 0,
+                ClientID: clientID
+            };
+
+            $.ajax({
+                type: "POST",
+                url: "ClientDashboard.aspx/GetNotifications",
+                data: JSON.stringify({ notificationDTO: notificationInfo }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    let notifications = JSON.parse(response.d);
+                    console.log(notifications);
+                    
+                    // Transform to sidebar format
+                    const sidebarNotifications = notifications.map(n => {
+                        let message = "";
+                        switch (n.StatusID) {
+                            case 2:
+                                message = "Your reservation request has been submitted";
+                                break;
+                            case 3:
+                                message = "Your reservation has been accepted";
+                                break;
+                            case 4:
+                                message = "Your reservation was rejected";
+                                break;
+                            case 5:
+                                message = "Coordination has been set for your reservation";
+                                break;
+                            case 6:
+                                message = "Your reservation has been rescheduled";
+                                break;
+                            case 7:
+                                message = "Your reservation has been cancelled";
+                                break;
+                            case 8:
+                                message = "Cancellation request has been sent";
+                                break;
+                            case 9:
+                                message = "Your reservation is now approved";
+                                break;
+                            default:
+                                message = "Status updated";
+                                break;
+                        }
+
+                        let formattedDate = new Date(n.CreatedAt).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        });
+
+                        return {
+                            id: n.NotificationID,
+                            message: message,
+                            time: formattedDate,
+                            isRead: n.IsRead
+                        };
+                    });
+
+                    displayNotificationsInSidebar(sidebarNotifications);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error loading notifications:", xhr.responseText);
+                    notificationBody.innerHTML = '<div class="notification-empty">Failed to load notifications</div>';
+                }
+            });
+        }
+
+        // Display notifications in sidebar
+        function displayNotificationsInSidebar(notifications) {
+            const notificationBody = document.getElementById('notificationBody');
+
+            if (notifications.length === 0) {
+                notificationBody.innerHTML = '<div class="notification-empty">No notifications</div>';
+                updateNotificationBadge(0);
+                return;
+            }
+
+            const unreadCount = notifications.filter(n => !n.isRead).length;
+            updateNotificationBadge(unreadCount);
+
+            notificationBody.innerHTML = notifications.map(notif => `
+                <div class="notification-item ${notif.isRead ? '' : 'unread'}" onclick="markNotificationAsRead(${notif.id})">
+                    <div class="notification-content">
+                        ${!notif.isRead ? '<span class="notification-dot"></span>' : ''}
+                        <div class="notification-message">${notif.message}</div>
+                        <div class="notification-time">${notif.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update notification badge
+        function updateNotificationBadge(count) {
+            const badge = document.getElementById('sidebarNotificationBadge');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+
+        // Mark notification as read
+        function markNotificationAsRead(notificationID) {
+            let notificationData = {
+                NotificationID: notificationID
+            }
+            $.ajax({
+                type: "POST",
+                url: "ClientDashboard.aspx/MarkAsRead",
+                data: JSON.stringify({ notificationDTO: notificationData }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                    console.log('Marked as read:', notificationID);
+                    // Reload notifications
+                    setTimeout(() => {
+                        loadNotificationsUI();
+                    }, 300);
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error:", xhr.responseText);
+                }
+            });
+        }
     </script>
 
     <form id="aspForm" runat="server">
@@ -107,6 +254,7 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-section">
+                    <div class="logo-icon">📋</div>
                     <span class="logo-text">MCCSC</span>
                 </div>
             </div>
@@ -124,8 +272,8 @@
             <nav class="sidebar-menu">
                 <ul>
                     <li class="active" onclick="showSection('notificationSection')">
-                        <span class="menu-icon">🔔</span>
-                        <span class="menu-text">Notifications</span>
+                        <span class="menu-icon">🏠</span>
+                        <span class="menu-text">Dashboard</span>
                     </li>
                     <li onclick="showSection('clientProfileCard')">
                         <span class="menu-icon">👤</span>
@@ -138,6 +286,11 @@
                     <li onclick="showSection('historySection')">
                         <span class="menu-icon">📜</span>
                         <span class="menu-text">History</span>
+                    </li>
+                    <li onclick="event.preventDefault(); toggleNotificationSidebar()">
+                        <span class="menu-icon">🔔</span>
+                        <span class="menu-text">Notifications</span>
+                        <span class="notification-badge" id="sidebarNotificationBadge" style="display: none; margin-left: auto; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;">0</span>
                     </li>
                 </ul>
             </nav>
@@ -168,21 +321,8 @@
             <!-- DASHBOARD CONTAINER -->
             <div class="dashboard-container">
                 <div class="section-card" id="notificationSection">
-                    <h3>Notification</h3>
-                    <div class="table-container">
-                        <table class="table table-striped table-bordered" id="notificationTable">
-                            <thead>
-                                <tr>
-                                    <th>Record Updated/Added</th>
-                                    <th>Message</th>
-                                    <th>View</th>
-                                </tr>
-                            </thead>
-                            <tbody id="notificationTableBody">
-                                <!-- Data will be populated by JavaScript -->
-                            </tbody>
-                        </table>
-                    </div>
+                    <h3>Dashboard Overview</h3>
+                    <p>Welcome to your Client Dashboard! Use the menu to navigate through different sections.</p>
                 </div>
 
                 <!-- CLIENT PROFILE SECTION -->
@@ -238,23 +378,46 @@
                     </div>
                 </div>
             </div>
+
+            <!-- NOTIFICATION SIDEBAR -->
+            <div class="notification-sidebar" id="notificationSidebar">
+                <div class="notification-header">
+                    <h3>Notifications</h3>
+                    <button type="button" class="btn-close-notification" onclick="toggleNotificationSidebar()">×</button>
+                </div>
+                <div class="notification-body" id="notificationBody">
+                    <div class="notification-loading">Loading notifications...</div>
+                </div>
+            </div>
+
+            <!-- NOTIFICATION OVERLAY -->
+            <div class="notification-overlay" id="notificationOverlay" onclick="toggleNotificationSidebar()"></div>
         </div>
     </form>
 
     <script>
         // Initialize user display
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const firstName = window.AppData.firstName || '';
             const lastName = window.AppData.lastName || '';
             const fullName = `${firstName} ${lastName}`.trim();
-
+            
             // Set full name in header
             document.getElementById('fullname').textContent = fullName;
             document.getElementById('sidebarFullName').textContent = fullName;
-
+            
             // Set user initials
             const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
             document.getElementById('userInitials').textContent = initials;
+
+            // Load initial notification count after clientID is set
+            setTimeout(() => {
+                if (clientID) {
+                    loadNotificationsUI();
+                    // Poll for new notifications every 5 seconds
+                    setInterval(loadNotificationsUI, 5000);
+                }
+            }, 1000);
         });
     </script>
 </body>

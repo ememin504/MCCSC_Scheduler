@@ -19,8 +19,10 @@ document.addEventListener("DOMContentLoaded", function () {
     getCancelledReservation();
     getUsers();
 });
+
 let noteFor = "Client";
 let pageType = "Admin";
+
 function getRegistrationRequests() {
     $.ajax({
         type: "POST",
@@ -72,94 +74,11 @@ function getRegistrationRequests() {
                     </tr>
                 `;
                 tbody.innerHTML += row;
-            }); 
-            startNotificationPolling() 
+            });
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
-    });
-}
-function startNotificationPolling() {
-    loadNotifications();
-    setInterval(() => {
-        loadNotifs();
-    }, 5000);
-}
-
-function loadNotifs() {
-    let clientID = 0;
-    let notificationInfo = {
-        PageType: pageType,
-        UserID: userId,
-        ClientID: clientID
-    }
-    console.log(notificationInfo);
-    $.ajax({
-        type: "POST",
-        url: "AdminDashboard2.aspx/GetNotifications",
-        data: JSON.stringify({ notificationDTO: notificationInfo }),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            let notifications = JSON.parse(response.d);
-            console.log("Notifications: ", notifications)
-            displayNotifications(notifications);
-            return notifications;
-        },
-        error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
-        }
-    });
-}
-function displayNotifications(notifications) {
-    $("#notificationTableBody").empty(); // Clear old rows
-    if (!Array.isArray(notifications)) {
-        console.error("Notifications is not an array:", notifications);
-        return;
-    }
-    notifications.forEach(n => {
-
-        // Format date (if needed)
-        let formattedDate = new Date(n.CreatedAt).toLocaleString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-
-        // Determine message by status_id
-        let message = "";
-        switch (n.StatusID) {
-            case 2:
-                message = "A Reservation Request has been added to the waiting list!";
-                break;
-            case 8:
-                message = "A Cancellation Request has been added to the waiting list!";
-                break;
-            default:
-                message = "Status updated.";
-                break;
-        }
-
-        // Build the table row
-        let row = `
-            <tr class="${n.IsRead ? '' : 'table-warning'}">
-
-                <td>${formattedDate}</td>
-                <td>${notifications.ClientName}</td>
-                <td>${message}</td>
-                <td>
-                    <button class = "btn btn-primary" onclick="markAsRead(${n.NotificationID}); return false;">
-                    Mark as Read
-                    </button>
-                </td>
-            </tr>
-        `;
-
-        $("#notificationTableBody").append(row);
     });
 }
 
@@ -186,7 +105,6 @@ function getReservationRequests() {
                 console.error("JSON parse error:", e);
                 data = [];
             }
-
 
             console.log("Parsed data:", data);
 
@@ -233,6 +151,7 @@ function getReservationRequests() {
         }
     });
 }
+
 function getAcceptedReservation() {
     let reservationType = "Accepted Reservation";
     let requestInfo = {
@@ -303,6 +222,7 @@ function getAcceptedReservation() {
         }
     })
 }
+
 function getStatusCMReservation() {
     let reservationType = "Coordination Meeting";
     let requestInfo = {
@@ -373,6 +293,7 @@ function getStatusCMReservation() {
         }
     })
 }
+
 function formatDate(dateString) {
     if (!dateString) return "";
 
@@ -393,6 +314,7 @@ function formatTime(timeString) {
 
     return `${hour}:${minute} ${suffix}`;
 }
+
 function getCancelledReservation() {
     let reservationType = "Cancelled";
     let requestInfo = {
@@ -518,8 +440,6 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
                 buttonText = "Confirm Cancellation"
             }
 
-
-
             // ✅ Build modal dynamically here
             let modalHTML = `
                 <div class='modal fade' id='viewReservationModal' role='dialog'>
@@ -566,6 +486,7 @@ function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, ref
         }
     });
 }
+
 function getUsers() {
     $.ajax({
         type: "POST",
