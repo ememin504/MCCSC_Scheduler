@@ -4,6 +4,8 @@
 <head runat="server">
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
+    <!-- Your custom styles - ORDER MATTERS -->
+    <link rel="stylesheet" href="Scripts/css/sidebar.css" />
     <link rel="stylesheet" href="Scripts/css/client.css" />
     <!-- jQuery (must be loaded before any script using it) -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
@@ -90,7 +92,12 @@
             document.querySelectorAll('.sidebar-menu li').forEach(item => {
                 item.classList.remove('active');
             });
-            event.target.closest('li').classList.add('active');
+            if (event && event.target) {
+                const listItem = event.target.closest('li');
+                if (listItem) {
+                    listItem.classList.add('active');
+                }
+            }
         }
 
         // Toggle notification sidebar
@@ -254,7 +261,6 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-section">
-                    <div class="logo-icon">📋</div>
                     <span class="logo-text">MCCSC</span>
                 </div>
             </div>
@@ -290,7 +296,7 @@
                     <li onclick="event.preventDefault(); toggleNotificationSidebar()">
                         <span class="menu-icon">🔔</span>
                         <span class="menu-text">Notifications</span>
-                        <span class="notification-badge" id="sidebarNotificationBadge" style="display: none; margin-left: auto; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;">0</span>
+                        <span class="notification-badge" id="sidebarNotificationBadge" style="display: none;">0</span>
                     </li>
                 </ul>
             </nav>
@@ -412,7 +418,7 @@
 
             // Load initial notification count after clientID is set
             setTimeout(() => {
-                if (clientID) {
+                if (typeof clientID !== 'undefined' && clientID) {
                     loadNotificationsUI();
                     // Poll for new notifications every 5 seconds
                     setInterval(loadNotificationsUI, 5000);
