@@ -55,9 +55,11 @@ var coordinationMeetingModalEl = `
 
 
 
-function openCoordinationMeetingModal(data) {
+function openCoordinationMeetingModal(data, reservationID) {
     console.log("Opening coordination meeting setup modal....", data);
-
+    if (Array.isArray(data)) {
+        data = data[0];
+    }
     let modalElement = document.getElementById('coordinationMeetingModal');
 
     // Insert modal into DOM if it doesn't exist yet
@@ -72,21 +74,21 @@ function openCoordinationMeetingModal(data) {
     }
     let assetDetails = "";
     let dateDetails = "";
-    data.Asset.forEach(a => {
+    data.SelectedAssets.forEach(a => {
         assetDetails += `<p><strong>Asset:</strong> ${a.AssetName}</p>
                      <p><strong>Quantity:</strong> ${a.Quantity}</p>`;
     });
-    data.Date.forEach(d => {
+    data.EventDates.forEach(d => {
         dateDetails += `<p><strong>Date:</strong> ${d.Date}</p>
                      <p><strong>Starting Time:</strong> ${d.StartTime}</p>
                      <p><strong>Ending Time:</strong> ${d.EndTime}</p>`;
     });
     // Pre-fill modal content with reservation info
     document.getElementById('reservationInfo').innerHTML = `
-        <p><strong>Event Title:</strong> ${data.Event}</p>
+        <p><strong>Event Title:</strong> ${data.EventName}</p>
         <p><strong>Client:</strong> ${data.Client.FirstName} ${data.Client.MiddleInitial || ""} ${data.Client.LastName}</p>
         <p><strong>Organization:</strong> ${data.Organization}</p>
-        <p><strong>Status:</strong> ${data.Status}</p>
+        <p><strong>Status:</strong> ${data.StatusName}</p>
         ${assetDetails}<br>
         ${dateDetails}
     `;
@@ -100,6 +102,32 @@ function openCoordinationMeetingModal(data) {
     const modalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static' });
     modalInstance.show();
 }
+
+// global.js
+
+var userModalEl = `
+<div class="modal fade" id="userModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Registration Request Info</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="userModalContent">
+      </div>
+    </div>
+  </div>
+</div>`;
+
+var userModal;
+function openUserModal() {
+    if (!userModal) {
+        userModal = new bootstrap.Modal(document.getElementById('userModal'));
+    }
+    userModal.show();
+}
+
+
 function openEditCategoryModal(category_id, category_name, parent_id) {
     console.log("Opening edit category modal...");
     categoryID = category_id;

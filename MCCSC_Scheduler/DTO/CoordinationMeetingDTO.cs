@@ -8,7 +8,7 @@ namespace MCCSC_Scheduler
         public int ReservationID { get; set; }
         public DateTime MeetingDate { get; set; }
         public TimeSpan MeetingTime { get; set; }
-        public string Remarks { get; set; }
+        public string MeetingRemarks { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

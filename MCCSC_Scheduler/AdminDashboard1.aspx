@@ -193,7 +193,7 @@
                 dataType: "json",
                 success: function (response) {
                     let notifications = JSON.parse(response.d);
-                    console.log(notifications);
+                    //console.log(notifications);
                     // Transform to sidebar format
                     const sidebarNotifications = notifications.map(n => {
                         let message = "";
@@ -395,7 +395,7 @@
                 </ul>
 
                 <div class="sidebar-logout">
-                    <button type="button" class="btn-logout-sidebar" onclick="confirmLogout()">
+                    <button type="button" class="btn-logout-sidebar" onclick="confirmLogout(); return false">
                         <span>🚪</span>
                         <span>Logout</span>
                     </button>
@@ -444,10 +444,9 @@
                                 <thead>
                                     <tr>
                                         <th>Reservation ID</th>
-                                        <th>Client ID</th>
-                                        <th>Status ID</th>
+                                        <th>Event Title</th>
+                                        <th>Dates</th>
                                         <th>Remarks</th>
-                                        <th>Event ID</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
@@ -467,10 +466,9 @@
                                 <thead>
                                     <tr>
                                         <th>Reservation ID</th>
-                                        <th>Client ID</th>
-                                        <th>Status ID</th>
+                                        <th>Event Title</th>
+                                        <th>Dates</th>
                                         <th>Remarks</th>
-                                        <th>Event ID</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
@@ -490,12 +488,11 @@
                                 <thead>
                                     <tr>
                                         <th>Reservation ID</th>
-                                        <th>Client ID</th>
-                                        <th>Status ID</th>
-                                        <th>Remarks</th>
-                                        <th>Event ID</th>
+                                        <th>Event Tittle</th>
+                                        <th>Event Dates</th>
                                         <th>Meeting Date</th>
                                         <th>Meeting Time</th>
+                                        <th>Remarks</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
@@ -515,9 +512,10 @@
                                 <thead>
                                     <tr>
                                         <th>Reservation ID</th>
-                                        <th>Client ID</th>
-                                        <th>Event ID</th>
-                                        <th>Date</th>
+                                        <th>Event Title</th>
+                                        <th>Dates</th>
+                                        <th>Remarks</th>
+                                        <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -538,11 +536,9 @@
                                 <thead>
                                     <tr>
                                         <th>Reservation ID</th>
-                                        <th>Client ID</th>
-                                        <th>Status ID</th>
+                                        <th>Event Title</th>
+                                        <th>Dates</th>
                                         <th>Remarks</th>
-                                        <th>Event ID</th>
-                                        <th>Reason</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
@@ -723,5 +719,7 @@
             </div>
         </div>
     </form>
+    <script src="Scripts/js/global.js"></script>
+    <script src="Scripts/js/Admin1.js"></script>
 </body>
 </html>

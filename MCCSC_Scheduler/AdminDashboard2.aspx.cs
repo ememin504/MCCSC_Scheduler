@@ -91,24 +91,7 @@ namespace MCCSC_Scheduler
             public int EventID { get; set; }
             public string Reference { get; set; }
         }
-        [WebMethod]
-        public static string GetRequestInfo(object requestData)
-        {
-            try
-            {
-                // Deserialize incoming JSON to a strongly typed C# object
-                var jsonString = JsonConvert.SerializeObject(requestData);
-                var data = JsonConvert.DeserializeObject<RequestData>(jsonString);
-
-                string result = dbContext.GetRequestInfo(data.ReservationID, data.ClientID, data.StatusID, data.EventID);
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                return JsonConvert.SerializeObject(new { error = ex.Message });
-            }
-        }
+       
         [WebMethod]
         public static string GetUser()
         {

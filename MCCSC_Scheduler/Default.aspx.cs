@@ -49,7 +49,21 @@ namespace MCCSC_Scheduler
         [WebMethod]
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
 
+        public static string GetReservationDates(ReservationDTO requestData)
+        {
+            try
+            {
+                var requests = dbContext.GetReservation(requestData);
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
         public static string AuthenticationResult(LoginViewModel loginVM)
         {
             try

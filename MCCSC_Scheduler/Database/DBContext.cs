@@ -136,7 +136,6 @@ namespace MCCSC_Scheduler.Database
 
                 // Step 2: Hash the entered password
                 string hashedPasswordInput = GeneralHasher.ComputeSHA512(password); // or PasswordHasher.Hash for Argon2
-                string gagi = "Admin123";
              
                 // Step 3: Compare hashes
                 if (storedHash != hashedPasswordInput)
@@ -172,39 +171,66 @@ namespace MCCSC_Scheduler.Database
             }
         }
 
-        public string StoreRegistration(UserDTO userDTO) {
+        public string StoreRegistration(UserDTO userDTO)
+        {
             Console.WriteLine(userDTO);
-            string query = @"INSERT INTO RegistrationRequests
-                    (FirstName, MiddleInitial, LastName, Email, Organization, UserName, PassWord)
-                    VALUES (@FirstName, @MiddleInitial, @LastName, @Email, @Organization, @UserName, @PassWord)";
+
+            string checkUserNameQuery = @"SELECT COUNT(*) FROM Users WHERE Username = @UserName";
+
+            string insertQuery = @"
+        INSERT INTO RegistrationRequests
+        (FirstName, MiddleInitial, LastName, Email, ContactNumber, Organization, UserName, PassWord)
+        VALUES (@FirstName, @MiddleInitial, @LastName, @Email, @ContactNumber, @Organization, @UserName, @PassWord)
+    ";
+
             try
             {
-                using (SqlConnection conn = new SqlConnection(connectionString)) {
-                    conn.Open() ;
-                    
-                    using (SqlCommand cmd = new SqlCommand(query, conn)) {
-                        cmd.Parameters.AddWithValue("@FirstName", userDTO.FirstName);
-                        cmd.Parameters.AddWithValue("@MiddleInitial", userDTO.MiddleInitial ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@LastName", userDTO.LastName);
-                        cmd.Parameters.AddWithValue("@Email", userDTO.Email);
-                        cmd.Parameters.AddWithValue("@Organization", userDTO.Organization ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
-                        cmd.Parameters.AddWithValue("@PassWord", GeneralHasher.ComputeSHA512(userDTO.PassWord));
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
 
-                        int rows = cmd.ExecuteNonQuery();
+                    // 1️⃣ Check if username already exists
+                    using (SqlCommand checkCmd = new SqlCommand(checkUserNameQuery, conn))
+                    {
+                        checkCmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
 
-                        return rows > 0 ? "Registration request stored successfully!" : "Failed to store registration.";
+                        int existing = (int)checkCmd.ExecuteScalar();
+
+                        if (existing > 0)
+                        {
+                            return "Username already exists. Please create another one.";
+                        }
+                    }
+
+                    // 2️⃣ Insert the registration request
+                    using (SqlCommand insertCmd = new SqlCommand(insertQuery, conn))
+                    {
+                        insertCmd.Parameters.AddWithValue("@FirstName", userDTO.FirstName);
+                        insertCmd.Parameters.AddWithValue("@MiddleInitial", userDTO.MiddleInitial ?? (object)DBNull.Value);
+                        insertCmd.Parameters.AddWithValue("@LastName", userDTO.LastName);
+                        insertCmd.Parameters.AddWithValue("@Email", userDTO.Email);
+                        insertCmd.Parameters.AddWithValue("@ContactNumber",(object)userDTO.ContactNumber ?? DBNull.Value);
+                        insertCmd.Parameters.AddWithValue("@Organization", userDTO.Organization ?? (object)DBNull.Value);
+                        insertCmd.Parameters.AddWithValue("@UserName", userDTO.UserName);
+                        insertCmd.Parameters.AddWithValue("@PassWord", GeneralHasher.ComputeSHA512(userDTO.PassWord));
+
+                        int rows = insertCmd.ExecuteNonQuery();
+
+                        return rows > 0
+                            ? "Registration request stored successfully!"
+                            : "Failed to store registration request.";
                     }
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 return $"Error in StoreRegistration: {ex.Message}";
             }
-           
         }
+
         public string GetRegistrationRequestDB()
         {
-            string query = "SELECT RequestID, FirstName, MiddleInitial, LastName, Email, Organization, UserName, Status, DateRequested FROM RegistrationRequests WHERE Status = 'Pending'";
+            string query = "SELECT RequestID, FirstName, MiddleInitial, LastName, Email, ContactNumber, Organization, UserName, Status, DateRequested FROM RegistrationRequests WHERE Status = 'Pending'";
             List<object> requests = new List<object>();
 
             try
@@ -225,6 +251,7 @@ namespace MCCSC_Scheduler.Database
                                     MiddleInitial = reader["MiddleInitial"] == DBNull.Value ? "" : reader["MiddleInitial"].ToString(),
                                     LastName = reader["LastName"],
                                     Email = reader["Email"],
+                                    ContactNumber = reader["ContactNumber"],
                                     Organization = reader["Organization"],
                                     UserName = reader["UserName"],
                                     Status = reader["Status"],
@@ -296,9 +323,9 @@ namespace MCCSC_Scheduler.Database
                               OUTPUT INSERTED.organization_id
                               VALUES (@orgName, 'Unknown')";
             string insertUserQuery = @"
-                                INSERT INTO Users (first_name, middle_initial, last_name, email, role_id, username, hashed_password)
+                                INSERT INTO Users (first_name, middle_initial, last_name, email, contact_number, role_id, username, hashed_password)
                                 OUTPUT INSERTED.user_id
-                                VALUES (@FirstName, @MiddleInitial, @LastName, @Email, @RoleID, @UserName, @Password)";
+                                VALUES (@FirstName, @MiddleInitial, @LastName, @Email, @ContactNumber, @RoleID, @UserName, @Password)";
 
             string insertClientQuery = @"INSERT INTO Client (user_id, organization_id)
                                  VALUES (@UserID, @OrganizationID)";
@@ -326,6 +353,7 @@ namespace MCCSC_Scheduler.Database
                                     MiddleInitial = reader["MiddleInitial"] == DBNull.Value ? "" : reader["MiddleInitial"].ToString(),
                                     LastName = reader["LastName"].ToString(),
                                     Email = reader["Email"].ToString(),
+                                    ContactNumber = reader["ContactNumber"].ToString(),
                                     Organization = reader["Organization"].ToString(),
                                     UserName = reader["UserName"].ToString(),
                                     PassWord = reader["PassWord"].ToString()
@@ -366,6 +394,7 @@ namespace MCCSC_Scheduler.Database
                         insertUserCmd.Parameters.AddWithValue("@MiddleInitial", request.MiddleInitial);
                         insertUserCmd.Parameters.AddWithValue("@LastName", request.LastName);
                         insertUserCmd.Parameters.AddWithValue("@Email", request.Email);
+                        insertUserCmd.Parameters.AddWithValue("@ContactNumber", request.ContactNumber);
                         insertUserCmd.Parameters.AddWithValue("@RoleID", 1);
                         insertUserCmd.Parameters.AddWithValue("@UserName", request.UserName);
                         insertUserCmd.Parameters.AddWithValue("@Password", request.PassWord); // temporary plain password
@@ -548,8 +577,6 @@ namespace MCCSC_Scheduler.Database
             }
         }
 
-
-
         public List<AssetDTO> GetAssets()
         {
             List<AssetDTO> assets = new List<AssetDTO>();
@@ -590,7 +617,6 @@ namespace MCCSC_Scheduler.Database
 
             return assets;
         }
-
         public string GetAssetRecords()
         {
             string query = @"
@@ -972,20 +998,33 @@ namespace MCCSC_Scheduler.Database
         {
             int StatusSearch = 0;
 
-            if (requestData.ReservationType == "Reservation Request")
-                StatusSearch = 2;
-            else if (requestData.ReservationType == "Accepted Reservation")
-                StatusSearch = 3;
-            else if (requestData.ReservationType == "Coordination Meeting")
-                StatusSearch = 5;
-            else if (requestData.ReservationType == "Cancellation Request")
-                StatusSearch = 8;
-            else if (requestData.ReservationType == "Cancelled")
-                StatusSearch = 7;
-            else if (requestData.ReservationType == "Approved Reservation")
-                StatusSearch = 9;
+            switch (requestData.ReservationType)
+            {
+                case "Reservation Request":
+                    StatusSearch = 2;
+                    break;
+                case "Accepted Reservation":
+                    StatusSearch = 3;
+                    break;
+                case "Coordination Meeting":
+                    StatusSearch = 5;
+                    break;
+                case "Cancellation Request":
+                    StatusSearch = 8;
+                    break;
+                case "Cancelled":
+                    StatusSearch = 7;
+                    break;
+                case "Approved Reservation":
+                    StatusSearch = 9;
+                    break;
+                default:
+                    StatusSearch = 0; // optional: handle unknown types
+                    break;
+            }
 
-                List<object> result = new List<object>();
+
+            List<object> reservations = new List<object>();
 
             try
             {
@@ -993,23 +1032,15 @@ namespace MCCSC_Scheduler.Database
                 {
                     conn.Open();
 
-                    // -------------------------------------------------------
-                    // MAIN RESERVATION QUERY (always runs)
-                    // -------------------------------------------------------
-                    string queryA = @"
-                SELECT * FROM Reservation WHERE status_id = @StatusSearch";
+                    // ---------------------- MAIN QUERY ----------------------
+                    string query = @"
+                SELECT r.*, c.reason
+                FROM Reservation r
+                LEFT JOIN CancellationRequests c 
+                    ON r.reservation_id = c.reservation_id
+                WHERE r.status_id = @StatusSearch";
 
-                    if (StatusSearch == 8)
-                    {
-                        queryA = @"
-                    SELECT r.*, c.reason
-                    FROM Reservation r
-                    LEFT JOIN CancellationRequests c
-                        ON r.reservation_id = c.reservation_id
-                    WHERE r.status_id = @StatusSearch";
-                    }
-
-                    using (SqlCommand cmd = new SqlCommand(queryA, conn))
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
                     {
                         cmd.Parameters.AddWithValue("@StatusSearch", StatusSearch);
 
@@ -1017,69 +1048,204 @@ namespace MCCSC_Scheduler.Database
                         {
                             while (reader.Read())
                             {
-                                result.Add(new
+                                reservations.Add(new
                                 {
-                                    //Type = "Reservation",
-                                    ReservationID = reader["reservation_id"],
-                                    ClientID = reader["client_id"],
-                                    StatusID = reader["status_id"],
-                                    Remarks = reader["remarks"],
-                                    EventID = reader["event_id"],
-                                    Reference = reader["hashed_reference"],
-                                    Reason = StatusSearch == 8 ? reader["reason"]?.ToString() : null
+                                    ReservationID = Convert.ToInt32(reader["reservation_id"]),
+                                    ClientID = Convert.ToInt32(reader["client_id"]),
+                                    StatusID = Convert.ToInt32(reader["status_id"]),
+                                    Remarks = reader["remarks"].ToString(),
+                                    EventID = Convert.ToInt32(reader["event_id"]),
+                                    Reference = reader["hashed_reference"].ToString(),
+                                    Reason = reader["reason"]?.ToString()
                                 });
                             }
                         }
                     }
 
-                    // -------------------------------------------------------
-                    // SECOND QUERY (Only runs when StatusSearch == 5)
-                    // -------------------------------------------------------
-                    if (StatusSearch == 5)
+                    // ---------------------- LOOP THROUGH RESERVATIONS ----------------------
+                    List<ReservationDTO> finalList = new List<ReservationDTO>();
+
+                    foreach (dynamic r in reservations)
                     {
-                        // 1. Load all coordination meeting data first
-                        DateTime? meetingDate = null;
-                        string meetingTime = null;
-                        string meetingRemarks = null;
+                        int reservationID = r.ReservationID;
+                        int clientID = r.ClientID;
+                        int statusID = r.StatusID;
+                        int eventID = r.EventID;
 
-                        string queryB = @"SELECT TOP 1 meeting_date, meeting_time, remarks 
-                      FROM CoordinationMeetingDates";
+                        // ----- GET CLIENT + ORGANIZATION -----
+                        UserDTO client = null;
+                        string organizationName = "";
 
-                        using (SqlCommand cmd2 = new SqlCommand(queryB, conn))
-                        using (SqlDataReader reader = cmd2.ExecuteReader())
+                        using (SqlCommand cmd = new SqlCommand(@"
+                    SELECT u.user_id, u.first_name, u.middle_initial, u.last_name,
+                           u.role_id, u.email, c.organization_id
+                    FROM Users u
+                    INNER JOIN Client c ON u.user_id = c.user_id
+                    WHERE c.client_id = @CID", conn))
                         {
-                            if (reader.Read())
+                            cmd.Parameters.AddWithValue("@CID", clientID);
+                            using (var reader = cmd.ExecuteReader())
                             {
-                                meetingDate = reader["meeting_date"] as DateTime?;
-                                meetingTime = reader["meeting_time"]?.ToString();
-                                meetingRemarks = reader["remarks"]?.ToString();
+                                if (reader.Read())
+                                {
+                                    client = new UserDTO
+                                    {
+                                        UserID = Convert.ToInt32(reader["user_id"]),
+                                        FirstName = reader["first_name"].ToString(),
+                                        MiddleInitial = reader["middle_initial"].ToString(),
+                                        LastName = reader["last_name"].ToString(),
+                                        RoleID = Convert.ToInt32(reader["role_id"]),
+                                        Email = reader["email"].ToString(),
+                                        OrganizationID = Convert.ToInt32(reader["organization_id"])
+                                    };
+                                }
                             }
                         }
 
-                        // 2. Attach meeting info to each reservation
-                        for (int i = 0; i < result.Count; i++)
+                        // Organization name
+                        if (client != null && client.OrganizationID > 0)
                         {
-                            var item = result[i];
-
-                            result[i] = new
+                            using (SqlCommand cmd = new SqlCommand(
+                                @"SELECT organization_name FROM Organization WHERE organization_id = @OID", conn))
                             {
-                                ReservationID = item.GetType().GetProperty("ReservationID")?.GetValue(item),
-                                ClientID = item.GetType().GetProperty("ClientID")?.GetValue(item),
-                                StatusID = item.GetType().GetProperty("StatusID")?.GetValue(item),
-                                Remarks = item.GetType().GetProperty("Remarks")?.GetValue(item),
-                                EventID = item.GetType().GetProperty("EventID")?.GetValue(item),
-                                Reference = item.GetType().GetProperty("Reference")?.GetValue(item),
-
-                                // Add these fields
-                                MeetingDate = meetingDate,
-                                MeetingTime = meetingTime
-                            };
+                                cmd.Parameters.AddWithValue("@OID", client.OrganizationID);
+                                organizationName = cmd.ExecuteScalar()?.ToString() ?? "";
+                            }
+                            client.Organization = organizationName;
                         }
+
+                        // ----- GET STATUS NAME -----
+                        string statusName = "";
+                        using (SqlCommand cmd = new SqlCommand(
+                            @"SELECT status_name FROM reservation_status WHERE status_id = @SID", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@SID", statusID);
+                            statusName = cmd.ExecuteScalar()?.ToString() ?? "";
+                        }
+
+                        // ----- GET PREVIOUS STATUS IF CANCELLATION -----
+                        int? prevStatusID = null;
+                        string prevStatusName = null;
+                        if (statusID == 8)
+                        {
+                            using (SqlCommand cmd = new SqlCommand(
+                                @"SELECT previous_status_id FROM CancellationRequests WHERE reservation_id = @RID", conn))
+                            {
+                                cmd.Parameters.AddWithValue("@RID", reservationID);
+                                var resPrev = cmd.ExecuteScalar();
+                                if (resPrev != null && resPrev != DBNull.Value)
+                                    prevStatusID = Convert.ToInt32(resPrev);
+                            }
+
+                            if (prevStatusID.HasValue)
+                            {
+                                using (SqlCommand cmd = new SqlCommand(
+                                    @"SELECT status_name FROM reservation_status WHERE status_id = @PID", conn))
+                                {
+                                    cmd.Parameters.AddWithValue("@PID", prevStatusID);
+                                    prevStatusName = cmd.ExecuteScalar()?.ToString();
+                                }
+                            }
+                        }
+
+                        // ----- GET ASSETS -----
+                        List<AssetDTO> assets = new List<AssetDTO>();
+                        using (SqlCommand cmd = new SqlCommand(@"
+                    SELECT a.asset_name, aor.asset_quantity
+                    FROM AssetOnReservation aor
+                    INNER JOIN Assets a ON aor.asset_id = a.asset_id
+                    WHERE aor.reservation_id = @RID", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@RID", reservationID);
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    assets.Add(new AssetDTO
+                                    {
+                                        AssetName = reader["asset_name"].ToString(),
+                                        Quantity = Convert.ToInt32(reader["asset_quantity"])
+                                    });
+                                }
+                            }
+                        }
+
+                        // ----- GET EVENT DATES -----
+                        List<EventDateDTO> eventDates = new List<EventDateDTO>();
+                        using (SqlCommand cmd = new SqlCommand(@"
+                    SELECT date, start_time, end_time 
+                    FROM Reservation_Dates 
+                    WHERE reservation_id = @RID", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@RID", reservationID);
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    eventDates.Add(new EventDateDTO
+                                    {
+                                        Date = Convert.ToDateTime(reader["date"]),
+                                        StartTime = reader["start_time"].ToString(),
+                                        EndTime = reader["end_time"].ToString()
+                                    });
+                                }
+                            }
+                        }
+
+                        // ----- GET COORDINATION MEETINGS -----
+                        List<CoordinationMeetingDTO> meetings = new List<CoordinationMeetingDTO>();
+                        using (SqlCommand cmd = new SqlCommand(@"
+                    SELECT meeting_date, meeting_time, remarks 
+                    FROM CoordinationMeetingDates 
+                    WHERE reservation_id = @RID", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@RID", reservationID);
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                while (reader.Read())
+                                {
+                                    meetings.Add(new CoordinationMeetingDTO
+                                    {
+                                        MeetingDate = Convert.ToDateTime(reader["meeting_date"]),
+                                        MeetingTime = TimeSpan.Parse(reader["meeting_time"].ToString()),
+                                        MeetingRemarks = reader["remarks"].ToString()
+                                    });
+                                }
+                            }
+                        }
+
+                        // ----- GET EVENT NAME -----
+                        string eventName = "";
+                        using (SqlCommand cmd = new SqlCommand(
+                            @"SELECT title FROM Events WHERE event_id = @EID", conn))
+                        {
+                            cmd.Parameters.AddWithValue("@EID", eventID);
+                            eventName = cmd.ExecuteScalar()?.ToString() ?? "";
+                        }
+
+                        // ----- ADD TO FINAL LIST -----
+                        finalList.Add(new ReservationDTO
+                        {
+                            ReservationID = reservationID,
+                            ClientID = clientID,
+                            Client = client,
+                            StatusID = statusID,
+                            StatusName = statusName,
+                            PreviousStatusID = prevStatusID ?? 0,
+                            PreviousStatusName = prevStatusName,
+                            Remarks = r.Remarks,
+                            EventID = eventID,
+                            EventName = eventName,
+                            Reference = r.Reference,
+                            Reason = r.Reason,
+                            SelectedAssets = assets,
+                            EventDates = eventDates,
+                            Meetings = meetings
+                        });
                     }
 
+                    return JsonConvert.SerializeObject(finalList, Formatting.Indented);
                 }
-
-                return JsonConvert.SerializeObject(result);
             }
             catch (Exception ex)
             {
@@ -1087,176 +1253,116 @@ namespace MCCSC_Scheduler.Database
             }
         }
 
-        public string GetRequestInfo(int reservationID, int clientID, int statusID, int eventID)
+
+        public string MarkTodaysReservation(EventDateDTO eventDateDTO)
         {
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            try
             {
-                conn.Open();
+                DateTime todayDate = eventDateDTO.Date;    // YYYY-MM-DD
+                string nowTime = eventDateDTO.EndTime;     // HH:MM:SS.0000000
 
-                // 1️⃣ Get user_id + organization_id in ONE query
-                int userID = 0, organizationID = 0;
-                string clientQuery = @"
-            SELECT user_id, organization_id 
-            FROM Client 
-            WHERE client_id = @ClientID";
+                string ongoingQuery = @"
+            SELECT DISTINCT rd.reservation_id
+            FROM Reservation_Dates rd
+            WHERE rd.date = @TodayDate
+              AND rd.start_time <= @NowTime
+              AND rd.end_time >= @NowTime
+        ";
 
-                using (SqlCommand cmd = new SqlCommand(clientQuery, conn))
+                string expiredQuery = @"
+            SELECT r.reservation_id
+            FROM Reservation r
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM Reservation_Dates rd
+                WHERE rd.reservation_id = r.reservation_id
+                  AND (rd.date > @TodayDate OR (rd.date = @TodayDate AND rd.end_time >= @NowTime))
+            )
+        ";
+
+                string ongoingUpdate = @"UPDATE Reservation SET status_id = 10 WHERE reservation_id = @ReservationID";
+                string expiredUpdate = @"UPDATE Reservation SET status_id = 11 WHERE reservation_id = @ReservationID";
+
+                List<ReservationDTO> ongoingList = new List<ReservationDTO>();
+                List<ReservationDTO> expiredList = new List<ReservationDTO>();
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
                 {
-                    cmd.Parameters.AddWithValue("@ClientID", clientID);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    conn.Open();
+
+                    // ----------------------
+                    // 🔵 Find Ongoing Reservations
+                    // ----------------------
+                    using (SqlCommand cmd = new SqlCommand(ongoingQuery, conn))
                     {
-                        if (reader.Read())
+                        cmd.Parameters.AddWithValue("@TodayDate", todayDate);
+                        cmd.Parameters.AddWithValue("@NowTime", nowTime);
+
+                        using (SqlDataReader reader = cmd.ExecuteReader())
                         {
-                            userID = Convert.ToInt32(reader["user_id"]);
-                            organizationID = Convert.ToInt32(reader["organization_id"]);
-                        }
-                        else
-                        {
-                            return JsonConvert.SerializeObject(new { error = "Client not found" });
-                        }
-                    }
-                }
-
-                // 2️⃣ Get Client Name
-                string firstName = "", middleInitial = "", lastName = "";
-                string userQuery = @"SELECT first_name, middle_initial, last_name FROM Users WHERE user_id = @UserID";
-                using (SqlCommand cmd = new SqlCommand(userQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@UserID", userID);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        if (reader.Read())
-                        {
-                            firstName = reader["first_name"].ToString();
-                            middleInitial = reader["middle_initial"].ToString();
-                            lastName = reader["last_name"].ToString();
-                        }
-                    }
-                }
-
-                // 3️⃣ Get Organization Name
-                string organizationName = "";
-                string orgQuery = @"SELECT organization_name FROM Organization WHERE organization_id = @OrganizationID";
-                using (SqlCommand cmd = new SqlCommand(orgQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@OrganizationID", organizationID);
-                    organizationName = cmd.ExecuteScalar()?.ToString() ?? "";
-                }
-
-                // 4️⃣ Get Status Name
-                string statusName = "";
-                string statusQuery = @"SELECT status_name FROM reservation_status WHERE status_id = @StatusID";
-                using (SqlCommand cmd = new SqlCommand(statusQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@StatusID", statusID);
-                    statusName = cmd.ExecuteScalar()?.ToString() ?? "";
-                }
-
-                // 5️⃣ Previous Status (only if statusID = 8)
-                int? previousStatusID = null;
-                string previousStatusName = null;
-
-                if (statusID == 8)
-                {
-                    string prevStatusQuery = @"
-                SELECT previous_status_id 
-                FROM CancellationRequests 
-                WHERE reservation_id = @ReservationID";
-
-                    using (SqlCommand cmd = new SqlCommand(prevStatusQuery, conn))
-                    {
-                        cmd.Parameters.AddWithValue("@ReservationID", reservationID);
-                        var result = cmd.ExecuteScalar();
-                        if (result != null && result != DBNull.Value)
-                            previousStatusID = Convert.ToInt32(result);
-                    }
-
-                    if (previousStatusID.HasValue)
-                    {
-                        string prevStatusNameQuery = @"SELECT status_name FROM reservation_status WHERE status_id = @StatusID";
-                        using (SqlCommand cmd = new SqlCommand(prevStatusNameQuery, conn))
-                        {
-                            cmd.Parameters.AddWithValue("@StatusID", previousStatusID.Value);
-                            previousStatusName = cmd.ExecuteScalar()?.ToString() ?? "";
-                        }
-                    }
-                }
-
-                // 6️⃣ Get Assets
-                List<object> assets = new List<object>();
-                string assetQuery = @"
-            SELECT a.asset_name, aor.asset_quantity
-            FROM AssetOnReservation aor
-            INNER JOIN Assets a ON aor.asset_id = a.asset_id
-            WHERE aor.reservation_id = @ReservationID";
-
-                using (SqlCommand cmd = new SqlCommand(assetQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@ReservationID", reservationID);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            assets.Add(new
+                            while (reader.Read())
                             {
-                                AssetName = reader["asset_name"].ToString(),
-                                Quantity = Convert.ToInt32(reader["asset_quantity"])
-                            });
+                                ongoingList.Add(new ReservationDTO
+                                {
+                                    ReservationID = Convert.ToInt32(reader["reservation_id"])
+                                });
+                            }
                         }
                     }
-                }
 
-                // 7️⃣ Get Reservation Dates
-                List<object> date = new List<object>();
-                string dateQuery = @"SELECT date, start_time, end_time FROM Reservation_Dates WHERE reservation_id = @ReservationID";
-                using (SqlCommand cmd = new SqlCommand(dateQuery, conn))
-                {
-                    cmd.Parameters.AddWithValue("@ReservationID", reservationID);
-                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    // Update Ongoing status
+                    foreach (var res in ongoingList)
                     {
-                        while (reader.Read())
+                        using (SqlCommand cmd = new SqlCommand(ongoingUpdate, conn))
                         {
-                            date.Add(new
+                            cmd.Parameters.AddWithValue("@ReservationID", res.ReservationID);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    // ----------------------
+                    // 🔴 Find Expired Reservations
+                    // ----------------------
+                    using (SqlCommand cmd = new SqlCommand(expiredQuery, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@TodayDate", todayDate);
+                        cmd.Parameters.AddWithValue("@NowTime", nowTime);
+
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
                             {
-                                Date = reader["date"].ToString(),
-                                StartTime = reader["start_time"].ToString(),
-                                EndTime = reader["end_time"].ToString()
-                            });
+                                expiredList.Add(new ReservationDTO
+                                {
+                                    ReservationID = Convert.ToInt32(reader["reservation_id"])
+                                });
+                            }
+                        }
+                    }
+
+                    // Update Expired status
+                    foreach (var res in expiredList)
+                    {
+                        using (SqlCommand cmd = new SqlCommand(expiredUpdate, conn))
+                        {
+                            cmd.Parameters.AddWithValue("@ReservationID", res.ReservationID);
+                            cmd.ExecuteNonQuery();
                         }
                     }
                 }
 
-                // 8️⃣ Get Event Name
-                string eventName = "";
-                string eventQuery = @"SELECT title FROM Events WHERE event_id = @EventID";
-                using (SqlCommand cmd = new SqlCommand(eventQuery, conn))
+                return JsonConvert.SerializeObject(new
                 {
-                    cmd.Parameters.AddWithValue("@EventID", eventID);
-                    eventName = cmd.ExecuteScalar()?.ToString() ?? "";
-                }
-
-                // 9️⃣ Build Final JSON
-                var resultObj = new
-                {
-                    Client = new
-                    {
-                        FirstName = firstName,
-                        MiddleInitial = middleInitial,
-                        LastName = lastName
-                    },
-                    Organization = organizationName,
-                    Status = statusName,
-                    PreviousStatusID = previousStatusID,
-                    PreviousStatusName = previousStatusName,
-                    Date = date,
-                    Asset = assets,
-                    Event = eventName
-                };
-
-                return JsonConvert.SerializeObject(resultObj, Formatting.Indented);
+                    success = true,
+                    ongoing = ongoingList,
+                    expired = expiredList
+                });
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
             }
         }
-
 
         // ============================================================
         // ===============  SUBMIT RESERVATION METHOD  ================
@@ -1807,7 +1913,7 @@ namespace MCCSC_Scheduler.Database
                                 insertCmd.Parameters.AddWithValue("@ReservationID", meeting.ReservationID);
                                 insertCmd.Parameters.AddWithValue("@MeetingDate", meeting.MeetingDate);
                                 insertCmd.Parameters.AddWithValue("@MeetingTime", meeting.MeetingTime);
-                                insertCmd.Parameters.AddWithValue("@Remarks", (object)meeting.Remarks ?? DBNull.Value);
+                                insertCmd.Parameters.AddWithValue("@Remarks", (object)meeting.MeetingRemarks ?? DBNull.Value);
                                 insertCmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
 
                                 int inserted = insertCmd.ExecuteNonQuery();

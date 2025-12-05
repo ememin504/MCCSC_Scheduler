@@ -173,6 +173,27 @@ main {
 }
 
 /* CALENDAR */
+.calendar-day.holiday {
+    background-color: #fdd; /* red-ish for holidays */
+    color: #900;
+}
+
+.calendar-day.fully-booked {
+    background-color: #eee; /* gray for fully booked */
+    color: #666;
+}
+
+.calendar-day.other-month {
+    background-color: #f9f9f9;
+    color: #aaa;
+}
+
+.calendar-day.disabled {
+    pointer-events: none;
+    opacity: 0.3;
+}
+
+
 .calendar-container {
     flex: 1;
     background: transparent;
@@ -332,6 +353,17 @@ main {
     .selected-date #displayDate {
         font-weight: bold;
     }
+
+.day-number {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.day-note {
+    font-size: 10px;
+    color: red;
+    margin-top: 2px;
+}
 
 /* REGISTRATION FORM */
 .registration-container {

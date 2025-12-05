@@ -19,10 +19,12 @@ document.addEventListener("DOMContentLoaded", function () {
     if (alertModalDiv) {
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
         alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
+        //alertModalDiv.insertAdjacentHTML("afterend", userModalEl);
     }
 
     document.getElementById("fullname").textContent = `${firstName} ${lastName}`;
     document.getElementById("roles").textContent = `${roleName}/${roleTypeDescription}`;
+    document.body.insertAdjacentHTML("beforeend", userModalEl);
 
     // Initial data load
     loadAssetCategories();
@@ -38,6 +40,7 @@ document.addEventListener("DOMContentLoaded", function () {
     getEvents();
     loadNotifications();
     startNotificationPolling();
+    startReservationDateCheck();
 });
 console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
 // categoryLoader.js
@@ -64,8 +67,6 @@ function addNotification(reservationID, statusID) {
         NoteFor: noteFor
     };
 
-    console.log("Sending notification:", notificationInfo);
-
     $.ajax({
         type: "POST",
         url: "AdminDashboard1.aspx/CreateNotification",
@@ -85,8 +86,48 @@ function startNotificationPolling() {
     loadNotifications();
     setInterval(() => {
         loadNotifications();
+        //startReservationDateCheck();
     }, 5000);
 }
+function startReservationDateCheck() {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+
+    // Final SQL formats
+    const todayDate = `${year}-${month}-${day}`;            // YYYY-MM-DD
+    const todayTime = `${hours}:${minutes}:${seconds}.0000000`; // HH:MM:SS.0000000
+    //const todayDate = "2025-11-29";
+    //const todayTime = "23:42:00.0000000";
+
+
+    let dateTimeNow = {
+        Date: todayDate,
+        EndTime: todayTime
+    };
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/MarkTodaysReservation",
+        data: JSON.stringify({ eventDateDTO: dateTimeNow }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            let statusCheck = JSON.parse(response.d);
+            console.log(statusCheck);
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+
 
 function loadNotifications() {
     let clientID = 0;
@@ -478,7 +519,6 @@ function getEvents() {
             } catch (e) {
                 console.error("JSON parse error:", e);
             }
-            console.log("✅ Events loaded:", data);
 
             // Example: display first event
             if (data.length > 0) {
@@ -562,20 +602,15 @@ function getUsers() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Raw response:", response);
-            console.log("Response.d:", response.d);
 
             // Parse the string into a real array
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);
             } catch (e) {
                 console.error("JSON parse error:", e);
             }
-
-            console.log("Parsed data:", data);
 
             let tbody = document.getElementById("userTableBody");
             tbody.innerHTML = "";
@@ -620,9 +655,7 @@ function getReservationRequests() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log(response);
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);
@@ -630,6 +663,7 @@ function getReservationRequests() {
                 console.error("JSON parse error:", e);
                 data = [];
             }
+            
 
 
             console.log("Parsed data:", data);
@@ -644,33 +678,34 @@ function getReservationRequests() {
             }
 
             // Loop through the data and build table rows
-            data.forEach(req => {
+            data.forEach(req => {   
+                let dates = req.EventDates.length
+                    ? req.EventDates.map(d => {
+                        let formattedDate = d.Date.split('T')[0];
+                        let start = to12Hour(d.StartTime);
+                        let end = to12Hour(d.EndTime);
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
+
                 let row = `
                     <tr>
                         <td>${req.ReservationID}</td>
-                        <td>${req.ClientID}</td>
-                        <td>${req.StatusID}</td>
+                        <td>${req.EventName}</td>
+                        <td>${dates}</td>
+
                         <td>${req.Remarks}</td>
-                        <td>${req.EventID}</td>
                         <td>${req.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
-                            onclick="GetRequestInfo(
-                                ${req.ReservationID},
-                                ${req.ClientID}, 
-                                ${req.StatusID}, 
-                                '${req.Remarks}', 
-                                ${req.EventID}, 
-                                '${req.Reference}'
-                            ); return false;">
-                            View
+                                onclick='openReservationInfoModal(${JSON.stringify(req)}); return false;'>
+                                View
                             </button>
                         </td>
 
                     </tr>
                 `;
                 tbody.innerHTML += row;
-                console.log(eventID);
             });
         },
         error: function (xhr, status, error) {
@@ -691,9 +726,7 @@ function getApprovedReservation() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log(response);
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);
@@ -702,8 +735,6 @@ function getApprovedReservation() {
                 data = [];
             }
 
-
-            console.log("Parsed data:", data);
 
             let tbody = document.getElementById("approvedReservationTableBody");
             tbody.innerHTML = "";
@@ -716,38 +747,47 @@ function getApprovedReservation() {
 
             // Loop through the data and build table rows
             data.forEach(req => {
+                let dates = req.EventDates.length
+                    ? req.EventDates.map(d => {
+                        let formattedDate = d.Date.split('T')[0];
+                        let start = to12Hour(d.StartTime);
+                        let end = to12Hour(d.EndTime);
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
+
                 let row = `
                     <tr>
                         <td>${req.ReservationID}</td>
-                        <td>${req.ClientID}</td>
-                        <td>${req.StatusID}</td>
+                        <td>${req.EventName}</td>
+                        <td>${dates}</td>
+
                         <td>${req.Remarks}</td>
-                        <td>${req.EventID}</td>
                         <td>${req.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
-                            onclick="GetRequestInfo(
-                                ${req.ReservationID},
-                                ${req.ClientID}, 
-                                ${req.StatusID}, 
-                                '${req.Remarks}', 
-                                ${req.EventID}, 
-                                '${req.Reference}'
-                            ); return false;">
-                            View
+                                onclick='openReservationInfoModal(${JSON.stringify(req)}); return false;'>
+                                View
                             </button>
                         </td>
 
                     </tr>
                 `;
                 tbody.innerHTML += row;
-                console.log(eventID);
+                //startReservationDateCheckPolling();
             });
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
     });
+}
+function to12Hour(time) {
+    if (!time) return "";
+    let [hour, minute] = time.split(':').map(Number);
+    let ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
 }
 function getAcceptedReservation() {
     let reservationType = "Accepted Reservation";
@@ -761,12 +801,9 @@ function getAcceptedReservation() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Raw response:", response);
-            console.log("Response.d:", response.d);
 
             // Parse the string into a real array
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);
@@ -774,7 +811,6 @@ function getAcceptedReservation() {
                 console.error("JSON parse error:", e);
             }
 
-            console.log("Parsed data:", data);
 
             let tbody = document.getElementById("acceptedReservationTableBody");
             tbody.innerHTML = "";
@@ -786,25 +822,25 @@ function getAcceptedReservation() {
             }
             // Loop through the data and build table rows
             data.forEach(res => {
+                let dates = res.EventDates?.length
+                    ? res.EventDates.map(d => {
+                        const formattedDate = d?.Date?.split('T')[0] ?? 'No date';
+                        const start = d?.StartTime ? to12Hour(d.StartTime) : '--:--';
+                        const end = d?.EndTime ? to12Hour(d.EndTime) : '--:--';
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
                 let row = `
                     <tr>
                         <td>${res.ReservationID}</td>
-                        <td>${res.ClientID}</td>
-                        <td>${res.StatusID}</td>
+                        <td>${res.EventName}</td>
+                        <td>${dates}</td>
                         <td>${res.Remarks}</td>
-                        <td>${res.EventID}</td>
                         <td>${res.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
-                            onclick="GetRequestInfo(
-                                ${res.ReservationID},
-                                ${res.ClientID}, 
-                                ${res.StatusID}, 
-                                '${res.Remarks}', 
-                                ${res.EventID}, 
-                                '${res.Reference}'
-                            ); return false;">
-                            View
+                                onclick='openReservationInfoModal(${JSON.stringify(res)}); return false;'>
+                                View
                             </button>
                         </td>
 
@@ -832,12 +868,9 @@ function getStatusCMReservation() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Raw response:", response);
-            console.log("Response.d:", response.d);
 
             // Parse the string into a real array
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);
@@ -845,7 +878,6 @@ function getStatusCMReservation() {
                 console.error("JSON parse error:", e);
             }
 
-            console.log("Parsed data:", data);
 
             let tbody = document.getElementById("stautsCMReservationTableBody");
             tbody.innerHTML = "";
@@ -858,26 +890,27 @@ function getStatusCMReservation() {
             // Loop through the data and build table rows
             console.log("Status CM data: ", data);
             data.forEach(res => {
+                let dates = res.EventDates?.length
+                    ? res.EventDates.map(d => {
+                        const formattedDate = d?.Date?.split('T')[0] ?? 'No date';
+                        const start = d?.StartTime ? to12Hour(d.StartTime) : '--:--';
+                        const end = d?.EndTime ? to12Hour(d.EndTime) : '--:--';
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
                 let row = `
                     <tr>
                         <td>${res.ReservationID}</td>
-                        <td>${res.ClientID}</td>
-                        <td>${res.StatusID}</td>
-                        <td>${res.Remarks}</td>
-                        <td>${res.EventID}</td>
-                        <td>${formatDate(res.MeetingDate)}</td>
-                        <td>${formatTime(res.MeetingTime)}</td>
+                        <td>${res.EventName}</td>
+                        <td>${dates}</td>
+                        <td>${formatDate(res.Meetings[0].MeetingDate)}</td>
+                        <td>${formatTime(res.Meetings[0].MeetingTime)}</td>
+                        <td>${res.Meetings[0].MeetingRemarks}</td>
                         <td>${res.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
-                            onclick="GetRequestInfo(
-                                ${res.ReservationID},
-                                ${res.ClientID}, 
-                                ${res.StatusID},
-                                ${res.Remarks},
-                                ${res.EventID}, 
-                            ); return false;">
-                            View
+                                onclick='openReservationInfoModal(${JSON.stringify(res)}); return false;'>
+                                View
                             </button>
                         </td>
 
@@ -926,12 +959,9 @@ function getReservationCancellationRequests() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Raw response:", response);
-            console.log("Response.d:", response.d);
 
             // Parse the string into a real array
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);
@@ -951,26 +981,25 @@ function getReservationCancellationRequests() {
             }
             // Loop through the data and build table rows
             data.forEach(res => {
+                let dates = res.EventDates?.length
+                    ? res.EventDates.map(d => {
+                        const formattedDate = d?.Date?.split('T')[0] ?? 'No date';
+                        const start = d?.StartTime ? to12Hour(d.StartTime) : '--:--';
+                        const end = d?.EndTime ? to12Hour(d.EndTime) : '--:--';
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
                 let row = `
                     <tr>
                         <td>${res.ReservationID}</td>
-                        <td>${res.ClientID}</td>
-                        <td>${res.StatusID}</td>
+                        <td>${res.EventName}</td>
+                        <td>${dates}</td>
                         <td>${res.Remarks}</td>
-                        <td>${res.EventID}</td>
-                        <td>${res.Reason}</td>
                         <td>${res.Reference}</td>
                         <td>
-                            <button class="btn btn-success btn-sm"
-                            onclick="GetRequestInfo(
-                                ${res.ReservationID},
-                                ${res.ClientID}, 
-                                ${res.StatusID}, 
-                                '${res.Remarks}', 
-                                ${res.EventID}, 
-                                '${res.Reference}'
-                            ); return false;">
-                            View
+                           <button class="btn btn-success btn-sm"
+                                onclick='openReservationInfoModal(${JSON.stringify(res)}); return false;'>
+                                View
                             </button>
                         </td>
 
@@ -998,20 +1027,14 @@ function getCancelledReservation() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Raw response:", response);
-            console.log("Response.d:", response.d);
-
             // Parse the string into a real array
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);
             } catch (e) {
                 console.error("JSON parse error:", e);
             }
-
-            console.log("Parsed data:", data);
 
             let tbody = document.getElementById("cancelledReservationTableBody");
             tbody.innerHTML = "";
@@ -1023,26 +1046,25 @@ function getCancelledReservation() {
             }
             // Loop through the data and build table rows
             data.forEach(res => {
+                let dates = res.EventDates?.length
+                    ? res.EventDates.map(d => {
+                        const formattedDate = d?.Date?.split('T')[0] ?? 'No date';
+                        const start = d?.StartTime ? to12Hour(d.StartTime) : '--:--';
+                        const end = d?.EndTime ? to12Hour(d.EndTime) : '--:--';
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
                 let row = `
                     <tr>
                         <td>${res.ReservationID}</td>
-                        <td>${res.ClientID}</td>
-                        <td>${res.StatusID}</td>
+                        <td>${res.EventName}</td>
+                        <td>${dates}</td>
                         <td>${res.Remarks}</td>
-                        <td>${res.EventID}</td>
-                        <td>${res.Reason}</td>
                         <td>${res.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
-                            onclick="GetRequestInfo(
-                                ${res.ReservationID},
-                                ${res.ClientID}, 
-                                ${res.StatusID}, 
-                                '${res.Remarks}', 
-                                ${res.EventID}, 
-                                '${res.Reference}'
-                            ); return false;">
-                            View
+                                onclick='openReservationInfoModal(${JSON.stringify(res)}); return false;'>
+                                View
                             </button>
                         </td>
 
@@ -1058,122 +1080,105 @@ function getCancelledReservation() {
     })
 }
 
+function openReservationInfoModal(res) {
 
-function openReservationInfoModal() {
-    viewReservationModal = new bootstrap.Modal(document.getElementById('vewReservationModal'), {
-        backdrop: 'static'
+    let assetDetails = "";
+    let dateDetails = "";
+    let callFunction = "";
+    let buttonText = "";
+    let buttonClass = "";
+
+    // FIXED: use StatusName, not StatusID
+    switch (res.StatusName) {
+        case "Accepted":
+            callFunction = "coordinationMeetingSetUp";
+            buttonText = "Set Coordination Meeting";
+            buttonClass = "btn btn-primary"
+            break;
+
+        case "Pending":
+        case "Reservation Request": // if this is your actual name
+            callFunction = "acceptReservation";
+            buttonText = "Accept";
+            buttonClass = "btn btn-primary"
+            break;
+
+        case "Coordination Meeting":
+            callFunction = "approveReservation";
+            buttonText = "Approve Reservation";
+            buttonClass = "btn btn-primary"
+            break;
+
+        case "Cancellation Request":
+            callFunction = "confirmCancellation";
+            buttonText = "Confirm Cancellation";
+            buttonClass = "btn btn-danger"
+            break;
+
+        default:
+            callFunction = "";
+            buttonText = "";
+            break;
+    }
+
+    res.SelectedAssets.forEach(a => {
+        assetDetails += `
+        <p><strong>Asset:</strong> ${a.AssetName}</p>
+        <p><strong>Quantity:</strong> ${a.Quantity}</p>
+    `;
     });
-    viewReservationModal.show();
+
+    res.EventDates.forEach(d => {
+        dateDetails += `
+        <p><strong>Date:</strong> ${d.Date}</p>
+        <p><strong>Start:</strong> ${d.StartTime}</p>
+        <p><strong>End:</strong> ${d.EndTime}</p>
+    `;
+    });
+
+    let safeRes = encodeURIComponent(JSON.stringify(res));
+
+    let modalHTML = `
+<div class='modal fade' id='viewReservationModal'>
+    <div class='modal-dialog'>
+        <div class='modal-content'>
+            <div class='modal-header'>
+                <h4>Reservation Info</h4>
+                <button class='btn-close' data-bs-dismiss='modal'></button>
+            </div>
+            <div class='modal-body'>
+                <p><strong>Event:</strong> ${res.EventName}</p>
+                <p><strong>Client:</strong> ${res.Client.FirstName} ${res.Client.MiddleInitial ?? ""} ${res.Client.LastName}</p>
+                <p><strong>Organization:</strong> ${res.Client.Organization}</p>
+                <p><strong>Status:</strong> ${res.StatusName}</p>
+                ${assetDetails}
+                ${dateDetails}
+                <p><strong>Reference:</strong> ${res.Reference}</p>
+                <p><strong>Remarks:</strong> ${res.Remarks}</p>
+            </div>
+            <div class='modal-footer'>
+                ${callFunction !== ""
+            ? `<button class='${buttonClass}' onclick="${callFunction}('${safeRes}', ${res.ReservationID}); return false;">${buttonText}</button>`
+            : ""}
+                <button class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+`;
+
+    // Remove old modal
+    let old = document.getElementById("viewReservationModal");
+    if (old) old.remove();
+
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+    new bootstrap.Modal(document.getElementById("viewReservationModal"), {
+        backdrop: "static"
+    }).show();
 }
 
-function GetRequestInfo(reservationID, clientID, statusID, remarks, eventID, reference) {
-    let requestInfo = {
-        ReservationID: reservationID,
-        ClientID: clientID,
-        StatusID: statusID,
-        EventID: eventID,
-    };
-    console.log(requestInfo);
-    $.ajax({
-        type: "POST",
-        url: "AdminDashboard1.aspx/GetRequestInfo",
-        data: JSON.stringify({ requestData: requestInfo }),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            console.log("Full server response:", response.d);
-            let callFunction;
-            let buttonText = "";
-            let data = response.d;
-            if (typeof data === "string") {
-                try { data = JSON.parse(data); } catch (e) { console.error("JSON parse error:", e); }
-            }
-
-            if (!data || !data.Client) {
-                console.error("Invalid data structure:", data);
-                alert("Reservation info could not be loaded.");
-                return;
-            }
-            let assetDetails = "";
-            let dateDetails = "";
-            data.Asset.forEach(a => {
-                assetDetails += `<p><strong>Asset:</strong> ${a.AssetName}</p>
-                     <p><strong>Quantity:</strong> ${a.Quantity}</p>`;
-            });
-            data.Date.forEach(d => {
-                dateDetails += `<p><strong>Date:</strong> ${d.Date}</p>
-                     <p><strong>Starting Time:</strong> ${d.StartTime}</p>
-                     <p><strong>Ending Time:</strong> ${d.EndTime}</p>`;
-            });
-            if (data.Status === "Accepted") {
-                callFunction = "coordinationMeetingSetUp";
-                buttonText = "Set Coordination Meeting";
-            } else if (data.Status === "Pending") {
-                callFunction = "acceptReservation";
-                buttonText = "Accept";
-            } else if (data.Status == "Coordination Meeting") {
-                callFunction = "editReservationInfo";
-                buttonText = "Edit Reservation";
-            } else if (data.Status == "Cancellation Request") {
-                callFunction = "confirmCancellation";
-                buttonText = "Confirm Cancellation"
-            }
-
-
-
-            // ✅ Build modal dynamically here
-            let modalHTML = `
-                <div class='modal fade' id='viewReservationModal' role='dialog'>
-                  <div class='modal-dialog'>
-                    <div class='modal-content'>
-                      <div class='modal-header'>
-                        <h4 class='modal-title'>Reservation Info</h4>
-                        <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
-                      </div>
-                      <div class='modal-body'>
-                        <p><strong>Event Title:</strong> ${data.Event}</p>
-                        <p><strong>Client:</strong> ${data.Client.FirstName} ${data.Client.MiddleInitial || ""} ${data.Client.LastName}</p>
-                        <p><strong>Organization:</strong> ${data.Organization}</p>
-                        <p><strong>Status:</strong> ${data.Status}</p>
-                        ${assetDetails}<br>
-                        ${dateDetails}
-                        <p><strong>Reference:</strong> ${reference}</p>
-                        <p><strong>Remarks:</strong> ${remarks}</p>
-                      </div>
-                      <div class='modal-footer'>
-                        <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)}, ${reservationID}, ${clientID})'>${buttonText}</button>
-
-                        ${data.Status === "Coordination Meeting" ? `
-                          <button type='button' class='btn btn-primary' onclick='approveReservation(${reservationID}); return false;'>Approve</button>
-                        ` : ""}
-
-                        <button type='button' class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>`;
-
-
-            reservationId = reservationID
-            // ✅ Remove existing modal (to avoid duplicates)
-            let oldModal = document.getElementById("viewReservationModal");
-            if (oldModal) oldModal.remove();
-
-            // ✅ Add new modal to the DOM
-            document.body.insertAdjacentHTML("beforeend", modalHTML);
-
-            // ✅ Show modal
-            var modalInstance = new bootstrap.Modal(document.getElementById("viewReservationModal"), {
-                backdrop: "static"
-            });
-            modalInstance.show();
-        },
-        error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
-        }
-    });
-}
-function approveReservation(reservationID, clientID) {
+function approveReservation(res ,reservationID, clientID) {
     let reservationInfo = {
         ReservationID: reservationID,
         ClientID: clientID
@@ -1226,11 +1231,15 @@ function confirmCancellation(data, reservationID, clientID) {
         }
     })
 }
-function coordinationMeetingSetUp(data, reservationID) {
-    console.log("Reservation Data", data, reservationID)
+let reservationIDGlobal = 0;
+function coordinationMeetingSetUp(dataStr, reservationID) {
+    const data = JSON.parse(decodeURIComponent(dataStr));
+    console.log("Decoded Reservation Data", data, reservationID);
+    reservationIDGlobal = reservationID;
     $("#viewReservationModal").modal("hide");
     openCoordinationMeetingModal(data, reservationID);
 }
+
 function saveCoordinationMeeting() {
     let meetingDate = document.getElementById("meetingDate").value;
     let meetingTime = document.getElementById("meetingTime").value;
@@ -1238,7 +1247,7 @@ function saveCoordinationMeeting() {
     let meetingRemarks = document.getElementById("meetingRemarks").value.trim();
 
     let meetingInfo = {
-        ReservationID: reservationId,
+        ReservationID: reservationIDGlobal,
         MeetingDate: meetingDate,
         MeetingTime: meetingTime,
         Remarks: meetingRemarks
@@ -1331,20 +1340,15 @@ function getRegistrationRequests() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Raw response:", response);
-            console.log("Response.d:", response.d);
 
             // Parse the string into a real array
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);
             } catch (e) {
                 console.error("JSON parse error:", e);
             }
-
-            console.log("Parsed data:", data);
 
             let tbody = document.getElementById("registrationTableBody");
             tbody.innerHTML = "";
@@ -1357,19 +1361,29 @@ function getRegistrationRequests() {
 
             // Loop through the data and build table rows
             data.forEach(req => {
+                console.log("Get Registration data:",req);
                 let row = `
                     <tr>
                         <td>${req.RequestID}</td>
                         <td>${req.FirstName}</td>
                         <td>${req.MiddleInitial}</td>
                         <td>${req.LastName}</td>
-                        <td>${req.Email}</td>
                         <td>${req.Organization}</td>
                         <td>${req.UserName}</td>
-                        <td>${req.Status}</td>
                         <td>${new Date(req.DateRequested).toLocaleString()}</td>
                         <td>
-                            <button class="btn btn-success btn-sm" onclick="UserConfirmation(${req.RequestID})">Confirm</button>
+                            <button class="btn btn-success" onclick="UserConfirmation(${req.RequestID}); return false;">Confirm</button>
+                            <button class="btn btn-primary"
+                                onclick="viewRequestInfo(
+                                    '${req.FirstName}',
+                                    '${req.LastName}',
+                                    '${req.Organization}',
+                                    '${req.Email}',
+                                    '${req.ContactNumber}',
+                                    '${req.UserName}'
+                                ); return false;">
+                                View Request
+                            </button>
                         </td>
                     </tr>
                 `;
@@ -1381,6 +1395,21 @@ function getRegistrationRequests() {
         }
     });
 }
+function viewRequestInfo(firstName, lastName, organization, email, contactNumber, userName) {
+
+    let content = `
+        <p><strong>First Name:</strong> ${firstName}</p>
+        <p><strong>Last Name:</strong> ${lastName}</p>
+        <p><strong>Organization:</strong> ${organization}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Contact Number:</strong> ${contactNumber}</p>
+        <p><strong>Username:</strong> ${userName}</p>
+    `;
+
+    document.getElementById("userModalContent").innerHTML = content; // ✔ Correct
+    openUserModal(); // ✔ Uses function from global.js
+}
+
 function UserConfirmation(request_id) {
     console.log("request to be confirmed", request_id);
     let user_data = {
@@ -1413,12 +1442,9 @@ function getAssets() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log("Raw response:", response);
-            console.log("Response.d:", response.d);
 
             // Parse the string into a real array
             let data = [];
-            console.log("Type of response.d:", typeof response.d, response.d);
 
             try {
                 data = JSON.parse(response.d);

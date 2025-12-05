@@ -6,6 +6,7 @@
     <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
     <script type="text/javascript" src="Scripts/js/global.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
     <script type="text/javascript" src="Scripts/js/default.js" defer></script>
 </head>
@@ -62,6 +63,11 @@
                             <div class="form-group">
                                 <label for="email">Email</label>
                                 <input type="email" id="email" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="contactNumber">Contact Number</label>
+                                <input type="tel" id="contactNumber" required>
                             </div>
 
                             <div class="form-group">

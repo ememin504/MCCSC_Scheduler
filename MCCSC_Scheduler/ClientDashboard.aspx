@@ -134,7 +134,7 @@
                 dataType: "json",
                 success: function (response) {
                     let notifications = JSON.parse(response.d);
-                    console.log(notifications);
+                    //console.log(notifications);
                     
                     // Transform to sidebar format
                     const sidebarNotifications = notifications.map(n => {
@@ -302,7 +302,7 @@
             </nav>
 
             <div class="sidebar-footer">
-                <button class="logout-btn" onclick="confirmLogout()">
+                <button class="logout-btn" onclick="confirmLogout(); return false">
                     <span class="menu-icon">🚪</span>
                     <span class="menu-text">Logout</span>
                 </button>

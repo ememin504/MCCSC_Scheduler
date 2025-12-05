@@ -11,6 +11,7 @@ using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
+using MCCSC_Scheduler.DTO;
 using Newtonsoft.Json;
 using static MCCSC_Scheduler.AdminDashboard1;
 
@@ -107,24 +108,7 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
-        [WebMethod]
-        public static string GetRequestInfo(object requestData)
-        {
-            try
-            {
-                // Deserialize incoming JSON to a strongly typed C# object
-                var jsonString = JsonConvert.SerializeObject(requestData);
-                var data = JsonConvert.DeserializeObject<RequestData>(jsonString);
 
-                string result = dbContext.GetRequestInfo(data.ReservationID, data.ClientID, data.StatusID, data.EventID);
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                return JsonConvert.SerializeObject(new { error = ex.Message });
-            }
-        }
         [WebMethod]
         [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
         public static string SaveCoordinationMeeting(CoordinationMeetingDTO meetingData)
@@ -300,7 +284,7 @@ namespace MCCSC_Scheduler
         {
             try
             {
-                var requests = dbContext.UpdateAsset(assetData); 
+                var requests = dbContext.UpdateAsset(assetData);
                 return JsonConvert.SerializeObject(requests);
             }
             catch (Exception ex)
@@ -312,7 +296,7 @@ namespace MCCSC_Scheduler
         [WebMethod]
         public static string AddAsset(object assetData) {
             try {
-                var requests = dbContext.AddAsset(assetData); 
+                var requests = dbContext.AddAsset(assetData);
                 return JsonConvert.SerializeObject(requests);
             }
             catch (Exception ex)
@@ -434,6 +418,21 @@ namespace MCCSC_Scheduler
             {
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
+        }
+
+        [WebMethod]
+        public static string MarkTodaysReservation(EventDateDTO eventDateDTO)
+        {
+            try
+            {
+                string message = dbContext.MarkTodaysReservation(eventDateDTO);
+                return message;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+
         }
     }
 }

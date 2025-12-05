@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     // Initialize calendar
     generateCalendar(currentDate);
+    getReservationDates();
 
     // Attach event listeners to navigation buttons
     const navButtons = document.querySelectorAll('.nav-btn');
@@ -112,111 +113,335 @@ function showSection(sectionName) {
         }
     });
 }
+let reservationDatesGlobal = [];
+function getReservationDates() {
+    let requestInfo = { ReservationType: "Approved Reservation" };
+
+    $.ajax({
+        type: "POST",
+        url: "Default.aspx/GetReservationDates",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            let data = [];
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+                data = [];
+            }
+
+            // Build correct structure
+            reservationDatesGlobal = data.flatMap(req =>
+                req.EventDates.map(d => ({
+                    Date: d.Date.split('T')[0],          // "2025-12-23"
+                    StartTime: d.StartTime.substring(0, 5), // "10:01"
+                    EndTime: d.EndTime.substring(0, 5)       // "22:00"
+                }))
+            );
+
+            console.log("Reservation dates (correct structure):", reservationDatesGlobal);
+        },
+        error: function (xhr) {
+            console.error("❌ Error loading reservation dates:", xhr.responseText);
+        }
+    });
+}
+
+function to12Hour(time) {
+    if (!time) return "";
+    let [hour, minute] = time.split(':').map(Number);
+    let ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+}
+// Fixed Philippine Holidays (MM-DD)
+const fixedHolidays = [
+    "01-01", // New Year’s Day
+    "04-09", // Araw ng Kagitingan
+    "05-01", // Labor Day
+    "06-12", // Independence Day
+    "11-30", // Bonifacio Day
+    "12-25", // Christmas Day
+    "12-30", // Rizal Day
+
+    // Special holidays
+    "08-21", // Ninoy Aquino Day
+    "11-01", // All Saints' Day
+    "11-02", // All Souls' Day
+    "12-08", // Immaculate Conception
+    "12-24", // Christmas Eve
+    "12-31", // Last day of the year
+
+    // Local Mandaue Holiday
+    "08-30"  // Mandaue City Charter Day
+];
+
+// Compute Holy Week dates: Maundy, Good Friday, Black Saturday
+function getHolyWeekHolidays(year) {
+    const f = Math.floor;
+    let G = year % 19;
+    let C = f(year / 100);
+    let H = (C - f(C / 4) - f((8 * C + 13) / 25) + 19 * G + 15) % 30;
+    let I = H - f(H / 28) * (1 - f(29 / (H + 1)) * f((21 - G) / 11));
+    let J = (year + f(year / 4) + I + 2 - C + f(C / 4)) % 7;
+    let L = I - J;
+    let month = 3 + f((L + 40) / 44);
+    let day = L + 28 - 31 * f(month / 4);
+
+    const easter = new Date(year, month - 1, day);
+    const sunday = new Date(easter); sunday.setDate(easter.getDate() - 7);
+    const monday = new Date(easter); monday.setDate(easter.getDate() - 6);
+    const tuesday = new Date(easter); tuesday.setDate(easter.getDate() - 5);
+    const wednesday = new Date(easter); wednesday.setDate(easter.getDate() - 4);
+    const thursday = new Date(easter); thursday.setDate(easter.getDate() - 3);
+    const friday = new Date(easter); friday.setDate(easter.getDate() - 2);
+    const saturday = new Date(easter); saturday.setDate(easter.getDate() - 1);
+
+    return [
+        formatDate(sunday),
+        formatDate(monday),
+        formatDate(tuesday),
+        formatDate(wednesday),
+        formatDate(thursday),
+        formatDate(friday),
+        formatDate(saturday),
+        formatDate(easter)
+    ];
+}
+
+// Detect National Heroes Day (Last Monday of August)
+function isNationalHeroesDay(year, month, day) {
+    if (month !== 7) return false; // August (index 7)
+    const date = new Date(year, month, day);
+    if (date.getDay() !== 1) return false; // Monday only
+    const nextWeek = new Date(year, month, day + 7);
+    return nextWeek.getMonth() !== 7; // last Monday if next week is September
+}
+
+function getChineseNewYear(year) {
+    let formatter = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
+        dateStyle: "short"
+    });
+
+    function formatDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+    }
+
+    for (let d = new Date(year, 0, 20); d <= new Date(year, 1, 20); d.setDate(d.getDate() + 1)) {
+        let parts = formatter.formatToParts(d);
+        let lunarMonth = parts.find(p => p.type === "month").value;
+        let lunarDay = parts.find(p => p.type === "day").value;
+
+        if (lunarMonth == 1 && lunarDay == 1) {
+            return formatDate(d);
+        }
+    }
+
+    return null;
+}
+
+
+// Main holiday checker
+function isHoliday(year, month, day) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const mmdd = `${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    // Fixed holidays
+    if (fixedHolidays.includes(mmdd)) return true;
+    // Holy Week
+    if (getHolyWeekHolidays(year).includes(dateStr)) return true;
+    // Chinese New Year
+    if (getChineseNewYear(year) === dateStr) return true;
+    // National Heroes Day
+    if (isNationalHeroesDay(year, month, day)) return true;
+
+    return false;
+}
+function isFullyReserved(dateStr) {
+    return reservationDatesGlobal.some(res =>
+        res.Date === dateStr &&
+        res.StartTime <= "08:00" &&
+        res.EndTime >= "22:00"
+    );
+}
+
+function hasLessThan2HoursRemaining(dateStr) {
+    const dayStart = 8 * 60;
+    const dayEnd = 22 * 60;
+    const totalDayMinutes = dayEnd - dayStart;
+
+    const reservations = reservationDatesGlobal
+        .filter(r => r.Date === dateStr)
+        .map(r => ({
+            start: parseInt(r.StartTime.split(":")[0]) * 60 + parseInt(r.StartTime.split(":")[1]),
+            end: parseInt(r.EndTime.split(":")[0]) * 60 + parseInt(r.EndTime.split(":")[1])
+        }))
+        .sort((a, b) => a.start - b.start);
+
+    let reservedMinutes = 0;
+    let lastEnd = dayStart;
+
+    reservations.forEach(r => {
+        const start = Math.max(r.start, dayStart);
+        const end = Math.min(r.end, dayEnd);
+        if (end > lastEnd) {
+            reservedMinutes += end - Math.max(start, lastEnd);
+            lastEnd = end;
+        }
+    });
+
+    return (totalDayMinutes - reservedMinutes) <= 120;
+}
+
 
 // ===== CALENDAR GENERATION =====
 function generateCalendar(date) {
+    let dayNote = "";
     const calendar = document.getElementById('calendar');
-    if (!calendar) {
-        console.warn("Calendar element not found");
-        return;
-    }
+    if (!calendar) return;
 
     calendar.innerHTML = '';
 
     const year = date.getFullYear();
     const month = date.getMonth();
 
-    // Create calendar header
+    const today = new Date();
+    const oneMonthFromNow = new Date(today);
+    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+
     const header = document.createElement('div');
     header.className = 'calendar-header';
 
     const prevBtn = document.createElement('button');
-    prevBtn.type = 'button';
+    prevBtn.textContent = "◀ Prev";
     prevBtn.className = 'calendar-nav';
-    prevBtn.textContent = '◀ Prev';
-    prevBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        changeMonth(-1);
-    });
+    prevBtn.onclick = () => changeMonth(-1);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = "Next ▶";
+    nextBtn.className = 'calendar-nav';
+    nextBtn.onclick = () => changeMonth(1);
 
     const monthTitle = document.createElement('h4');
     monthTitle.textContent = `${getMonthName(month)} ${year}`;
-
-    const nextBtn = document.createElement('button');
-    nextBtn.type = 'button';
-    nextBtn.className = 'calendar-nav';
-    nextBtn.textContent = 'Next ▶';
-    nextBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        changeMonth(1);
-    });
 
     header.appendChild(prevBtn);
     header.appendChild(monthTitle);
     header.appendChild(nextBtn);
     calendar.appendChild(header);
 
-    // Create day headers
-    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // ---------------------------
+    // DAY HEADERS
+    // ---------------------------
     const dayHeaderGrid = document.createElement('div');
-    dayHeaderGrid.className = 'calendar-grid';
-
-    daysOfWeek.forEach(day => {
-        const dayHeader = document.createElement('div');
-        dayHeader.className = 'calendar-day-header';
-        dayHeader.textContent = day;
-        dayHeaderGrid.appendChild(dayHeader);
+    dayHeaderGrid.className = "calendar-grid";
+    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(d => {
+        const el = document.createElement('div');
+        el.className = "calendar-day-header";
+        el.textContent = d;
+        dayHeaderGrid.appendChild(el);
     });
     calendar.appendChild(dayHeaderGrid);
 
-    // Create calendar grid
-    const calendarGrid = document.createElement('div');
-    calendarGrid.className = 'calendar-grid';
+    // ---------------------------
+    // CALENDAR DAYS
+    // ---------------------------
+    const grid = document.createElement('div');
+    grid.className = "calendar-grid";
 
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-    const today = new Date();
-    const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
-
-    // Previous month's days
+    // Previous month filler
     for (let i = firstDay - 1; i >= 0; i--) {
-        const dayCell = createDayCell(daysInPrevMonth - i, true);
-        calendarGrid.appendChild(dayCell);
+        const cell = createDayCell(daysInPrevMonth - i, true);
+        cell.classList.add("disabled");
+        grid.appendChild(cell);
     }
 
-    // Current month's days
+    // Current month
     for (let day = 1; day <= daysInMonth; day++) {
-        const dayCell = createDayCell(day, false);
+        const dateObj = new Date(year, month, day);
 
-        // Highlight today
-        if (isCurrentMonth && day === today.getDate()) {
-            dayCell.classList.add('today');
+        // Format as YYYY-MM-DD in LOCAL time
+        const yyyy = dateObj.getFullYear();
+        const mm = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+        const dd = dateObj.getDate().toString().padStart(2, "0");
+        const dateStr = `${yyyy}-${mm}-${dd}`;
+
+        // Create the day cell (false means not disabled yet)
+        const cell = createDayCell(day, false, dayNote);
+
+        let disabled = false;
+        let reason = [];
+
+        // 1️⃣ Disable if before one month from today
+        if (dateObj < oneMonthFromNow) {
+            disabled = true;
+            reason.push("Before one month from today");
+            console.log(dateStr);
         }
 
-        // Add click event
-        dayCell.addEventListener('click', function () {
-            selectDate(year, month, day);
-        });
+        // 2️⃣ Disable if holiday
+        if (isHoliday(year, month, day)) {
+            disabled = true;
+            reason.push("Holiday");
+            cell.classList.add("holiday");
+        }
 
-        calendarGrid.appendChild(dayCell);
+        // 3️⃣ Disable if fully booked
+        if (isFullyReserved(dateStr)) {
+            disabled = true;
+            reason.push("Fully booked");
+            cell.classList.add("fully-booked");
+        }
+
+        // Log disabled days with reason
+        if (disabled) {
+            console.log(`Disabled: ${dateStr} → ${reason.join(", ")}`);
+        }
+        if (!disabled) {
+            cell.onclick = () => selectDate(year, month, day);
+        } else {
+            cell.classList.add("disabled");
+        }
+
+        grid.appendChild(cell);
     }
-
-    // Next month's days
-    const remainingCells = 42 - (firstDay + daysInMonth);
-    for (let day = 1; day <= remainingCells; day++) {
-        const dayCell = createDayCell(day, true);
-        calendarGrid.appendChild(dayCell);
+    // Next month filler
+    const filledCells = firstDay + daysInMonth;
+    const remaining = 42 - filledCells;
+    for (let i = 0; i <= remaining; i++) {
+        const cell = createDayCell(i, true, dayNote);
+        cell.classList.add("disabled");
+        grid.appendChild(cell);
     }
-
-    calendar.appendChild(calendarGrid);
+    calendar.appendChild(grid);
 }
 
-function createDayCell(day, isOtherMonth) {
+function createDayCell(day, isOtherMonth, dayNote) {
     const dayCell = document.createElement('div');
     dayCell.className = 'calendar-day';
-    dayCell.textContent = day;
+    
+    // Main day number
+    const dayNumber = document.createElement('div');
+    dayNumber.className = 'day-number';
+    dayNumber.textContent = day;
+    dayCell.appendChild(dayNumber);
+
+    // Extra text
+    const note = document.createElement('div');
+    note.className = 'day-note';
+    note.textContent = dayNote; // ← change this
+    dayCell.appendChild(note);
 
     if (isOtherMonth) {
         dayCell.classList.add('other-month');
@@ -224,6 +449,7 @@ function createDayCell(day, isOtherMonth) {
 
     return dayCell;
 }
+
 
 function selectDate(year, month, day) {
     selectedDate = new Date(year, month, day);
@@ -259,9 +485,12 @@ function getMonthName(month) {
 }
 
 function formatDate(date) {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
 }
+
 
 // ===== REGISTRATION FUNCTIONS =====
 function submitRegistrationRequest() {
@@ -270,12 +499,13 @@ function submitRegistrationRequest() {
     let firstName = document.getElementById("firstName").value.trim();
     let lastName = document.getElementById("lastName").value.trim();
     let e_mail = document.getElementById("email").value.trim();
+    let contactNumber = parseInt(document.getElementById("contactNumber").value.trim());
     let orgs = document.getElementById("organization").value.trim();
     let userName = document.getElementById("username").value.trim();
     let passWord = document.getElementById("password").value.trim();
 
     // Validate inputs
-    if (!firstName || !lastName || !e_mail || !orgs || !userName || !passWord) {
+    if (!firstName || !lastName || !e_mail || !contactNumber || !orgs || !userName || !passWord) {
         alert("Please fill in all required fields.");
         return false;
     }
@@ -291,11 +521,12 @@ function submitRegistrationRequest() {
         MiddleInitial: "",
         LastName: lastName,
         Email: e_mail,
+        ContactNumber: contactNumber,
         Organization: orgs,
         UserName: userName,
         PassWord: passWord
     };
-
+    console.log(userData);
     // Try to submit to backend if available
     let submitUrl = 'Default.aspx/registrationRequestResult';
     let options = {
@@ -303,20 +534,23 @@ function submitRegistrationRequest() {
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ userDTO: userData })
     };
-
     fetch(submitUrl, options)
         .then(response => response.json())
         .then(data => {
             let result = data.d;
             console.log("Backend registration result:", result);
-
+            if (result == "Username already exists. Please create another one.")
+                alert(result);
+            else {
+                alert(result);
+                resetRegistrationForm();
+            }
             // Show success message
-            alert(`Registration Successful!\n\nWelcome, ${firstName} ${lastName}!\n\nYour reservation for ${formatDate(selectedDate)} has been recorded.\n\nOrganization: ${orgs}\nUsername: ${userName}\n\nThis is a FREE booking service. Please arrive on time for your event.`);
+            //alert(`Registration Successful!\n\nWelcome, ${firstName} ${lastName}!\n\nYour reservation for ${formatDate(selectedDate)} has been recorded.\n\nOrganization: ${orgs}\nUsername: ${userName}\n\nThis is a FREE booking service. Please arrive on time for your event.`);
 
-            // Reset form
-            resetRegistrationForm();
+            
         })
-        .catch(error => {
+        .catch(error => {x``
             console.error("Backend registration error:", error);
 
             // Fallback: Store in memory
@@ -335,10 +569,7 @@ function submitRegistrationRequest() {
             console.log('Stored in memory:', registeredUsers);
 
             // Show success message
-            alert(`Registration Successful!\n\nWelcome, ${firstName} ${lastName}!\n\nYour reservation for ${formatDate(selectedDate)} has been recorded.\n\nOrganization: ${orgs}\nUsername: ${userName}\n\nThis is a FREE booking service. Please arrive on time for your event.`);
-
-            // Reset form
-            resetRegistrationForm();
+            //alert(`Registration Successful!\n\nWelcome, ${firstName} ${lastName}!\n\nYour reservation for ${formatDate(selectedDate)} has been recorded.\n\nOrganization: ${orgs}\nUsername: ${userName}\n\nThis is a FREE booking service. Please arrive on time for your event.`);
         });
 
     return false;
@@ -398,9 +629,41 @@ function authenticateUser() {
                 role_type_description = user.RoleTypeDescription;
 
                 console.log("All user data:", user);
-                openOtpModal(user); // pass full object
+                //openOtpModal(user); // pass full object
+                if (role_id === 1) {
+                    // After login success
+                    sessionStorage.setItem("role_id", role_id);
+                    sessionStorage.setItem("user_id", user_id);
+                    sessionStorage.setItem("user_email", user_email);
+                    sessionStorage.setItem("role_name", role_name);
+                    console.log(role_name);
+                    sessionStorage.setItem("role_type_id", role_type_id);
+                    sessionStorage.setItem("role_type_description", role_type_description);
+                    sessionStorage.setItem("first_name", first_name);
+                    sessionStorage.setItem("middle_initial", middle_initial);
+                    sessionStorage.setItem("last_name", last_name);
+                    // Redirect to dashboard
+                    window.location.href = "ClientDashboard.aspx";
+
+                }
+                else if (role_id === 2) {
+                    sessionStorage.setItem("role_id", role_id);
+                    sessionStorage.setItem("user_id", user_id);
+                    sessionStorage.setItem("user_email", user_email);
+                    sessionStorage.setItem("role_name", role_name);
+                    sessionStorage.setItem("role_type_id", role_type_id);
+                    sessionStorage.setItem("role_type_description", role_type_description);
+                    sessionStorage.setItem("first_name", first_name);
+                    sessionStorage.setItem("middle_initial", middle_initial);
+                    sessionStorage.setItem("last_name", last_name);
+
+                    if (role_type_id == 1)
+                        window.location.href = "AdminDashboard1.aspx";
+                    else
+                        window.location.href = "AdminDashboard2.aspx";
+                }
             } else {
-                alert("Login failed: " + user.Success);
+                alert("Login failed: " + user.Message);
                 console.log("All user data:", user.Success);
             }
         })

@@ -56,7 +56,6 @@ function getReservation() {
         dataType: "json",
         success: function (response) {
             let data = JSON.parse(response.d);
-
             // Render reservations table
             renderReservations(data);
         },
@@ -67,6 +66,7 @@ function getReservation() {
 }
 
 function renderReservations(data) {
+    
     // Clear tables first
     $("#reservationTableBody").empty();
     $("#reservationHistoryTableBody").empty();
@@ -92,52 +92,23 @@ function renderReservations(data) {
             : "No dates";
 
         // Determine button properties
-        let buttonText = "";
-        let buttonFunction = "";
-        let buttonClass = "";
-        let container = $("#reservationTableBody"); // default
+        let container ;
 
         switch (res.StatusName) {
-            case "Accepted":
-            case "Coordination Meeting":
-            case "Reschedule":
-                buttonText = "Request Cancellation";
-                buttonFunction = "requestCancellation";
-                buttonClass = "btn btn-warning btn-sm";
-                break;
-
-            case "Pending":
-                buttonText = "Cancel Reservation";
-                buttonFunction = "cancelReservation";
-                buttonClass = "btn btn-danger btn-sm";
-                break;
-
             case "Rejected":
-            case "Cancellation Request":
-                buttonText = "View Info";
-                buttonFunction = "viewInfo";
-                buttonClass = "btn btn-secondary btn-sm";
-                break;
-
+            case "Expired":
             case "Cancelled":
-                buttonText = "View Info";
-                buttonFunction = "viewInfo";
-                buttonClass = "btn btn-secondary btn-sm";
                 container = $("#reservationHistoryTableBody");
                 break;
 
             default:
-                buttonText = "";
-                buttonFunction = "";
-                buttonClass = "";
+                container = $("#reservationTableBody");
                 break;
         }
+        let safeRes = JSON.stringify(res).replace(/"/g, '&quot;');
+        // Create button with data attributes
+        let buttonHTML = `<button class="btn btn-primary btn-sm" onclick="viewInfo(${safeRes}, ${res.ReservationID}); return false;">View Info</button>`;
 
-        let buttonHTML = `
-            <button class="${buttonClass}"
-                ${buttonFunction ? `onclick="${buttonFunction}('${res.ReservationID}','${clientID}','${res.StatusID}','${res.EventID}','${res.Reference}',${res.remarks}); return false;"` : ''}>
-                ${buttonText}
-            </button>`;
 
         // Append row
         let row = `<tr>
@@ -154,119 +125,111 @@ function renderReservations(data) {
     });
 }
 
-function viewInfo(reservationID, clientId, statusID, eventID, reference, remarks) {
-    let requestInfo = {
-        ReservationID: reservationID,
-        ClientID: clientId,
-        StatusID: statusID,
-        EventID: eventID,
-    };
-    console.log(requestInfo);
-    $.ajax({
-        type: "POST",
-        url: "ClientDashboard.aspx/GetRequestInfo",
-        data: JSON.stringify({ requestData: requestInfo }),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            console.log("Full server response:", response.d);
-            let callFunction;
-            let buttonText = "";
-            let data = response.d;
-            if (typeof data === "string") {
-                try { data = JSON.parse(data); } catch (e) { console.error("JSON parse error:", e); }
-            }
+function viewInfo(res, reservationID) {
+    let buttonText = "";
+    let buttonClass = "";
+    let callFunction = "";
+    switch (res.StatusName) {
+        case "Accepted":
+        case "Coordination Meeting":
+        case "Reschedule":
+            buttonText = "Request Cancellation";
+            buttonClass = "btn btn-warning btn";
+            callFunction = "requestCancellation";
+            break;
 
-            if (!data || !data.Client) {
-                console.error("Invalid data structure:", data);
-                alert("Reservation info could not be loaded.");
-                return;
-            }
-            let assetDetails = "";
-            let dateDetails = "";
-            data.Asset.forEach(a => {
-                assetDetails += `<p><strong>Asset:</strong> ${a.AssetName}</p>
-                     <p><strong>Quantity:</strong> ${a.Quantity}</p>`;
-            });
-            data.Date.forEach(d => {
-                dateDetails += `<p><strong>Date:</strong> ${d.Date}</p>
-                     <p><strong>Starting Time:</strong> ${d.StartTime}</p>
-                     <p><strong>Ending Time:</strong> ${d.EndTime}</p>`;
-            });
-            if (data.Status === "Accepted") {
-                callFunction = "coordinationMeetingSetUp";
-                buttonText = "Set Coordination Meeting";
-            } else if (data.Status === "Pending") {
-                callFunction = "acceptReservation";
-                buttonText = "Accept";
-            } else if (data.Status == "Coordination Meeting") {
-                callFunction = "editReservationInfo";
-                buttonText = "Edit Reservation";
-            } else if (data.Status == "Cancellation Request") {
-                callFunction = "undoCancellation";
-                buttonText = "Undo Cancellation"
-            }
+        case "Pending":
+            buttonText = "Cancel Reservation";
+            buttonClass = "btn btn-danger btn";
+            callFunction = "cancelReservation";
+            break;
 
-            // ✅ Build modal dynamically here
-            let modalHTML = `
-            <div class='modal fade' id='viewReservationModal' role='dialog'>
-              <div class='modal-dialog'>
-                <div class='modal-content'>
-                  <div class='modal-header'>
-                    <h4 class='modal-title'>Reservation Info</h4>
-                    <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
-                  </div>
-                  <div class='modal-body'>
-                    <p><strong>Event Title:</strong> ${data.Event}</p>
-                    <p><strong>Client:</strong> ${data.Client.FirstName} ${data.Client.MiddleInitial || ""} ${data.Client.LastName}</p>
-                    <p><strong>Organization:</strong> ${data.Organization}</p>
-                    <p><strong>Status:</strong> ${data.Status}</p>
+        case "Cancellation Request":
+            buttonText = "Undo Cancellation";
+            buttonClass = "btn btn-secondary btn";
+            callFunction = "undoCancellation";
+            break;
 
-                    ${data.Status === "Cancellation Request"
-                    ? `<p><strong>Previous Status:</strong> ${data.PreviousStatusName}</p>`
-                    : ""
-                }
+        case "Rejected":
+        case "Expired":
+        case "Cancelled":
+            buttonText = "View Info";
+            buttonClass = "btn btn-secondary btn";
+            callFunction = "viewInfo";
+            break;
 
-                    ${assetDetails}<br>
-                    ${dateDetails}
-                    <p><strong>Reference:</strong> ${reference}</p>
-                    <p><strong>Remarks:</strong> ${remarks}</p>
-                  </div>
-                  <div class='modal-footer'>
-                    <button type='button' class='btn btn-success' onclick='${callFunction}(${JSON.stringify(data)},${reservationID})'>${buttonText}</button>
-                    <button type='button' class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
-                  </div>
-                </div>
-              </div>
-            </div>`;
+        default:
+            buttonText = "";
+            buttonClass = "";
+            callFunction = "";
+            break;
+    }
 
-            reservationId = reservationID
-            // ✅ Remove existing modal (to avoid duplicates)
-            let oldModal = document.getElementById("viewReservationModal");
-            if (oldModal) oldModal.remove();
+    if (Array.isArray(res)) {
+        res = res[0];
+    }
 
-            // ✅ Add new modal to the DOM
-            document.body.insertAdjacentHTML("beforeend", modalHTML);
+    let assetDetails = "";
+    let dateDetails = "";
 
-            // ✅ Show modal
-            var modalInstance = new bootstrap.Modal(document.getElementById("viewReservationModal"), {
-                backdrop: "static"
-            });
-            modalInstance.show();
-        },
-        error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
-        }
+    res.SelectedAssets.forEach(a => {
+        assetDetails += `
+            <p><strong>Asset:</strong> ${a.AssetName}</p>
+            <p><strong>Quantity:</strong> ${a.Quantity}</p>
+        `;
     });
+
+    res.EventDates.forEach(d => {
+        dateDetails += `
+            <p><strong>Date:</strong> ${d.Date.split("T")[0]}</p>
+            <p><strong>Start:</strong> ${d.StartTime}</p>
+            <p><strong>End:</strong> ${d.EndTime}</p>
+        `;
+    });
+
+    // Encode the object safely for onclick
+    const safeRes = encodeURIComponent(JSON.stringify(res));
+
+    let modalHTML = `
+        <div class='modal fade' id='viewReservationModal'>
+            <div class='modal-dialog'>
+                <div class='modal-content'>
+                    <div class='modal-header'>
+                        <h4>Reservation Info</h4>
+                        <button class='btn-close' data-bs-dismiss='modal'></button>
+                    </div>
+                    <div class='modal-body'>
+                        <p><strong>Event:</strong> ${res.EventName}</p>                       
+                        <p><strong>Status:</strong> ${res.StatusName}</p>
+                        ${assetDetails}
+                        ${dateDetails}
+                        <p><strong>Reference:</strong> ${res.Reference}</p>
+                        <p><strong>Remarks:</strong> ${res.Remarks}</p>
+                    </div>
+                    <div class='modal-footer'>
+                        ${buttonText ? `<button class="${buttonClass}" onclick="${callFunction}('${safeRes}', ${res.ReservationID}, ${res.PreviousStatusID}); return false;">${buttonText}</button>` : ""}
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById("viewReservationModal")?.remove();
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+
+    new bootstrap.Modal(document.getElementById("viewReservationModal"), {
+        backdrop: "static"
+    }).show();
 }
 
-function undoCancellation(data, reservationID) {
+
+function undoCancellation(data, reservationID, previousStatusID) {
     console.log("Undoing Cancellation");
     let reservationInfo = {
-        PreviousStatusID: data.PreviousStatusID,
+        PreviousStatusID: previousStatusID,
         ReservationID: reservationID
     }
-    console.log(reservationInfo)
     $.ajax({
         type: "POST",
         url: "ClientDashboard.aspx/UndoCancellation",
@@ -285,7 +248,8 @@ function undoCancellation(data, reservationID) {
     });
 }
 
-function requestCancellation(reservationID, clientId, statusID, eventID) {
+function requestCancellation(res, reservationID) {
+    document.getElementById("viewReservationModal")?.remove();
     openReservationCancellationModal();
 
     // Wait for modal to render before binding the button
@@ -298,7 +262,7 @@ function requestCancellation(reservationID, clientId, statusID, eventID) {
                 return;
             }
 
-            sendCancellationRequest(reservationID, statusID, reason);
+            sendCancellationRequest(reservationID, res.StatusID, reason);
         };
     }, 200);
 }
