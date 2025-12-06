@@ -700,11 +700,10 @@
                                 <thead>
                                     <tr>
                                         <th>Reservation ID</th>
-                                        <th>Client ID</th>
-                                        <th>Status ID</th>
+                                        <th>Event Title</th>
+                                        <th>Date</th>
+                                        <th>Organization</th>
                                         <th>Remarks</th>
-                                        <th>Event ID</th>
-                                        <th>Reason</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>

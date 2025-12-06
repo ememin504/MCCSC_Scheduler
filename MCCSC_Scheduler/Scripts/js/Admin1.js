@@ -337,14 +337,14 @@ function populateCategoryTable(categories) {
             <td>${parentName}</td>
             <td>
                 <button class="btn btn-sm btn-primary"
-                        onclick="openEditCategoryModal(${item.CategoryID}, '${safeName}', ${item.ParentCategoryID ?? 'null'})">
+                        onclick="openEditCategoryModal(${item.CategoryID}, '${safeName}', ${item.ParentCategoryID ?? 'null'}); return false;">
                     Edit
                 </button>
                 ${
                 item.IsActive == 1
-            ? `<button class="btn btn-danger btn-sm" onclick="deactivateCategory(${item.CategoryID})">Deactivate</button>`
-                    : `<button class="btn btn-success btn-sm" onclick="activateCategory(${item.CategoryID})">Activate</button>`
-                              }
+                    ? `<button class="btn btn-danger btn-sm" onclick="deactivateCategory(${item.CategoryID}); return false;">Deactivate</button>`
+                    : `<button class="btn btn-success btn-sm" onclick="activateCategory(${item.CategoryID}) return false;">Activate</button>`
+                }
             </td>
         `;
         tableBody.appendChild(row);
@@ -1059,6 +1059,7 @@ function getCancelledReservation() {
                         <td>${res.ReservationID}</td>
                         <td>${res.EventName}</td>
                         <td>${dates}</td>
+                        <td>${res.Client.Organization}</td>
                         <td>${res.Remarks}</td>
                         <td>${res.Reference}</td>
                         <td>
@@ -1475,13 +1476,13 @@ function getAssets() {
                         <td>${req.IsActive}</td>
                         <td>
                           <button class="btn btn-primary btn-sm"
-                              onclick="editAsset(${req.AssetId}, '${req.AssetName}', ${req.Quantity},${req.CategoryID},'${req.CategoryName}')">
+                              onclick="editAsset(${req.AssetId}, '${req.AssetName}', ${req.Quantity},${req.CategoryID},'${req.CategoryName}'); return false;">
                               Edit
                           </button>
                            ${
                             req.IsActive == 1
-                                ? `<button class="btn btn-danger btn-sm" onclick="deactivateAsset(${req.AssetId})">Deactivate</button>`
-                                : `<button class="btn btn-success btn-sm" onclick="activateAsset(${req.AssetId})">Activate</button>`
+                                ? `<button class="btn btn-danger btn-sm" onclick="deactivateAsset(${req.AssetId}); return false;">Deactivate</button>`
+                                : `<button class="btn btn-success btn-sm" onclick="activateAsset(${req.AssetId}); return false;">Activate</button>`
                           }
                           </td>
                         </td>

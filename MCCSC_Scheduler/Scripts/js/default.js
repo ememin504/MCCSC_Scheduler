@@ -158,59 +158,80 @@ function to12Hour(time) {
     return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
 }
 // Fixed Philippine Holidays (MM-DD)
-const fixedHolidays = [
-    "01-01", // New Year’s Day
-    "04-09", // Araw ng Kagitingan
-    "05-01", // Labor Day
-    "06-12", // Independence Day
-    "11-30", // Bonifacio Day
-    "12-25", // Christmas Day
-    "12-30", // Rizal Day
+const fixedHolidays = {
+    "01-01": "New Year’s Day",
+    "04-09": "Araw ng Kagitingan",
+    "05-01": "Labor Day",
+    "06-12": "Independence Day",
+    "11-30": "Bonifacio Day",
+    "12-25": "Christmas Day",
+    "12-30": "Rizal Day",
 
-    // Special holidays
-    "08-21", // Ninoy Aquino Day
-    "11-01", // All Saints' Day
-    "11-02", // All Souls' Day
-    "12-08", // Immaculate Conception
-    "12-24", // Christmas Eve
-    "12-31", // Last day of the year
+    "08-21": "Ninoy Aquino Day",
+    "11-01": "All Saints' Day",
+    "11-02": "All Souls' Day",
+    "12-08": "Immaculate Conception",
+    "12-24": "Christmas Eve",
+    "12-31": "Last Day of the Year",
 
-    // Local Mandaue Holiday
-    "08-30"  // Mandaue City Charter Day
-];
+    "08-30": "Mandaue City Charter Day"
+};
+// 1️⃣ Calculate Easter Sunday for a given year
+function getEasterSunday(year) {
+    const f = Math.floor,
+        // Meeus/Jones algorithm
+        G = year % 19,
+        C = f(year / 100),
+        H = (C - f(C / 4) - f((8 * C + 13) / 25) + 19 * G + 15) % 30,
+        I = H - f(H / 28) * (1 - f(29 / (H + 1)) * f((21 - G) / 11)),
+        J = (year + f(year / 4) + I + 2 - C + f(C / 4)) % 7,
+        L = I - J,
+        month = 3 + f((L + 40) / 44),
+        day = L + 28 - 31 * f(month / 4);
+
+    return new Date(year, month - 1, day);
+}
+
+// 2️⃣ Get Palm Sunday (1 week before Easter)
+function getPalmSunday(year) {
+    const easter = getEasterSunday(year);
+    const palmSunday = new Date(easter);
+    palmSunday.setDate(easter.getDate() - 6);
+    return palmSunday;
+}
+
+// 3️⃣ Add days utility
+function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
 
 // Compute Holy Week dates: Maundy, Good Friday, Black Saturday
 function getHolyWeekHolidays(year) {
-    const f = Math.floor;
-    let G = year % 19;
-    let C = f(year / 100);
-    let H = (C - f(C / 4) - f((8 * C + 13) / 25) + 19 * G + 15) % 30;
-    let I = H - f(H / 28) * (1 - f(29 / (H + 1)) * f((21 - G) / 11));
-    let J = (year + f(year / 4) + I + 2 - C + f(C / 4)) % 7;
-    let L = I - J;
-    let month = 3 + f((L + 40) / 44);
-    let day = L + 28 - 31 * f(month / 4);
+    const sunday = getPalmSunday(year); // returns a Date object
+    const monday = addDays(sunday, 1);
+    const tuesday = addDays(sunday, 2);
+    const wednesday = addDays(sunday, 3);
+    const thursday = addDays(sunday, 4);
+    const friday = addDays(sunday, 5);
+    const saturday = addDays(sunday, 6);
+    const easter = addDays(sunday, 7);
 
-    const easter = new Date(year, month - 1, day);
-    const sunday = new Date(easter); sunday.setDate(easter.getDate() - 7);
-    const monday = new Date(easter); monday.setDate(easter.getDate() - 6);
-    const tuesday = new Date(easter); tuesday.setDate(easter.getDate() - 5);
-    const wednesday = new Date(easter); wednesday.setDate(easter.getDate() - 4);
-    const thursday = new Date(easter); thursday.setDate(easter.getDate() - 3);
-    const friday = new Date(easter); friday.setDate(easter.getDate() - 2);
-    const saturday = new Date(easter); saturday.setDate(easter.getDate() - 1);
+    const format = d => d.toISOString().split("T")[0]; // YYYY-MM-DD
 
-    return [
-        formatDate(sunday),
-        formatDate(monday),
-        formatDate(tuesday),
-        formatDate(wednesday),
-        formatDate(thursday),
-        formatDate(friday),
-        formatDate(saturday),
-        formatDate(easter)
-    ];
+    return {
+        [format(sunday)]: "Palm Sunday",
+        [format(monday)]: "Holy Monday",
+        [format(tuesday)]: "Holy Tuesday",
+        [format(wednesday)]: "Holy Wednesday",
+        [format(thursday)]: "Maundy Thursday",
+        [format(friday)]: "Good Friday",
+        [format(saturday)]: "Black Saturday",
+        [format(easter)]: "Easter Sunday"
+    };
 }
+
 
 // Detect National Heroes Day (Last Monday of August)
 function isNationalHeroesDay(year, month, day) {
@@ -249,20 +270,30 @@ function getChineseNewYear(year) {
 
 // Main holiday checker
 function isHoliday(year, month, day) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const mmdd = `${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const dateObj = new Date(year, month, day);
+    const yyyy = dateObj.getFullYear();
+    const mm = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+    const dd = dateObj.getDate().toString().padStart(2, "0");
+    const dateStr = `${yyyy}-${mm}-${dd}`;
 
-    // Fixed holidays
-    if (fixedHolidays.includes(mmdd)) return true;
-    // Holy Week
-    if (getHolyWeekHolidays(year).includes(dateStr)) return true;
-    // Chinese New Year
-    if (getChineseNewYear(year) === dateStr) return true;
-    // National Heroes Day
-    if (isNationalHeroesDay(year, month, day)) return true;
+    const mmdd = `${mm}-${dd}`;
 
-    return false;
+    // 1️⃣ Fixed holidays
+    if (fixedHolidays[mmdd]) return fixedHolidays[mmdd];
+
+    // 2️⃣ Holy Week
+    const holyWeek = getHolyWeekHolidays(year);
+    if (holyWeek[dateStr]) return holyWeek[dateStr];
+    console.log(holyWeek);
+    // 3️⃣ Chinese New Year
+    if (getChineseNewYear(year) === dateStr) return "Chinese New Year";
+
+    // 4️⃣ National Heroes Day
+    if (isNationalHeroesDay(year, month, day)) return "National Heroes Day";
+
+    return null;
 }
+
 function isFullyReserved(dateStr) {
     return reservationDatesGlobal.some(res =>
         res.Date === dateStr &&
@@ -368,17 +399,20 @@ function generateCalendar(date) {
     }
 
     // Current month
+    // Current month
     for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(year, month, day);
 
-        // Format as YYYY-MM-DD in LOCAL time
         const yyyy = dateObj.getFullYear();
         const mm = (dateObj.getMonth() + 1).toString().padStart(2, "0");
         const dd = dateObj.getDate().toString().padStart(2, "0");
         const dateStr = `${yyyy}-${mm}-${dd}`;
 
-        // Create the day cell (false means not disabled yet)
-        const cell = createDayCell(day, false, dayNote);
+        // Get holiday name BEFORE creating the cell
+        const holidayName = isHoliday(year, month, day);
+
+        // Now create the cell WITH the holiday name
+        const cell = createDayCell(day, false, holidayName);
 
         let disabled = false;
         let reason = [];
@@ -387,14 +421,15 @@ function generateCalendar(date) {
         if (dateObj < oneMonthFromNow) {
             disabled = true;
             reason.push("Before one month from today");
-            console.log(dateStr);
         }
 
         // 2️⃣ Disable if holiday
-        if (isHoliday(year, month, day)) {
+        if (holidayName) {
             disabled = true;
-            reason.push("Holiday");
-            cell.classList.add("holiday");
+            reason.push(holidayName);
+
+            const safeClass = holidayName.toLowerCase().replace(/ /g, "-");
+            cell.classList.add("holiday", safeClass);
         }
 
         // 3️⃣ Disable if fully booked
@@ -404,10 +439,6 @@ function generateCalendar(date) {
             cell.classList.add("fully-booked");
         }
 
-        // Log disabled days with reason
-        if (disabled) {
-            console.log(`Disabled: ${dateStr} → ${reason.join(", ")}`);
-        }
         if (!disabled) {
             cell.onclick = () => selectDate(year, month, day);
         } else {
@@ -416,10 +447,11 @@ function generateCalendar(date) {
 
         grid.appendChild(cell);
     }
+
     // Next month filler
     const filledCells = firstDay + daysInMonth;
     const remaining = 42 - filledCells;
-    for (let i = 0; i <= remaining; i++) {
+    for (let i = 1; i <= remaining; i++) {
         const cell = createDayCell(i, true, dayNote);
         cell.classList.add("disabled");
         grid.appendChild(cell);
@@ -430,21 +462,41 @@ function generateCalendar(date) {
 function createDayCell(day, isOtherMonth, dayNote) {
     const dayCell = document.createElement('div');
     dayCell.className = 'calendar-day';
-    
+
+    // Use flex layout to stack day number and note vertically
+    dayCell.style.display = 'flex';
+    dayCell.style.flexDirection = 'column';
+    dayCell.style.alignItems = 'center';
+    dayCell.style.justifyContent = 'center';
+    dayCell.style.height = '100%';
+
     // Main day number
     const dayNumber = document.createElement('div');
     dayNumber.className = 'day-number';
     dayNumber.textContent = day;
     dayCell.appendChild(dayNumber);
 
-    // Extra text
-    const note = document.createElement('div');
-    note.className = 'day-note';
-    note.textContent = dayNote; // ← change this
-    dayCell.appendChild(note);
+    // Extra text (holiday name)
+    if (dayNote) {
+        const note = document.createElement('div');
+        note.className = 'day-note';
+        note.textContent = dayNote;
+        note.style.fontSize = '0.7em'; // smaller than the number
+        note.style.marginTop = '2px';  // small spacing
+        dayCell.appendChild(note);
+    }
 
+    // Other month
     if (isOtherMonth) {
         dayCell.classList.add('other-month');
+    }
+
+    // Holiday classes
+    if (dayNote) {
+        dayCell.classList.add('holiday');
+
+        const safeClass = dayNote.toLowerCase().replace(/ /g, "-");
+        dayCell.classList.add(safeClass);
     }
 
     return dayCell;

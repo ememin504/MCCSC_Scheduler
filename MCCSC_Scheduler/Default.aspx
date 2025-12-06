@@ -39,7 +39,6 @@
                 <div class="content-grid">
                     <!-- Calendar Section -->
                     <div class="calendar-container">
-                        <h3>January 2025</h3>
                         <div id="calendar"></div>
                         <div class="selected-date">
                             <strong>Selected Date:</strong> <span id="displayDate">Please select a date</span>
