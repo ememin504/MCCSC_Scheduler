@@ -775,3 +775,218 @@ function openCreateAssetModal() {
 
     console.log("✅ Modal opened successfully.");
 }
+
+let packageEditorModalEl = `
+<div class="modal fade" id="packageEditorModal" tabindex="-1" aria-labelledby="packageEditorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="packageEditorModalLabel">Edit Package</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="editPackageForm">
+
+          <div class="mb-3">
+            <label for="editPackageName" class="form-label">Package Name</label>
+            <input type="text" id="editPackageName" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="editDaysAllowed" class="form-label">Consecutive Days Allowed</label>
+            <input type="number" id="editDaysAllowed" class="form-control" required>
+          </div>
+
+          <div id="itemsContainer">
+            <label class="form-label">Item Inclusions</label>
+          </div>
+
+          <button type="button" class="btn btn-success btn-sm mt-2" id="addItemBtn">+ Add Item</button>
+
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="savePackageChanges()">Save Changes</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+`;
+
+// ---------------------------
+// Add / Remove item buttons
+// ---------------------------
+document.addEventListener('click', function (e) {
+    // Add new item row
+    if (e.target && e.target.id === 'addItemBtn') {
+        const container = document.getElementById('itemsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'item-row mb-2 d-flex gap-2';
+        newRow.dataset.itemId = 0; // new item
+        newRow.innerHTML = `
+            <input type="text" class="form-control item-name" placeholder="Item Name" required>
+            <input type="number" class="form-control quantity" placeholder="Quantity" min="1" required>
+            <button type="button" class="btn btn-danger btn-sm remove-item-btn">-</button>
+        `;
+        container.appendChild(newRow);
+    }
+
+    // Remove item row
+    if (e.target && e.target.classList.contains('remove-item-btn')) {
+        e.target.closest('.item-row').remove();
+    }
+});
+
+// ---------------------------
+// Open edit modal
+// ---------------------------
+function openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed) {
+    let modalElement = document.getElementById('packageEditorModal');
+    if (!modalElement) {
+        document.body.insertAdjacentHTML('beforeend', packageEditorModalEl);
+        modalElement = document.getElementById('packageEditorModal');
+    }
+
+    // Store packageID in modal
+    modalElement.dataset.packageId = packageID;
+
+    // Set package info
+    modalElement.querySelector('#editPackageName').value = packageName;
+    modalElement.querySelector('#editDaysAllowed').value = daysAllowed;
+
+    // Populate items
+    const itemsContainer = modalElement.querySelector('#itemsContainer');
+    itemsContainer.innerHTML = ''; // Clear old items
+    if (itemIncluded && itemIncluded.length > 0) {
+        itemIncluded.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'item-row mb-2 d-flex gap-2';
+            row.dataset.itemId = item.ItemID || 0;
+            row.innerHTML = `
+                <input type="text" class="form-control item-name" placeholder="Item Name" value="${item.ItemName}" required>
+                <input type="number" class="form-control quantity" placeholder="Quantity" min="1" value="${item.QuantityAvailable}" required>
+                <button type="button" class="btn btn-danger btn-sm remove-item-btn">-</button>
+            `;
+            itemsContainer.appendChild(row);
+        });
+    } else {
+        // Add one empty row if no items
+        const row = document.createElement('div');
+        row.className = 'item-row mb-2 d-flex gap-2';
+        row.dataset.itemId = 0;
+        row.innerHTML = `
+            <input type="text" class="form-control item-name" placeholder="Item Name" required>
+            <input type="number" class="form-control quantity" placeholder="Quantity" min="1" required>
+            <button type="button" class="btn btn-danger btn-sm remove-item-btn">-</button>
+        `;
+        itemsContainer.appendChild(row);
+    }
+
+    // Show modal
+    const modalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static' });
+    modalInstance.show();
+}
+
+let createPackageModalEl = `
+<div class="modal fade" id="createPackageModal" tabindex="-1" aria-labelledby="createPackageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="createPackageModalLabel">Create Package</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <form id="createPackageForm">
+
+          <div class="mb-3">
+            <label for="createPackageName" class="form-label">Package Name</label>
+            <input type="text" id="createPackageName" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="createDaysAllowed" class="form-label">Consecutive Days Allowed</label>
+            <input type="number" id="createDaysAllowed" class="form-control" required>
+          </div>
+
+          <div id="createItemsContainer">
+            <label class="form-label">Item Inclusions</label>
+          </div>
+
+          <button type="button" class="btn btn-success btn-sm mt-2" id="createAddItemBtn">+ Add Item</button>
+
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="CreatePackage()">Add Package</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+`;
+
+// ---------------------------
+// Open Create Package Modal
+// ---------------------------
+function openCreatePackageModal() {
+    let modalElement = document.getElementById('createPackageModal');
+    if (!modalElement) {
+        document.body.insertAdjacentHTML('beforeend', createPackageModalEl);
+        modalElement = document.getElementById('createPackageModal');
+    }
+
+    const itemsContainer = modalElement.querySelector('#createItemsContainer');
+    itemsContainer.innerHTML = ''; // Clear previous rows
+
+    // Add initial empty item row
+    const row = document.createElement('div');
+    row.className = 'item-row mb-2 d-flex gap-2';
+    row.dataset.itemId = 0;
+    row.innerHTML = `
+        <input type="text" class="form-control item-name" placeholder="Item Name" required>
+        <input type="number" class="form-control quantity" placeholder="Quantity" min="1" required>
+        <button type="button" class="btn btn-danger btn-sm remove-item-btn">-</button>
+    `;
+    itemsContainer.appendChild(row);
+
+    // Show modal
+    const modalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static' });
+    modalInstance.show();
+}
+
+// ---------------------------
+// Add / Remove Item functionality
+// ---------------------------
+document.addEventListener('click', function (e) {
+    const modal = document.getElementById('createPackageModal');
+    if (!modal) return;
+
+    // Add new item row
+    if (e.target && e.target.id === 'createAddItemBtn') {
+        const container = modal.querySelector('#createItemsContainer');
+        const newRow = document.createElement('div');
+        newRow.className = 'item-row mb-2 d-flex gap-2';
+        newRow.dataset.itemId = 0;
+        newRow.innerHTML = `
+            <input type="text" class="form-control item-name" placeholder="Item Name" required>
+            <input type="number" class="form-control quantity" placeholder="Quantity" min="1" required>
+            <button type="button" class="btn btn-danger btn-sm remove-item-btn">-</button>
+        `;
+        container.appendChild(newRow);
+    }
+
+    // Remove item row
+    if (e.target && e.target.classList.contains('remove-item-btn')) {
+        e.target.closest('.item-row').remove();
+    }
+});
+

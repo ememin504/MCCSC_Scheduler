@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
     getReservationRequests();
     getUsers();
     getAssets();
+    getPackages();
     getAcceptedReservation();
     getStatusCMReservation();
     getReservationCancellationRequests();
@@ -1639,4 +1640,234 @@ function deactivateAsset(asset_id) {
             alert("Failed to deactivate asset. Please try again.");
         }
     });
+}
+
+function getPackages() {
+    console.log("Loading Packages");
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetPackages",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+
+            // Parse the JSON string
+            let data = [];
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            console.log("Parsed data:", data);
+
+            let tbody = document.getElementById("packageTableBody");
+            tbody.innerHTML = "";
+
+            // No records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center">No Packages found</td></tr>`;
+                return;
+            }
+
+            // Build table rows
+            data.forEach(pkg => {
+                // Convert items array to a readable string
+                let itemsStr = pkg.ItemIncluded.map(i => `${i.ItemName} (${i.QuantityAvailable})`).join(", ");
+
+                let row = `
+                    <tr>
+                        <td>${pkg.PackageID}</td>
+                        <td>${pkg.PackageName}</td>
+                        <td>${itemsStr}</td>
+                        <td>${pkg.ConsecutiveDaysAllowed}</td>
+                        <td>${pkg.IsActive ? "Active" : "Inactive"}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm"
+                                onclick='editPackage(${pkg.PackageID}, "${pkg.PackageName}", ${JSON.stringify(pkg.ItemIncluded)}, ${pkg.ConsecutiveDaysAllowed}); return false;'>
+                                Edit
+                            </button>
+                            ${pkg.IsActive
+                        ? `<button class="btn btn-danger btn-sm" onclick="deactivatePackage(${pkg.PackageID}); return false;">Deactivate</button>`
+                        : `<button class="btn btn-success btn-sm" onclick="activatePackage(${pkg.PackageID}); return false;">Activate</button>`
+                    }
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        },
+        error: function (xhr, status, error) {
+            console.error("Error loading packages:", xhr.responseText);
+        }
+    });
+}
+function CreatePackage() {
+    const packageName = document.getElementById("createPackageName").value.trim();
+    const daysAllowed = parseInt(document.getElementById("createDaysAllowed").value);
+
+    if (!packageName || isNaN(daysAllowed)) {
+        alert("Please fill in all fields.");
+        return;
+    }
+
+    // Collect item inclusions
+    const itemIncluded = [];
+    const itemRows = document.querySelectorAll("#createItemsContainer .item-row");
+    itemRows.forEach(row => {
+        const itemName = row.querySelector(".item-name").value.trim();
+        const quantity = parseInt(row.querySelector(".quantity").value);
+
+        if (itemName && !isNaN(quantity)) {
+            itemIncluded.push({
+                ItemID: 0, // New item
+                ItemName: itemName,
+                QuantityAvailable: quantity
+            });
+        }
+    });
+
+    if (itemIncluded.length === 0) {
+        alert("Please add at least one item.");
+        return;
+    }
+
+    const payload = {
+        PackageName: packageName,
+        ConsecutiveDaysAllowed: daysAllowed,
+        ItemIncluded: itemIncluded
+    };
+
+    console.log("Payload:", payload);
+
+    // Get modal element
+    const modalElement = document.getElementById("createPackageModal");
+
+    // AJAX call to backend
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/CreatePackage",
+        data: JSON.stringify({ packageDTO: payload }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            const bootstrapModal = bootstrap.Modal.getInstance(modalElement);
+            if (bootstrapModal) bootstrapModal.hide();
+            alert("Package created successfully!");
+            // Clear form or close modal here if needed
+            getPackages(); // Refresh package table
+        },
+        error: function (xhr) {
+            console.error("Error creating package:", xhr.responseText);
+            alert("Failed to create package.");
+        }
+    });
+}
+
+function editPackage(packageID, packageName, itemIncluded, daysAllowed) {
+    console.log(packageID, packageName, itemIncluded, daysAllowed);
+    openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed);
+}
+
+function savePackageChanges() {
+    const modal = document.getElementById('packageEditorModal');
+    if (!modal) return;
+
+    const packageID = parseInt(modal.dataset.packageId);
+    const packageName = modal.querySelector('#editPackageName').value.trim();
+    const daysAllowed = parseInt(modal.querySelector('#editDaysAllowed').value);
+
+    if (!packageName || isNaN(daysAllowed)) {
+        alert("Please fill in all fields.");
+        return;
+    }
+
+    const items = [];
+    modal.querySelectorAll('.item-row').forEach(row => {
+        const itemName = row.querySelector('.item-name').value.trim();
+        const quantity = parseInt(row.querySelector('.quantity').value);
+        const itemID = row.dataset.itemId ? parseInt(row.dataset.itemId) : 0;
+
+        if (itemName && !isNaN(quantity)) {
+            items.push({
+                ItemID: itemID,
+                ItemName: itemName,
+                QuantityAvailable: quantity
+            });
+        }
+    });
+
+    if (items.length === 0) {
+        alert("Please add at least one item.");
+        return;
+    }
+
+    const payload = {
+        PackageID: packageID,
+        PackageName: packageName,
+        ConsecutiveDaysAllowed: daysAllowed,
+        ItemIncluded: items
+    };
+    console.log(payload);
+    // AJAX call
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/SavePackage",
+        data: JSON.stringify({packageDTO: payload}),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            alert("Package saved successfully!");
+            const bootstrapModal = bootstrap.Modal.getInstance(modal);
+            if (bootstrapModal) bootstrapModal.hide();
+            getPackages(); // Refresh table
+        },
+        error: function (xhr) {
+            console.error("Error saving package:", xhr.responseText);
+            alert("Failed to save package.");
+        }
+    });
+}
+function deactivatePackage(packageID) {
+    let payload = {
+        PackageID: packageID
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/DeactivatePackage",
+        data: JSON.stringify({ packageDTO: payload }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            alert(response.d);
+            getPackages();
+        },
+        error: function (xhr) {
+            console.error("Error saving package:", xhr.responseText);
+            alert("Failed to save package.");
+        }
+    })
+}
+function activatePackage(packageID) {
+    let payload = {
+        PackageID: packageID
+    }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/ActivatePackage",
+        data: JSON.stringify({ packageDTO: payload }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            alert(response.d);
+            console.log(response.d);
+            getPackages();
+        },
+        error: function (xhr) {
+            console.error("Error saving package:", xhr.responseText);
+            alert("Failed to save package.");
+        }
+    })
 }

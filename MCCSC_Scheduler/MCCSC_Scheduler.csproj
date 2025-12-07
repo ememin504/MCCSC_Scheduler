@@ -2261,8 +2261,10 @@
     <Compile Include="DTO\EventDTO.cs" />
     <Compile Include="DTO\AssetDTO.cs" />
     <Compile Include="DTO\EventDateDTO.cs" />
+    <Compile Include="DTO\ItemsDTO.cs" />
     <Compile Include="DTO\OtpDTO.cs" />
     <Compile Include="DTO\NotificationDTO.cs" />
+    <Compile Include="DTO\PackageDTO.cs" />
     <Compile Include="DTO\ReservationDTO.cs" />
     <Compile Include="DTO\UserDTO.cs" />
     <Compile Include="IEmailSender.cs" />

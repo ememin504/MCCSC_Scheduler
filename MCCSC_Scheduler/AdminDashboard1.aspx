@@ -145,6 +145,7 @@
                 'cancellationSection': 'Cancellation',
                 'assetsSection': 'Assets',
                 'categoriesSection': 'Categories',
+                'packagesSection': 'Packages',
                 'registrationRequestSection': 'Registration',
                 'usersSection': 'Users',
                 'eventsSection': 'Event',
@@ -357,6 +358,14 @@
                         <a class="sidebar-link" onclick="event.preventDefault(); toggleSubmenu('assetSubmenu', this)">
                             <span class="sidebar-icon">📦</span>
                             <span>Asset Management</span>
+                        </a>
+                    </li>
+
+                    <!-- PACKAGE MANAGEMENT -->
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" onclick="event.preventDefault(); showSection('packagesSection')">
+                            <span class="sidebar-icon">📦</span>
+                            <span>Package Management</span>
                         </a>
                     </li>
 
@@ -589,6 +598,29 @@
                                     </tr>
                                 </thead>
                                 <tbody id="categoryTableBody">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- PACKAGES -->
+                    <div id="packagesSection" class="section-card" style="display: none;">
+                        <h3>Packages</h3>
+                        <button class="btn-add" onclick="openCreatePackageModal(); return false">+ Add Package</button>
+                        <div class="table-container">
+                            <table class="table table-striped table-bordered" id="packageTable">
+                                <thead>
+                                    <tr>
+                                        <th>Asset ID</th>
+                                        <th>Asset Name</th>
+                                        <th>Quantity Available</th>
+                                        <th>Consecutive Days Allowed</th>
+                                        <th>IsActive</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="packageTableBody">
                                     <!-- Data will be populated by JavaScript -->
                                 </tbody>
                             </table>

@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.Remoting.Messaging;
 using System.Web.Script.Serialization;
 using System.Web.Services;
@@ -827,8 +828,264 @@ namespace MCCSC_Scheduler.Database
                 });
             }
         }
+        //Packages Section ========================================================================================================================
+        public List<PackageDTO> GetPackages()
+{
+            string packageQuery = @"SELECT package_id, package_name, consecutive_days_allowed, is_active 
+                            FROM Packages";
 
- //OTP Section ========================================================================================================================
+            string itemsQuery = @"SELECT item_id, item_name, package_id, quantity_available, is_active
+                          FROM Package_inclusions";
+
+            List<PackageDTO> packages = new List<PackageDTO>();
+            List<ItemsDTO> items = new List<ItemsDTO>();
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+
+                // ---------------------------
+                // 1. Load Packages
+                // ---------------------------
+                using (SqlCommand cmd = new SqlCommand(packageQuery, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        packages.Add(new PackageDTO
+                        {
+                            PackageID = (int)reader["package_id"],
+                            PackageName = reader["package_name"].ToString(),
+                            ConsecutiveDaysAllowed = (int)reader["consecutive_days_allowed"],
+                            IsActive = (bool)reader["is_active"],
+                            ItemIncluded = new List<ItemsDTO>() // prepare empty item list
+                        });
+                    }
+                }
+
+                // ---------------------------
+                // 2. Load Items
+                // ---------------------------
+                using (SqlCommand cmd = new SqlCommand(itemsQuery, conn))
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        items.Add(new ItemsDTO
+                        {
+                            ItemID = (int)reader["item_id"],
+                            ItemName = reader["item_name"].ToString(),
+                            PackageID = (int)reader["package_id"],
+                            QuantityAvailable = (int)reader["quantity_available"],
+                            IsActive = (bool)reader["is_active"]
+                        });
+                    }
+                }
+            }
+
+            // ---------------------------
+            // 3. Group Items under Packages
+            // ---------------------------
+            foreach (var package in packages)
+            {
+                package.ItemIncluded = items
+                    .Where(i => i.PackageID == package.PackageID)
+                    .ToList();
+            }
+
+            return packages;
+        }
+        public string CreatePackage(PackageDTO packageDTO)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                SqlTransaction transaction = conn.BeginTransaction();
+
+                try
+                {
+                    // 1️⃣ Insert the package and get its ID
+                    string addPackage = @"
+                INSERT INTO Packages (package_name, consecutive_days_allowed, is_active)
+                VALUES (@PackageName, @DaysAllowed, 1);
+                SELECT CAST(scope_identity() AS int);"; // Get the new package_id
+
+                    int packageID;
+                    using (SqlCommand cmd = new SqlCommand(addPackage, conn, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@PackageName", packageDTO.PackageName);
+                        cmd.Parameters.AddWithValue("@DaysAllowed", packageDTO.ConsecutiveDaysAllowed);
+                        packageID = (int)cmd.ExecuteScalar();
+                    }
+
+                    // 2️⃣ Insert items
+                    string addItems = @"
+                INSERT INTO Package_inclusions (package_id, item_name, quantity_available, is_active)
+                VALUES (@PackageID, @ItemName, @Qty, 1)";
+
+                    foreach (var item in packageDTO.ItemIncluded)
+                    {
+                        using (SqlCommand cmd = new SqlCommand(addItems, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@PackageID", packageID);
+                            cmd.Parameters.AddWithValue("@ItemName", item.ItemName);
+                            cmd.Parameters.AddWithValue("@Qty", item.QuantityAvailable);
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    transaction.Commit();
+                    return "Package added successfuly";
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return $"Error: {ex.Message}";
+                }
+            }
+        }
+
+        public string SavePackage(PackageDTO packageDTO)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                conn.Open();
+                SqlTransaction transaction = conn.BeginTransaction();
+
+                try
+                {
+                    // 1️⃣ Update package info
+                    string savePackage = @"
+                UPDATE Packages
+                SET package_name = @PackageName,
+                    consecutive_days_allowed = @DaysAllowed
+                WHERE package_id = @PackageID";
+                    using (SqlCommand cmd = new SqlCommand(savePackage, conn, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@PackageName", packageDTO.PackageName);
+                        cmd.Parameters.AddWithValue("@DaysAllowed", packageDTO.ConsecutiveDaysAllowed);
+                        cmd.Parameters.AddWithValue("@PackageID", packageDTO.PackageID);
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 2️⃣ Handle items
+                    // Get existing item IDs from DB
+                    List<int> existingIDs = new List<int>();
+                    string selectItems = "SELECT item_id FROM Package_inclusions WHERE package_id=@PackageID";
+                    using (SqlCommand cmd = new SqlCommand(selectItems, conn, transaction))
+                    {
+                        cmd.Parameters.AddWithValue("@PackageID", packageDTO.PackageID);
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                                existingIDs.Add((int)reader["item_id"]);
+                        }
+                    }
+
+                    foreach (var item in packageDTO.ItemIncluded)
+                    {
+                        if (item.ItemID != 0) // Existing item, update
+                        {
+                            string saveItems = @"
+                        UPDATE Package_inclusions
+                        SET item_name = @ItemName, quantity_available = @Qty
+                        WHERE item_id = @ItemID";
+                            using (SqlCommand cmd = new SqlCommand(saveItems, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@ItemName", item.ItemName);
+                                cmd.Parameters.AddWithValue("@Qty", item.QuantityAvailable);
+                                cmd.Parameters.AddWithValue("@ItemID", item.ItemID);
+                                cmd.ExecuteNonQuery();
+                            }
+
+                            existingIDs.Remove(item.ItemID); // remove updated ID
+                        }
+                        else // New item, insert
+                        {
+                            string addItemsIfThereIsNew = @"
+                        INSERT INTO Package_inclusions (package_id, item_name, quantity_available, is_active)
+                        VALUES (@PackageID, @ItemName, @Qty, 1)";
+                            using (SqlCommand cmd = new SqlCommand(addItemsIfThereIsNew, conn, transaction))
+                            {
+                                cmd.Parameters.AddWithValue("@PackageID", packageDTO.PackageID);
+                                cmd.Parameters.AddWithValue("@ItemName", item.ItemName);
+                                cmd.Parameters.AddWithValue("@Qty", item.QuantityAvailable);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+
+                    // 3️⃣ Delete removed items
+                    if (existingIDs.Count > 0)
+                    {
+                        string deleteRemoved = $"DELETE FROM Package_inclusions WHERE item_id IN ({string.Join(",", existingIDs)})";
+                        using (SqlCommand cmd = new SqlCommand(deleteRemoved, conn, transaction))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+
+                    transaction.Commit();
+                    return "Success";
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    return $"Error: {ex.Message}";
+                }
+            }
+        }
+        public string DeactivatePackage(PackageDTO packageDTO)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = "UPDATE Packages SET is_active = 0 WHERE package_id = @PackageID";
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@PackageID", packageDTO.PackageID);
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected > 0)
+                            return "Package Deactivated Successfully";
+                        else
+                            return "No package found with the given ID.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return $"Error: {ex.Message}";
+                }
+            }
+        }
+        public string ActivatePackage(PackageDTO packageDTO)
+        {
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                try
+                {
+                    conn.Open();
+                    string query = "UPDATE Packages SET is_active = 1 WHERE package_id = @PackageID";
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@PackageID", packageDTO.PackageID);
+                        int rowsAffected = cmd.ExecuteNonQuery();
+                        if (rowsAffected > 0)
+                            return "Package Activated Successfully";
+                        else
+                            return "No package found with the given ID.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return $"Error: {ex.Message}";
+                }
+            }
+        }
+
+
+        //OTP Section ========================================================================================================================
         public string GenerateOTP(int userID)
         {
             Random rnd = new Random();

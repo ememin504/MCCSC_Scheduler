@@ -329,7 +329,74 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+        [WebMethod]
+        public static string GetPackages()
+        {
+            try
+            {
+                var requests = dbContext.GetPackages();
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string CreatePackage(PackageDTO packageDTO)
+        {
+            try
+            {
+                var requests = dbContext.CreatePackage(packageDTO);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
+        [WebMethod]
+        public static string SavePackage(PackageDTO packageDTO)
+        {
+            try
+            {
+                var requests = dbContext.SavePackage(packageDTO);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string DeactivatePackage(PackageDTO packageDTO)
+        {
+            try
+            {
+                var requests = dbContext.DeactivatePackage(packageDTO);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+
+        }
+        [WebMethod]
+        public static string ActivatePackage(PackageDTO packageDTO)
+        {
+            try
+            {
+                var requests = dbContext.ActivatePackage(packageDTO);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+
+        }
         [WebMethod]
         public static string AcceptReservation(ReservationDTO reservationData)
         {
