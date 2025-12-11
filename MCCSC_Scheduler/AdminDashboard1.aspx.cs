@@ -431,6 +431,19 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+        [WebMethod]
+        public static string GetRatings(RatingDTO ratingDTO)
+        {
+            try
+            {
+                var requests = dbContext.GetRatings(ratingDTO);
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
         [WebMethod]
         public static string GetEvents()

@@ -58,7 +58,7 @@
             },
             historySubmenu: {
                 tabs: [
-                    { id: 'successfulSection', icon: '✅', text: 'Successful' },
+                    { id: 'finishedSection', icon: '✅', text: 'Finished' },
                     { id: 'cancelledSection', icon: '❌', text: 'Cancelled' }
                 ]
             }
@@ -149,7 +149,7 @@
                 'registrationRequestSection': 'Registration',
                 'usersSection': 'Users',
                 'eventsSection': 'Event',
-                'successfulSection': 'Successful',
+                'finishedSection': 'Finished',
                 'cancelledSection': 'Cancelled'
             };
             return mapping[sectionId] || '';
@@ -193,9 +193,14 @@
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function (response) {
-                    let notifications = JSON.parse(response.d);
-                    //console.log(notifications);
-                    // Transform to sidebar format
+                    let responseData = JSON.parse(response.d);
+
+                    if (!responseData.success) {
+                        console.error(responseData.error);
+                        return;
+                    }
+
+                    let notifications = responseData.data;
                     const sidebarNotifications = notifications.map(n => {
                         let message = "";
                         switch (n.StatusID) {
@@ -616,6 +621,7 @@
                                         <th>Asset Name</th>
                                         <th>Quantity Available</th>
                                         <th>Consecutive Days Allowed</th>
+                                        <th>Days Before Event</th>
                                         <th>IsActive</th>
                                         <th>Actions</th>
                                     </tr>
@@ -701,23 +707,24 @@
                         </div>
                     </div>
 
-                    <!-- SUCCESSFUL RESERVATIONS -->
-                    <div id="successfulSection" class="section-card" style="display: none;">
-                        <h3>Successful Reservations</h3>
+                    <!-- FINISHED RESERVATIONS -->
+                    <div id="finishedSection" class="section-card" style="display: none;">
+                        <h3>Finished Reservations</h3>
                         <div class="table-container">
-                            <table class="table table-striped table-bordered">
+                            <table class="table table-striped table-bordered" id="finishedReservationTable">
                                 <thead>
                                     <tr>
-                                        <th>Reservation ID</th>
-                                        <th>Client ID</th>
-                                        <th>Event ID</th>
-                                        <th>Date</th>
-                                        <th>Actions</th>
+                                        <th>EVENT TITLE</th>
+                                        <th>ORGANIZATION</th>
+                                        <th>DATES</th>
+                                        <th>REFERENCE</th>
+                                        <th>RATINGS</th>
+                                        <th>ACTIONS</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="finishedReservationTableBody">
                                     <tr>
-                                        <td colspan="5" class="text-center">No successful reservations</td>
+                                        <td colspan="6" class="text-center">No reservation found</td>
                                     </tr>
                                 </tbody>
                             </table>

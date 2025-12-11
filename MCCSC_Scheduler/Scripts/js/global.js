@@ -402,16 +402,16 @@ let reservationModalEl =
     "</div>" +
 
     "<div class='modal-body'>" +
-    "<label for='eventName'>Event Name</label>" +
-    "<input type='text' id='eventName' class='form-control mb-2' placeholder='Singing Contest'>" +
+    "<ul class='nav nav-tabs mb-3' id='packageTabs'></ul>"+
+    "<div id='packageTabContent' class='tab-content'></div>"+
 
-    "<label for='eventDescription'>Event Description</label>" +
-    "<input type='text' id='eventDescription' class='form-control mb-3' placeholder='Battle of the Bands'>" +
-
-    "<label>Items you wish to borrow</label>" +
-    "<div id='assetContainer' class='mb-3' style='display:none;'></div>" +
-
-    "<div id='datesContainer'>" +
+    "<div class='modalCalendar-container'>"+
+        "<div id='modalCalendar'></div>"+
+        "<div class='selected-date'>"+
+            "<strong>Selected Date:</strong> <span id='displayDate'>Please select a date</span>"+
+        "</div>"+
+    "</div>"+
+    /*"<div id='datesContainer'>" +
     "<label>Event Dates and Time</label>" +
     "<div class='date-group mb-3'>" +
     "<div class='input-group mb-2'>" +
@@ -424,7 +424,13 @@ let reservationModalEl =
     "</div>" +
 
     "<button type='button' class='btn btn-success mb-3' id='addDate'>+ Add Another Date</button>" +
-    "</div>" +
+    "</div>" +*/
+
+    "<label for='eventName'>Event Name</label>" +
+    "<input type='text' id='eventName' class='form-control mb-2' placeholder='Singing Contest'>" +
+
+    "<label for='eventDescription'>Event Description</label>" +
+    "<input type='text' id='eventDescription' class='form-control mb-3' placeholder='Battle of the Bands'>" +
 
     "<div class='modal-footer'>" +
     "<button type='button' class='btn btn-primary' id='btnSubmitReservation' onclick='submitReservation()'; return false;> Submit</button >"+
@@ -435,6 +441,32 @@ let reservationModalEl =
     "</div>" +
     "</div>";
 // Restrict allowed date range
+function openReservationModal() {
+    console.log("Opening reservation modal...");
+
+    // 1️⃣ Check if modal exists
+    let modalElement = document.getElementById('reservationModal');
+    //getAssets();
+    getPackages();
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', reservationModalEl);
+        modalElement = document.getElementById('reservationModal');
+    }
+
+    // 2️⃣ Verify that insertion succeeded
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static'
+    });
+    modalInstance.show();
+    console.log("✅ Modal opened successfully.");
+}
 function setDateRange(input) {
     const today = new Date();
     const twoMonthsFromNow = new Date();
@@ -506,7 +538,7 @@ function getEventDates() {
                 date: date,
                 startTime: startTime,
                 endTime: endTime
-            });
+            }); 
         }
     });
 
@@ -717,31 +749,6 @@ function openAlertModal(title, message) {
     alertModalDiv[0].innerHTML = message;
 
 }
-function openReservationModal() {
-    console.log("Opening reservation modal...");
-
-    // 1️⃣ Check if modal exists
-    let modalElement = document.getElementById('reservationModal');
-    getAsset();
-    if (!modalElement) {
-        console.warn("Modal not found — inserting into DOM.");
-        document.body.insertAdjacentHTML('beforeend', reservationModalEl);
-        modalElement = document.getElementById('reservationModal');
-    }
-
-    // 2️⃣ Verify that insertion succeeded
-    if (!modalElement) {
-        console.error("❌ Failed to insert modal into DOM!");
-        return;
-    }
-
-    // 3️⃣ Create and show modal
-    const modalInstance = new bootstrap.Modal(modalElement, {
-        backdrop: 'static'
-    });
-    modalInstance.show();
-    console.log("✅ Modal opened successfully.");
-}
 
 function openRegistrationModal() {
     registrationModal = new bootstrap.Modal(document.getElementById('registrationModal'), {
@@ -799,8 +806,13 @@ let packageEditorModalEl = `
             <input type="number" id="editDaysAllowed" class="form-control" required>
           </div>
 
-          <div id="itemsContainer">
-            <label class="form-label">Item Inclusions</label>
+          <div class="mb-3">
+            <label for="editDaysPrior" class="form-label">Days Before the Event</label>
+            <input type="number" id="editDaysPrior" class="form-control" required>
+          </div>
+
+          <label for="editItemsContainer" class="form-label">Item Inclusions</label>
+          <div id="editItemsContainer">
           </div>
 
           <button type="button" class="btn btn-success btn-sm mt-2" id="addItemBtn">+ Add Item</button>
@@ -824,7 +836,7 @@ let packageEditorModalEl = `
 document.addEventListener('click', function (e) {
     // Add new item row
     if (e.target && e.target.id === 'addItemBtn') {
-        const container = document.getElementById('itemsContainer');
+        const container = document.getElementById('editItemsContainer');
         const newRow = document.createElement('div');
         newRow.className = 'item-row mb-2 d-flex gap-2';
         newRow.dataset.itemId = 0; // new item
@@ -845,7 +857,7 @@ document.addEventListener('click', function (e) {
 // ---------------------------
 // Open edit modal
 // ---------------------------
-function openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed) {
+function openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed, daysPrior) {
     let modalElement = document.getElementById('packageEditorModal');
     if (!modalElement) {
         document.body.insertAdjacentHTML('beforeend', packageEditorModalEl);
@@ -858,9 +870,10 @@ function openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed)
     // Set package info
     modalElement.querySelector('#editPackageName').value = packageName;
     modalElement.querySelector('#editDaysAllowed').value = daysAllowed;
+    modalElement.querySelector('#editDaysPrior').value = daysPrior;
 
     // Populate items
-    const itemsContainer = modalElement.querySelector('#itemsContainer');
+    const itemsContainer = modalElement.querySelector('#editItemsContainer');
     itemsContainer.innerHTML = ''; // Clear old items
     if (itemIncluded && itemIncluded.length > 0) {
         itemIncluded.forEach(item => {
@@ -915,8 +928,13 @@ let createPackageModalEl = `
             <input type="number" id="createDaysAllowed" class="form-control" required>
           </div>
 
+          <div class="mb-3">
+            <label for="createDaysPrior" class="form-label">Days Before the Event</label>
+            <input type="number" id="createDaysPrior" class="form-control" required>
+          </div>
+
+          <label for="createItemsContainer" class="form-label">Item Inclusions</label>
           <div id="createItemsContainer">
-            <label class="form-label">Item Inclusions</label>
           </div>
 
           <button type="button" class="btn btn-success btn-sm mt-2" id="createAddItemBtn">+ Add Item</button>
@@ -989,4 +1007,167 @@ document.addEventListener('click', function (e) {
         e.target.closest('.item-row').remove();
     }
 });
+
+let timeModalElHtml = `
+<div class="modal fade" id="timePickerModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Select Time for Dates</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="dateRowsContainer"></div>
+        <small class="text-muted">Only dates with start and end time will be saved.</small>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveTime()">Save</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+`;
+
+let returnToReservation = false;
+
+function openTimeModal() {
+    returnToReservation = true;
+
+    // Close the reservation modal
+    let reservationModalInstance = bootstrap.Modal.getInstance(
+        document.getElementById("reservationModal")
+    );
+    reservationModalInstance.hide();
+
+    // Ensure the time modal exists in DOM
+    let timeModalEl = document.getElementById("timePickerModal");
+    if (!timeModalEl) {
+        document.body.insertAdjacentHTML('beforeend', timeModalElHtml); // your modal HTML string
+        timeModalEl = document.getElementById("timePickerModal");
+    }
+
+    // ✅ Initialize Bootstrap modal on the actual element
+    let timeModalInstance = new bootstrap.Modal(timeModalEl, {
+        backdrop: 'static', // prevent clicking outside to close, optional
+        keyboard: false     // prevent ESC to close, optional
+    });
+
+    // Add listener AFTER ensuring element exists
+    timeModalEl.addEventListener('hidden.bs.modal', () => {
+        if (returnToReservation) {
+            let reservationModalInstance = new bootstrap.Modal(
+                document.getElementById("reservationModal")
+            );
+            reservationModalInstance.show();
+        }
+        returnToReservation = false;
+    }, { once: true });
+
+    timeModalInstance.show();
+}
+
+function initRatingStars() {
+    const stars = document.querySelectorAll("#ratingModal .star");
+
+    function fillStars(rating) {
+        stars.forEach(star => {
+            star.classList.toggle("filled", Number(star.dataset.value) <= rating);
+        });
+        selectedRating = rating;
+    }
+
+    // Click event
+    stars.forEach(star => {
+        star.addEventListener("click", () => {
+            fillStars(Number(star.dataset.value));
+        });
+
+        // Hover effect
+        star.addEventListener("mouseover", () => {
+            fillStars(Number(star.dataset.value));
+        });
+
+        star.addEventListener("mouseleave", () => {
+            fillStars(selectedRating);
+        });
+    });
+}
+let selectedRating = 0;
+function openRatingModal(reservationId) {
+    console.log("Opening Rating Modal");
+    //console.log(reservationId);
+    reservation_Id = reservationId;
+    console.log(reservation_Id);
+    let modalElement = document.getElementById('ratingModal');
+
+    if (!modalElement) {
+        document.body.insertAdjacentHTML('beforeend', ratingModalEl);
+        modalElement = document.getElementById('ratingModal');
+    }
+
+    // Reset selected rating and clear previous stars
+    selectedRating = 0;
+    document.querySelectorAll("#ratingModal .star").forEach(s => s.classList.remove("filled"));
+
+    // Set hidden fields
+    // Initialize stars
+    initRatingStars();
+
+    // Show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static'
+    });
+    modalInstance.show();
+
+    console.log("✅ Modal opened successfully.");
+}
+let ratingModalEl = `
+<!-- Rating Modal -->
+<div class="modal fade" id="ratingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Rate Your Experience</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Star Rating -->
+                <div class="text-center mb-3">
+                    <span class="star" data-value="1">&#9733;</span>
+                    <span class="star" data-value="2">&#9733;</span>
+                    <span class="star" data-value="3">&#9733;</span>
+                    <span class="star" data-value="4">&#9733;</span>
+                    <span class="star" data-value="5">&#9733;</span>
+                </div>
+
+                <!-- Feedback -->
+                <div class="mb-3">
+                    <label class="form-label">Feedback</label>
+                    <textarea id="ratingFeedback" class="form-control" rows="3"
+                        placeholder="Write your feedback here..."></textarea>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="submitRatings()">Submit Rating</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+`;
+
+
+
+
 

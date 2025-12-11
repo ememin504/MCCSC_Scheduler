@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     getClientInfo();
+    getReservationDates()
     getAsset(); // if independent
 });
 
@@ -64,7 +65,610 @@ function getReservation() {
         }
     });
 }
+function getPackages() {
+    console.log("Loading Packages");
 
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/GetPackages",
+        data: "{}",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            let package = JSON.parse(response.d);
+            console.log(package);
+            generateCalendar(package);
+        },
+        error: function (xhr) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
+let selectedDaysPrior = 0;
+let reservationDatesGlobal = [];
+
+let selectedPackageID; // store only the selected PackageID
+let currentPackages = [];
+
+function generateCalendar(packages) {
+
+    currentPackages = packages;
+    let tabButtons = "";
+    let tabContents = "";
+
+    packages.forEach((p, index) => {
+        const isActive = index === 0 ? "active" : "";
+        const showActive = index === 0 ? "show active" : "";
+
+        tabButtons += `
+            <li class="nav-item" role="presentation">
+                <button class="nav-link ${isActive}"
+                    data-bs-toggle="tab"
+                    data-bs-target="#package-${p.PackageID}"
+                    type="button"
+                    role="tab"
+                    onclick="selectPackage(${p.PackageID}, ${p.DaysPrior})">
+                    ${p.PackageName}
+                </button>
+            </li>
+        `;
+
+        let itemsHTML = "";
+        p.ItemIncluded.forEach(item => {
+            itemsHTML += `<div>✔ ${item.ItemName} (${item.QuantityAvailable})</div>`;
+        });
+
+        tabContents += `
+            <div class="tab-pane fade ${showActive}"
+                id="package-${p.PackageID}"
+                role="tabpanel">
+
+                <h6 class="mb-2"><strong>${p.PackageName}</strong></h6>
+                <label><strong>Items Included:</strong></label>
+                <div class="mt-1 mb-3">${itemsHTML}</div>
+
+                <p><strong>Consecutive Days Allowed:</strong> ${p.ConsecutiveDaysAllowed}</p>
+                <p><strong>Days Prior Required:</strong> ${p.DaysPrior}</p>
+            </div>
+        `;
+    });
+
+    document.getElementById("packageTabs").innerHTML = tabButtons;
+    document.getElementById("packageTabContent").innerHTML = tabContents;
+
+    // Auto-select the first package
+    if (packages.length > 0) {
+        selectedPackageID = packages[0].PackageID;
+        selectedDaysPrior = packages[0].DaysPrior;
+    }
+
+    generateCalendarDays();
+}
+
+function selectPackage(packageID, daysPrior) {
+    selectedPackageID = packageID;
+    selectedDaysPrior = daysPrior;
+    generateCalendarDays();
+}
+
+
+function getReservationDates() {
+    let requestInfo = { ReservationType: "Approved Reservation" };
+
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/GetReservationDates",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            let data = [];
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+                data = [];
+            }
+
+            // Build correct structure
+            reservationDatesGlobal = data.flatMap(req =>
+                req.EventDates.map(d => ({
+                    Date: d.Date.split('T')[0],          // "2025-12-23"
+                    StartTime: d.StartTime.substring(0, 5), // "10:01"
+                    EndTime: d.EndTime.substring(0, 5)       // "22:00"
+                }))
+            );
+
+            console.log("Reservation dates (correct structure):", reservationDatesGlobal);
+        },
+        error: function (xhr) {
+            console.error("❌ Error loading reservation dates:", xhr.responseText);
+        }
+    });
+}
+
+const fixedHolidays = {
+    "01-01": "New Year’s Day",
+    "04-09": "Araw ng Kagitingan",
+    "05-01": "Labor Day",
+    "06-12": "Independence Day",
+    "11-30": "Bonifacio Day",
+    "12-25": "Christmas Day",
+    "12-30": "Rizal Day",
+
+    "08-21": "Ninoy Aquino Day",
+    "11-01": "All Saints' Day",
+    "11-02": "All Souls' Day",
+    "12-08": "Immaculate Conception",
+    "12-24": "Christmas Eve",
+    "12-31": "Last Day of the Year",
+
+    "08-30": "Mandaue City Charter Day"
+};
+// 1️⃣ Calculate Easter Sunday for a given year
+function getEasterSunday(year) {
+    const f = Math.floor,
+        // Meeus/Jones algorithm
+        G = year % 19,
+        C = f(year / 100),
+        H = (C - f(C / 4) - f((8 * C + 13) / 25) + 19 * G + 15) % 30,
+        I = H - f(H / 28) * (1 - f(29 / (H + 1)) * f((21 - G) / 11)),
+        J = (year + f(year / 4) + I + 2 - C + f(C / 4)) % 7,
+        L = I - J,
+        month = 3 + f((L + 40) / 44),
+        day = L + 28 - 31 * f(month / 4);
+
+    return new Date(year, month - 1, day);
+}
+
+// 2️⃣ Get Palm Sunday (1 week before Easter)
+function getPalmSunday(year) {
+    const easter = getEasterSunday(year);
+    const palmSunday = new Date(easter);
+    palmSunday.setDate(easter.getDate() - 6);
+    return palmSunday;
+}
+
+// 3️⃣ Add days utility
+function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+}
+
+// Compute Holy Week dates: Maundy, Good Friday, Black Saturday
+function getHolyWeekHolidays(year) {
+    const sunday = getPalmSunday(year); // returns a Date object
+    const monday = addDays(sunday, 1);
+    const tuesday = addDays(sunday, 2);
+    const wednesday = addDays(sunday, 3);
+    const thursday = addDays(sunday, 4);
+    const friday = addDays(sunday, 5);
+    const saturday = addDays(sunday, 6);
+    const easter = addDays(sunday, 7);
+
+    const format = d => d.toISOString().split("T")[0]; // YYYY-MM-DD
+
+    return {
+        [format(sunday)]: "Palm Sunday",
+        [format(monday)]: "Holy Monday",
+        [format(tuesday)]: "Holy Tuesday",
+        [format(wednesday)]: "Holy Wednesday",
+        [format(thursday)]: "Maundy Thursday",
+        [format(friday)]: "Good Friday",
+        [format(saturday)]: "Black Saturday",
+        [format(easter)]: "Easter Sunday"
+    };
+}
+
+
+// Detect National Heroes Day (Last Monday of August)
+function isNationalHeroesDay(year, month, day) {
+    if (month !== 7) return false; // August (index 7)
+    const date = new Date(year, month, day);
+    if (date.getDay() !== 1) return false; // Monday only
+    const nextWeek = new Date(year, month, day + 7);
+    return nextWeek.getMonth() !== 7; // last Monday if next week is September
+}
+
+function getChineseNewYear(year) {
+    let formatter = new Intl.DateTimeFormat("zh-CN-u-ca-chinese", {
+        dateStyle: "short"
+    });
+
+    function formatDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+    }
+
+    for (let d = new Date(year, 0, 20); d <= new Date(year, 1, 20); d.setDate(d.getDate() + 1)) {
+        let parts = formatter.formatToParts(d);
+        let lunarMonth = parts.find(p => p.type === "month").value;
+        let lunarDay = parts.find(p => p.type === "day").value;
+
+        if (lunarMonth == 1 && lunarDay == 1) {
+            return formatDate(d);
+        }
+    }
+
+    return null;
+}
+function to12Hour(time) {
+    if (!time) return "";
+    let [hour, minute] = time.split(':').map(Number);
+    let ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12;
+    return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+}
+
+function isFullyReserved(dateStr) {
+    return reservationDatesGlobal.some(res =>
+        res.Date === dateStr &&
+        res.StartTime <= "08:00" &&
+        res.EndTime >= "22:00"
+    );
+    console.log("Reservation Dates: ",reservationDatesGlobal);
+}
+
+function hasLessThan2HoursRemaining(dateStr) {
+    const dayStart = 8 * 60;
+    const dayEnd = 22 * 60;
+    const totalDayMinutes = dayEnd - dayStart;
+
+    const reservations = reservationDatesGlobal
+        .filter(r => r.Date === dateStr)
+        .map(r => ({
+            start: parseInt(r.StartTime.split(":")[0]) * 60 + parseInt(r.StartTime.split(":")[1]),
+            end: parseInt(r.EndTime.split(":")[0]) * 60 + parseInt(r.EndTime.split(":")[1])
+        }))
+        .sort((a, b) => a.start - b.start);
+
+    let reservedMinutes = 0;
+    let lastEnd = dayStart;
+
+    reservations.forEach(r => {
+        const start = Math.max(r.start, dayStart);
+        const end = Math.min(r.end, dayEnd);
+        if (end > lastEnd) {
+            reservedMinutes += end - Math.max(start, lastEnd);
+            lastEnd = end;
+        }
+    });
+
+    return (totalDayMinutes - reservedMinutes) <= 120;
+}
+
+// Main holiday checker
+function isHoliday(year, month, day) {
+    const dateObj = new Date(year, month, day);
+    const yyyy = dateObj.getFullYear();
+    const mm = (dateObj.getMonth() + 1).toString().padStart(2, "0");
+    const dd = dateObj.getDate().toString().padStart(2, "0");
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    const mmdd = `${mm}-${dd}`;
+
+    // 1️⃣ Fixed holidays
+    if (fixedHolidays[mmdd]) return fixedHolidays[mmdd];
+    // 2️⃣ Holy Week
+    const holyWeek = getHolyWeekHolidays(year);
+    if (holyWeek[dateStr]) return holyWeek[dateStr];
+    // 3️⃣ Chinese New Year
+    if (getChineseNewYear(year) === dateStr) return "Chinese New Year";
+
+    // 4️⃣ National Heroes Day
+    if (isNationalHeroesDay(year, month, day)) return "National Heroes Day";
+
+    return null;
+}
+
+
+// 🔥 Updates selectedDaysPrior and refreshes calendar
+function setDaysPrior(days) {
+    selectedDaysPrior = days;
+    generateCalendarDays();
+}
+let eventDates;
+function saveTime() {
+    // Get the modal element
+    const modalEl = document.getElementById("timePickerModal");
+    if (!modalEl) return;
+
+    // Example: If you’re using single start/end inputs (like in your current HTML)
+    const startTime = modalEl.querySelector("#startTime").value;
+    const endTime = modalEl.querySelector("#endTime").value;
+
+    if (!startTime || !endTime) {
+        alert("Please fill both start and end times.");
+        return;
+    }
+
+    // Save/update the selected date in the global array
+    const dateStr = formatDate(selectedDate); // assuming selectedDate is set in selectDate()
+
+    const existing = allEventDates.find(d => d.date === dateStr);
+    if (existing) {
+        existing.startTime = startTime;
+        existing.endTime = endTime;
+    } else {
+        allEventDates.push({ date: dateStr, startTime, endTime });
+    }
+
+    console.log("All Event Dates:", allEventDates);
+    eventDates = allEventDates;
+
+    setConsecutiveDays();
+    // Close time modal
+    const timeModalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (timeModalInstance) timeModalInstance.hide();
+}
+
+let consecutiveTriggered = false;
+let allowedDates = []; // globally
+let consecutiveDaysAllowed = 0;
+
+function setConsecutiveDays() {
+    if (consecutiveTriggered) return;
+
+    if (allEventDates.length > 0) {
+        const firstDate = new Date(allEventDates[0].date);
+
+        allowedDates = [];
+        for (let i = 0; i < consecutiveDaysAllowed; i++) {
+            const d = new Date(firstDate);
+            d.setDate(d.getDate() + i);
+            allowedDates.push(formatDate(d));
+        }
+
+        consecutiveTriggered = true;
+        generateCalendarDays();
+    }
+}
+
+function generateCalendarDays() {
+    const calendar = document.getElementById("modalCalendar");
+    if (!calendar) return;
+
+    calendar.innerHTML = "";
+
+    const today = new Date();
+    const minDate = new Date(today);
+    minDate.setDate(minDate.getDate() + selectedDaysPrior);
+
+    // 📌 Use currentDate for navigation
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    // Header...
+    const header = document.createElement("div");
+    header.className = "calendar-header";
+
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = "◀ Prev";
+    prevBtn.className = 'calendar-nav';
+    prevBtn.onclick = () => changeMonth(-1);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = "Next ▶";
+    nextBtn.className = 'calendar-nav';
+    nextBtn.onclick = () => changeMonth(1);
+
+    const monthTitle = document.createElement("h4");
+    monthTitle.textContent = `${getMonthName(month)} ${year}`;
+
+    header.appendChild(prevBtn);
+    header.appendChild(monthTitle);
+    header.appendChild(nextBtn);
+    calendar.appendChild(header);
+
+    // ---------------------------
+    // Day headers
+    // ---------------------------
+    const dayHeaderGrid = document.createElement("div");
+    dayHeaderGrid.className = "calendar-grid";
+
+    ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach(d => {
+        const el = document.createElement("div");
+        el.className = "calendar-day-header";
+        el.textContent = d;
+        dayHeaderGrid.appendChild(el);
+    });
+    calendar.appendChild(dayHeaderGrid);
+
+    // ---------------------------
+    // Calendar days
+    // ---------------------------
+    const grid = document.createElement("div");
+    grid.className = "calendar-grid";
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    // Previous month filler
+    for (let i = firstDay - 1; i >= 0; i--) {
+        const cell = createDayCell(daysInPrevMonth - i, true);
+        cell.classList.add("disabled");
+        grid.appendChild(cell);
+    }
+
+    // Current month
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateObj = new Date(year, month, day);
+
+        let disabled = false;
+        let reason = [];
+
+        // 1️⃣ Disable if before minDate (DaysPrior)
+        if (dateObj < minDate) {
+            disabled = true;
+            reason.push(`Must reserve ${selectedDaysPrior} days prior`);
+        }
+
+        // 2️⃣ Disable if holiday
+        const holidayName = isHoliday(year, month, day);
+        if (holidayName) {
+            disabled = true;
+            reason.push(holidayName);
+        }
+
+        // 3️⃣ Disable if fully booked
+        const dateStr = `${year}-${(month + 1).toString().padStart(2, "0")}-${day
+            .toString()
+            .padStart(2, "0")}`;
+
+        if (isFullyReserved(dateStr)) {
+            disabled = true;
+            reason.push("Fully booked");
+        }
+        if (hasLessThan2HoursRemaining(dateStr)) {
+            disabled = true;
+            reason.push("Less than 2 hours remaining");
+            console.log(dateStr, reason);
+        }
+
+        /*if (consecutiveTriggered) {
+            const formatted = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+            if (!allowedDates.includes(formatted)) {
+                disabled = true;
+                reason.push("Only consecutive days allowed");
+            }
+        }*/
+
+        // Create the cell
+        const cell = createDayCell(day, false, holidayName);
+
+        if (disabled) {
+            cell.classList.add("disabled");
+            if (reason.length) {
+                cell.title = reason.join(", "); // tooltip
+            }
+        } else {
+            cell.onclick = () => selectDate(year, month, day);
+        }
+
+        grid.appendChild(cell);
+    }
+
+    // Next month filler
+    const filledCells = firstDay + daysInMonth;
+    const remaining = 42 - filledCells;
+    for (let i = 1; i <= remaining; i++) {
+        const cell = createDayCell(i, true);
+        cell.classList.add("disabled");
+        grid.appendChild(cell);
+    }
+
+    calendar.appendChild(grid);
+}
+
+function createDayCell(day, isOtherMonth, dayNote) {
+    const dayCell = document.createElement('div');
+    dayCell.className = 'calendar-day';
+
+    // Flex column
+    dayCell.style.display = 'flex';
+    dayCell.style.flexDirection = 'column';
+    dayCell.style.alignItems = 'center';
+    dayCell.style.justifyContent = 'center';
+    dayCell.style.height = '100%';
+    dayCell.style.padding = '2px'; // helps fit text neatly
+
+    // Main day number
+    const dayNumber = document.createElement('div');
+    dayNumber.className = 'day-number';
+    dayNumber.textContent = day;
+    dayCell.appendChild(dayNumber);
+
+    // Holiday description
+    if (dayNote) {
+        const note = document.createElement('div');
+        note.className = 'day-note';
+        note.textContent = dayNote;
+
+        note.style.fontSize = '0.65em';
+        note.style.marginTop = '2px';
+        note.style.textAlign = 'center';
+        note.style.lineHeight = '1.1';
+        note.style.wordBreak = 'break-word'; // PREVENTS LAYOUT BREAKING
+
+        dayCell.appendChild(note);
+    }
+
+    if (isOtherMonth) {
+        dayCell.classList.add('other-month');
+    }
+
+    // Add holiday class
+    if (dayNote) {
+        dayCell.classList.add('holiday');
+
+        const safeClass = dayNote.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        dayCell.classList.add(safeClass);
+    }
+
+    return dayCell;
+}
+let currentDate = new Date();
+
+function changeMonth(direction) {
+    currentDate.setMonth(currentDate.getMonth() + direction);
+    generateCalendarDays(currentDate);
+}
+
+function getMonthName(month) {
+    const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month];
+}
+let allEventDates = [];
+let selectedDate = null; // set when clicking calendar
+
+function selectDate(year, month, day) {
+    selectedDate = new Date(year, month, day);
+    const formattedDate = formatDate(selectedDate); // e.g., "2025-12-08"
+
+    // Highlight selected day
+    document.querySelectorAll('.calendar-day:not(.other-month)').forEach(dayCell => {
+        dayCell.classList.remove('selected');
+        if (parseInt(dayCell.textContent) === day) dayCell.classList.add('selected');
+    });
+
+    // Ensure time modal exists
+    openTimeModal();
+
+    // Add a new row for the date if it doesn't already exist
+    const container = document.getElementById("dateRowsContainer");
+    if (!container.querySelector(`[data-date='${formattedDate}']`)) {
+        const row = document.createElement("div");
+        row.className = "date-group mb-2";
+        row.dataset.date = formattedDate;
+
+        row.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold">${formattedDate}</span>
+                <input type="time" id= "startTime" class="start-time form-control" placeholder="Start Time">
+                <input type="time" id= "endTime" class="end-time form-control" placeholder="End Time">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeDateRow(this)">Remove</button>
+            </div>
+        `;
+
+        container.appendChild(row);
+    }
+}
+
+function formatDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
 function renderReservations(data) {
     
     // Clear tables first
@@ -340,6 +944,7 @@ function formatDates(dates) {
         .join("<br><br>");
 }
 
+
 function formatAssets(assets) {
     if (!assets || assets.length === 0) return "No Assets";
 
@@ -429,24 +1034,58 @@ function getAsset() {
         }
     });
 }
+function submitRatings() {
+    //const reservationID = document.getElementById("ratingReservationID").value;
+    //const organizationID = document.getElementById("ratingOrganizationID").value;
+    const feedback = document.getElementById("ratingFeedback").value;
+    if (selectedRating === 0) {
+        alert("Please select a rating");
+        return;
+    }
 
+    const ratingDTO = {
+        ClientID: clientID,
+        ReservationID: reservation_Id,
+        OrganizationID: organizationID,
+        NumberOfStars: selectedRating,
+        Feedback: feedback
+    };
+    console.log(ratingDTO);
+
+    $.ajax({
+        type: "POST",
+        url: "ClientDashboard.aspx/SubmitRatings",
+        data: JSON.stringify({ ratingDTO }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log("Rating submitted:", response);
+            bootstrap.Modal.getInstance(document.getElementById("ratingModal")).hide();
+            // Optional: reload notifications or update UI
+        },
+        error: function (xhr) {
+            console.error("Error submitting rating:", xhr.responseText);
+        }
+    });
+}
 function submitReservation() {
     console.log("Submitting these assets:", selectedAssets);
-
+    const packageId = selectedPackageID;
+    console.log(packageId);
     const eventName = document.getElementById("eventName").value.trim();
     const eventDescription = document.getElementById("eventDescription").value.trim();
-    const eventDates = getEventDates();
-
+    const alleventDates = eventDates;
+    console.log(alleventDates);
     // ✅ VALIDATION SECTION
     if (!eventName) {
         alert("Please enter the event name.");
         return;
     }
 
-    if (!eventDates || eventDates.length === 0) {
+    /*if (!eventDates || eventDates.length === 0) {
         alert("Please add at least one event date.");
         return;
-    }
+    }*/
 
     if (!clientID) {
         alert("Client ID is missing. Please log in again.");
@@ -458,6 +1097,7 @@ function submitReservation() {
         EventName: eventName,
         EventDescription: eventDescription,
         SelectedAssets: selectedAssets,
+        PackageID: packageId,
         EventDates: eventDates,
         ClientID: parseInt(clientID),
         organizationID: organizationID
@@ -566,3 +1206,4 @@ function connectDB() {
         openAlertModal('App Info', 'DB connection status: ' + response.d);
     };
 }
+

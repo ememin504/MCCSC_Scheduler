@@ -124,7 +124,9 @@ function getReservationDates() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            let data = [];
+            console.log(response.d);
+            let data = response.d;
+            data = [];
 
             try {
                 data = JSON.parse(response.d);
@@ -600,9 +602,10 @@ function submitRegistrationRequest() {
             // Show success message
             //alert(`Registration Successful!\n\nWelcome, ${firstName} ${lastName}!\n\nYour reservation for ${formatDate(selectedDate)} has been recorded.\n\nOrganization: ${orgs}\nUsername: ${userName}\n\nThis is a FREE booking service. Please arrive on time for your event.`);
 
-            
+
         })
-        .catch(error => {x``
+        .catch(error => {
+            x``
             console.error("Backend registration error:", error);
 
             // Fallback: Store in memory

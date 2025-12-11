@@ -7,6 +7,7 @@
     <!-- Your custom styles - ORDER MATTERS -->
     <link rel="stylesheet" href="Scripts/css/sidebar.css" />
     <link rel="stylesheet" href="Scripts/css/client.css" />
+    <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
     <!-- jQuery (must be loaded before any script using it) -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <!-- Bootstrap JS (depends on jQuery for some features like modals) -->
@@ -29,6 +30,29 @@
             middleInitial: '<%= Session["middle_initial"] %>',
             lastName: '<%= Session["last_name"] %>'
         };
+        // Initialize user display
+        document.addEventListener('DOMContentLoaded', function () {
+            const firstName = window.AppData.firstName || '';
+            const lastName = window.AppData.lastName || '';
+            const fullName = `${firstName} ${lastName}`.trim();
+
+            // Set full name in header
+            document.getElementById('fullname').textContent = fullName;
+            document.getElementById('sidebarFullName').textContent = fullName;
+
+            // Set user initials
+            const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+            document.getElementById('userInitials').textContent = initials;
+ 
+            // Load initial notification count after clientID is set
+            setTimeout(() => {
+                if (typeof clientID !== 'undefined' && clientID) {
+                    loadNotificationsUI();
+                    // Poll for new notifications every 5 seconds
+                    setInterval(loadNotificationsUI, 5000);
+                }
+            }, 1000);
+        });
 
         // Logout function with confirmation
         function confirmLogout() {
@@ -133,40 +157,31 @@
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function (response) {
-                    let notifications = JSON.parse(response.d);
+                    let responseData = JSON.parse(response.d);
+
+                    if (!responseData.success) {
+                        console.error(responseData.error);
+                        return;
+                    }
+
+                    let notifications = responseData.data; // <- this is now the array
                     //console.log(notifications);
-                    
-                    // Transform to sidebar format
+
                     const sidebarNotifications = notifications.map(n => {
+
                         let message = "";
                         switch (n.StatusID) {
-                            case 2:
-                                message = "Your reservation request has been submitted";
-                                break;
-                            case 3:
-                                message = "Your reservation has been accepted";
-                                break;
-                            case 4:
-                                message = "Your reservation was rejected";
-                                break;
-                            case 5:
-                                message = "Coordination has been set for your reservation";
-                                break;
-                            case 6:
-                                message = "Your reservation has been rescheduled";
-                                break;
-                            case 7:
-                                message = "Your reservation has been cancelled";
-                                break;
-                            case 8:
-                                message = "Cancellation request has been sent";
-                                break;
-                            case 9:
-                                message = "Your reservation is now approved";
-                                break;
-                            default:
-                                message = "Status updated";
-                                break;
+                            case 2: message = "Your reservation request has been submitted"; break;
+                            case 3: message = "Your reservation has been accepted"; break;
+                            case 4: message = "Your reservation was rejected"; break;
+                            case 5: message = "Coordination has been set for your reservation"; break;
+                            case 6: message = "Your reservation has been rescheduled"; break;
+                            case 7: message = "Your reservation has been cancelled"; break;
+                            case 8: message = "Cancellation request has been sent"; break;
+                            case 9: message = "Your reservation is now approved"; break;
+                            case 10: message = "Your reservation is now ongoing"; break;
+                            case 11: message = "Your reservation is now expired"; break;
+                            default: message = "Status updated"; break;
                         }
 
                         let formattedDate = new Date(n.CreatedAt).toLocaleString('en-US', {
@@ -177,25 +192,66 @@
                             hour12: true
                         });
 
+                        // FIXED: Loop reservation dates
+                        let formattedResDate = "";
+
+                        if (Array.isArray(n.ReservationDates) && n.ReservationDates.length > 0) {
+                            let first = n.ReservationDates[0];
+                            let last = n.ReservationDates[n.ReservationDates.length - 1];
+
+                            let firstFormatted = new Date(first).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                            });
+
+                            let lastFormatted = new Date(last).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                            });
+
+                            formattedResDate =
+                                (first === last) ? firstFormatted : `${firstFormatted} - ${lastFormatted}`;
+                        }
+
+
                         return {
                             id: n.NotificationID,
+                            resID: n.ReservationID,
+                            eventName: n.EventName,
                             message: message,
                             time: formattedDate,
-                            isRead: n.IsRead
+                            isRead: n.IsRead,
+                            isRated: n.IsRated,
+                            reservationDates: formattedResDate
                         };
                     });
 
+
                     displayNotificationsInSidebar(sidebarNotifications);
                 },
+
                 error: function (xhr, status, error) {
                     console.error("Error loading notifications:", xhr.responseText);
                     notificationBody.innerHTML = '<div class="notification-empty">Failed to load notifications</div>';
                 }
             });
         }
+        function formatDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, "0");
+            const d = String(date.getDate()).padStart(2, "0");
+            return `${y}-${m}-${d}`;
+        }
 
         // Display notifications in sidebar
         function displayNotificationsInSidebar(notifications) {
+            //console.log(notifications);
             const notificationBody = document.getElementById('notificationBody');
 
             if (notifications.length === 0) {
@@ -208,10 +264,12 @@
             updateNotificationBadge(unreadCount);
 
             notificationBody.innerHTML = notifications.map(notif => `
-                <div class="notification-item ${notif.isRead ? '' : 'unread'}" onclick="markNotificationAsRead(${notif.id})">
+                <div class="notification-item ${notif.isRead ? '' : 'unread'}" onclick="markNotificationAsRead(${notif.id}, '${notif.message}', ${notif.resID}, ${notif.isRated})">
                     <div class="notification-content">
                         ${!notif.isRead ? '<span class="notification-dot"></span>' : ''}
                         <div class="notification-message">${notif.message}</div>
+                        <div class="notification-eventName">${notif.eventName}</div>
+                        <div class="notification-dates">${notif.reservationDates}</div>
                         <div class="notification-time">${notif.time}</div>
                     </div>
                 </div>
@@ -230,12 +288,14 @@
                 }
             }
         }
-
+        let notificationId = 0;
+        
         // Mark notification as read
-        function markNotificationAsRead(notificationID) {
+        function markNotificationAsRead(notificationID, notificationMessage, reservationID, isRated) {
             let notificationData = {
                 NotificationID: notificationID
             }
+            //console.log(reservationID);
             $.ajax({
                 type: "POST",
                 url: "ClientDashboard.aspx/MarkAsRead",
@@ -243,7 +303,15 @@
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function (response) {
-                    console.log('Marked as read:', notificationID);
+                    //console.log('Marked as read:', notificationID);
+                    reservation_Id = reservationID;
+                    //console.log(reservation_Id);
+                    notificationId = notificationID;
+                    if (notificationMessage === "Your reservation is now expired" && isRated === false) {
+                        console.log(reservation_Id);
+                        openRatingModal(reservation_Id);
+                    }
+                    
                     // Reload notifications
                     setTimeout(() => {
                         loadNotificationsUI();
@@ -320,6 +388,7 @@
                     </div>
                     <div class="header-actions">
                         <asp:Button ID="btnReserve" runat="server" class="btn-primary" OnClientClick="openReservationModal(); return false;" Text="Request +" />
+                        <asp:Button ID="Button1" runat="server" class="btn-primary" OnClientClick="openRatingModal(); return false;" Text="Rate" />
                     </div>
                 </div>
             </header>
@@ -402,29 +471,6 @@
     </form>
 
     <script>
-        // Initialize user display
-        document.addEventListener('DOMContentLoaded', function() {
-            const firstName = window.AppData.firstName || '';
-            const lastName = window.AppData.lastName || '';
-            const fullName = `${firstName} ${lastName}`.trim();
-            
-            // Set full name in header
-            document.getElementById('fullname').textContent = fullName;
-            document.getElementById('sidebarFullName').textContent = fullName;
-            
-            // Set user initials
-            const initials = (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
-            document.getElementById('userInitials').textContent = initials;
-
-            // Load initial notification count after clientID is set
-            setTimeout(() => {
-                if (typeof clientID !== 'undefined' && clientID) {
-                    loadNotificationsUI();
-                    // Poll for new notifications every 5 seconds
-                    setInterval(loadNotificationsUI, 5000);
-                }
-            }, 1000);
-        });
     </script>
 </body>
 </html>

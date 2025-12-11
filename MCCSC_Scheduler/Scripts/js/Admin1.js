@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
     getReservationCancellationRequests();
     getCancelledReservation();
     getApprovedReservation();
+    getFinishedReservation();
     getEvents();
     loadNotifications();
     startNotificationPolling();
@@ -783,6 +784,118 @@ function getApprovedReservation() {
         }
     });
 }
+
+async function getFinishedReservation() {
+    console.log("getting finished reservation!");
+
+    let reservationType = "Expired Reservation";
+    let requestInfo = { ReservationType: reservationType };
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: async function (response) {
+
+            let data = [];
+            try { data = JSON.parse(response.d); }
+            catch { data = []; }
+
+            let tbody = document.getElementById("finishedReservationTableBody");
+            tbody.innerHTML = "";
+
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Reservation Request found</td></tr>`;
+                return;
+            }
+
+            for (const req of data) {
+
+                let ratings = await getRatings(req.ReservationID);
+                // Extract rating value from array [{ Rating: 4 }]
+                let ratingValue =
+                    ratings.length > 0 ? Number(ratings[0].number_of_stars) : null;
+
+                let ratingDisplay =
+                    ratings.length > 0
+                        ? renderStars(ratings[0].NumberOfStars)
+                        : "No Rating";
+
+                console.log("Raw ratings:", ratings);
+                console.log("Rating Value:", ratingValue, "Type:", typeof ratingValue);
+
+
+                let dates = req.EventDates.length
+                    ? req.EventDates.map(d => {
+                        let formattedDate = d.Date.split('T')[0];
+                        let start = to12Hour(d.StartTime);
+                        let end = to12Hour(d.EndTime);
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
+
+                let row = `
+                    <tr>
+                        <td>${req.EventName}</td>
+                        <td>${req.OrganizationName}</td>
+                        <td>${dates}</td>
+                        <td>${req.Reference}</td>
+                        <td>${ratingDisplay}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                                onclick='openReservationInfoModal(${JSON.stringify(req)}); return false;'>
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+
+                tbody.innerHTML += row;
+            }
+
+        }
+    });
+}
+function renderStars(rating) {
+    const maxStars = 5;
+    let stars = "";
+
+    for (let i = 1; i <= maxStars; i++) {
+        stars += i <= rating ? "⭐" : "✩";
+    }
+
+    return stars;
+}
+
+
+function getRatings(reservationID) {
+    return new Promise(function (resolve, reject) {
+        let requestInfo = { ReservationID: reservationID };
+
+        $.ajax({
+            type: "POST",
+            url: "AdminDashboard1.aspx/GetRatings",
+            data: JSON.stringify({ ratingDTO: requestInfo }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (response) {
+                try {
+                    let data = JSON.parse(response.d);
+                    resolve(data.data);  // return ratings array
+                } catch (e) {
+                    reject(e);
+                }
+            },
+            error: function (xhr, status, error) {
+                reject(error);
+            }
+        });
+    });
+}
+
+
 function to12Hour(time) {
     if (!time) return "";
     let [hour, minute] = time.split(':').map(Number);
@@ -1683,10 +1796,11 @@ function getPackages() {
                         <td>${pkg.PackageName}</td>
                         <td>${itemsStr}</td>
                         <td>${pkg.ConsecutiveDaysAllowed}</td>
+                        <td>${pkg.DaysPrior}</td>
                         <td>${pkg.IsActive ? "Active" : "Inactive"}</td>
                         <td>
                             <button class="btn btn-primary btn-sm"
-                                onclick='editPackage(${pkg.PackageID}, "${pkg.PackageName}", ${JSON.stringify(pkg.ItemIncluded)}, ${pkg.ConsecutiveDaysAllowed}); return false;'>
+                                onclick='editPackage(${pkg.PackageID}, "${pkg.PackageName}", ${JSON.stringify(pkg.ItemIncluded)}, ${pkg.ConsecutiveDaysAllowed}, ${pkg.DaysPrior}); return false;'>
                                 Edit
                             </button>
                             ${pkg.IsActive
@@ -1707,8 +1821,9 @@ function getPackages() {
 function CreatePackage() {
     const packageName = document.getElementById("createPackageName").value.trim();
     const daysAllowed = parseInt(document.getElementById("createDaysAllowed").value);
+    const daysPrior = parseInt(document.getElementById("createDaysPrior").value);
 
-    if (!packageName || isNaN(daysAllowed)) {
+    if (!packageName || isNaN(daysAllowed) || isNaN(daysPrior)) {
         alert("Please fill in all fields.");
         return;
     }
@@ -1737,6 +1852,7 @@ function CreatePackage() {
     const payload = {
         PackageName: packageName,
         ConsecutiveDaysAllowed: daysAllowed,
+        DaysPrior: daysPrior,
         ItemIncluded: itemIncluded
     };
 
@@ -1766,9 +1882,9 @@ function CreatePackage() {
     });
 }
 
-function editPackage(packageID, packageName, itemIncluded, daysAllowed) {
-    console.log(packageID, packageName, itemIncluded, daysAllowed);
-    openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed);
+function editPackage(packageID, packageName, itemIncluded, daysAllowed, daysPrior) {
+    console.log(packageID, packageName, itemIncluded, daysAllowed, daysPrior);
+    openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed, daysPrior);
 }
 
 function savePackageChanges() {
@@ -1778,6 +1894,7 @@ function savePackageChanges() {
     const packageID = parseInt(modal.dataset.packageId);
     const packageName = modal.querySelector('#editPackageName').value.trim();
     const daysAllowed = parseInt(modal.querySelector('#editDaysAllowed').value);
+    const daysPrior = parseInt(modal.querySelector('#editDaysPrior').value);
 
     if (!packageName || isNaN(daysAllowed)) {
         alert("Please fill in all fields.");
@@ -1794,7 +1911,7 @@ function savePackageChanges() {
             items.push({
                 ItemID: itemID,
                 ItemName: itemName,
-                QuantityAvailable: quantity
+                QuantityAvailable: quantity,
             });
         }
     });
@@ -1808,6 +1925,7 @@ function savePackageChanges() {
         PackageID: packageID,
         PackageName: packageName,
         ConsecutiveDaysAllowed: daysAllowed,
+        DaysPrior: daysPrior,
         ItemIncluded: items
     };
     console.log(payload);

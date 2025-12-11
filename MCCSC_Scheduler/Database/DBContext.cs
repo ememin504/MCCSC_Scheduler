@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.Remoting.Messaging;
 using System.Web.Script.Serialization;
@@ -831,7 +832,7 @@ namespace MCCSC_Scheduler.Database
         //Packages Section ========================================================================================================================
         public List<PackageDTO> GetPackages()
 {
-            string packageQuery = @"SELECT package_id, package_name, consecutive_days_allowed, is_active 
+            string packageQuery = @"SELECT package_id, package_name, consecutive_days_allowed, is_active, days_prior 
                             FROM Packages";
 
             string itemsQuery = @"SELECT item_id, item_name, package_id, quantity_available, is_active
@@ -857,6 +858,7 @@ namespace MCCSC_Scheduler.Database
                             PackageID = (int)reader["package_id"],
                             PackageName = reader["package_name"].ToString(),
                             ConsecutiveDaysAllowed = (int)reader["consecutive_days_allowed"],
+                            DaysPrior = (int)reader["days_prior"],
                             IsActive = (bool)reader["is_active"],
                             ItemIncluded = new List<ItemsDTO>() // prepare empty item list
                         });
@@ -906,8 +908,8 @@ namespace MCCSC_Scheduler.Database
                 {
                     // 1️⃣ Insert the package and get its ID
                     string addPackage = @"
-                INSERT INTO Packages (package_name, consecutive_days_allowed, is_active)
-                VALUES (@PackageName, @DaysAllowed, 1);
+                INSERT INTO Packages (package_name, consecutive_days_allowed, is_active ,days_prior)
+                VALUES (@PackageName, @DaysAllowed, 1, @DaysPrior);
                 SELECT CAST(scope_identity() AS int);"; // Get the new package_id
 
                     int packageID;
@@ -915,6 +917,7 @@ namespace MCCSC_Scheduler.Database
                     {
                         cmd.Parameters.AddWithValue("@PackageName", packageDTO.PackageName);
                         cmd.Parameters.AddWithValue("@DaysAllowed", packageDTO.ConsecutiveDaysAllowed);
+                        cmd.Parameters.AddWithValue("@DaysPrior", packageDTO.DaysPrior);
                         packageID = (int)cmd.ExecuteScalar();
                     }
 
@@ -958,13 +961,15 @@ namespace MCCSC_Scheduler.Database
                     string savePackage = @"
                 UPDATE Packages
                 SET package_name = @PackageName,
-                    consecutive_days_allowed = @DaysAllowed
+                    consecutive_days_allowed = @DaysAllowed,
+                    days_prior = @DaysPrior
                 WHERE package_id = @PackageID";
                     using (SqlCommand cmd = new SqlCommand(savePackage, conn, transaction))
                     {
                         cmd.Parameters.AddWithValue("@PackageName", packageDTO.PackageName);
                         cmd.Parameters.AddWithValue("@DaysAllowed", packageDTO.ConsecutiveDaysAllowed);
                         cmd.Parameters.AddWithValue("@PackageID", packageDTO.PackageID);
+                        cmd.Parameters.AddWithValue("@DaysPrior", packageDTO.DaysPrior);
                         cmd.ExecuteNonQuery();
                     }
 
@@ -1253,35 +1258,37 @@ namespace MCCSC_Scheduler.Database
         //Reservation Section ========================================================================================================================
         public string GetReservation(ReservationDTO requestData)
         {
-            int StatusSearch = 0;
-
-            switch (requestData.ReservationType)
-            {
-                case "Reservation Request":
-                    StatusSearch = 2;
-                    break;
-                case "Accepted Reservation":
+            int StatusSearch = 0; 
+            switch (requestData.ReservationType) 
+            { 
+                case "Reservation Request": 
+                    StatusSearch = 2; 
+                    break; 
+                case "Accepted Reservation": 
                     StatusSearch = 3;
+                    break; 
+                case "Coordination Meeting": 
+                    StatusSearch = 5; 
+                    break; 
+                case "Cancellation Request": 
+                    StatusSearch = 8; 
+                    break; 
+                case "Cancelled": 
+                    StatusSearch = 7; 
+                    break; 
+                case "Approved Reservation": 
+                    StatusSearch = 9; 
                     break;
-                case "Coordination Meeting":
-                    StatusSearch = 5;
+                case "Expired Reservation":
+                    StatusSearch = 11;
                     break;
-                case "Cancellation Request":
-                    StatusSearch = 8;
-                    break;
-                case "Cancelled":
-                    StatusSearch = 7;
-                    break;
-                case "Approved Reservation":
-                    StatusSearch = 9;
-                    break;
-                default:
+                default: 
                     StatusSearch = 0; // optional: handle unknown types
                     break;
-            }
+                                      
+             }
 
-
-            List<object> reservations = new List<object>();
+            List<ReservationDTO> finalList = new List<ReservationDTO>();
 
             try
             {
@@ -1289,7 +1296,7 @@ namespace MCCSC_Scheduler.Database
                 {
                     conn.Open();
 
-                    // ---------------------- MAIN QUERY ----------------------
+                    // MAIN QUERY
                     string query = @"
                 SELECT r.*, c.reason
                 FROM Reservation r
@@ -1303,210 +1310,284 @@ namespace MCCSC_Scheduler.Database
 
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
+                            var reservations = new List<dynamic>();
+
                             while (reader.Read())
                             {
                                 reservations.Add(new
                                 {
+                                    ReservationID = SafeInt(reader["reservation_id"]),
+                                    ClientID = SafeInt(reader["client_id"]),
+                                    StatusID = SafeInt(reader["status_id"]),
+                                    Remarks = SafeString(reader["remarks"]),
+                                    EventID = SafeInt(reader["event_id"]),
+                                    PackageID = SafeInt(reader["package_id"]),
+                                    Reference = SafeString(reader["hashed_reference"]),
+                                    Reason = SafeString(reader["reason"])
+                                });
+                            }
+
+                            reader.Close();
+
+                            // Loop through reservations
+                            foreach (var r in reservations)
+                            {
+                                int reservationID = r.ReservationID;
+                                int clientID = r.ClientID;
+                                int statusID = r.StatusID;
+                                int eventID = r.EventID;
+                                int packageID = r.PackageID;
+
+                                // GET CLIENT + ORG
+                                UserDTO client = null;
+                                using (SqlCommand cmdClient = new SqlCommand(@"
+                            SELECT u.user_id, u.first_name, u.middle_initial, u.last_name,
+                                   u.role_id, u.email, c.organization_id
+                            FROM Users u
+                            INNER JOIN Client c ON u.user_id = c.user_id
+                            WHERE c.client_id = @CID", conn))
+                                {
+                                    cmdClient.Parameters.AddWithValue("@CID", clientID);
+                                    using (SqlDataReader rc = cmdClient.ExecuteReader())
+                                    {
+                                        if (rc.Read())
+                                        {
+                                            client = new UserDTO
+                                            {
+                                                UserID = SafeInt(rc["user_id"]),
+                                                FirstName = SafeString(rc["first_name"]),
+                                                MiddleInitial = SafeString(rc["middle_initial"]),
+                                                LastName = SafeString(rc["last_name"]),
+                                                RoleID = SafeInt(rc["role_id"]),
+                                                Email = SafeString(rc["email"]),
+                                                OrganizationID = SafeInt(rc["organization_id"])
+                                            };
+                                        }
+                                        rc.Close();
+                                    }
+                                }
+
+                                if (client != null && client.OrganizationID > 0)
+                                {
+                                    client.Organization = GetScalar(conn,
+                                        "SELECT organization_name FROM Organization WHERE organization_id = @OID",
+                                        "@OID", client.OrganizationID);
+                                }
+
+                                // STATUS NAME
+                                string statusName = GetScalar(conn,
+                                    "SELECT status_name FROM reservation_status WHERE status_id = @SID",
+                                    "@SID", statusID);
+
+                                // PREVIOUS STATUS IF CANCELLATION
+                                int prevStatusID = 0;
+                                string prevStatusName = "";
+                                if (statusID == 8) // cancellation request
+                                {
+                                    object prevObj = ExecuteScalarObject(conn,
+                                        "SELECT previous_status_id FROM CancellationRequests WHERE reservation_id = @RID",
+                                        "@RID", reservationID);
+                                    if (prevObj != null && prevObj != DBNull.Value)
+                                    {
+                                        prevStatusID = Convert.ToInt32(prevObj);
+                                        prevStatusName = GetScalar(conn,
+                                            "SELECT status_name FROM reservation_status WHERE status_id = @PID",
+                                            "@PID", prevStatusID);
+                                    }
+                                }
+
+                                // ASSETS
+                                var assets = new List<AssetDTO>();
+                                using (SqlCommand cmdA = new SqlCommand(@"
+                            SELECT a.asset_name, aor.asset_quantity
+                            FROM AssetOnReservation aor
+                            INNER JOIN Assets a ON aor.asset_id = a.asset_id
+                            WHERE aor.reservation_id = @RID", conn))
+                                {
+                                    cmdA.Parameters.AddWithValue("@RID", reservationID);
+                                    using (SqlDataReader ra = cmdA.ExecuteReader())
+                                    {
+                                        while (ra.Read())
+                                        {
+                                            assets.Add(new AssetDTO
+                                            {
+                                                AssetName = SafeString(ra["asset_name"]),
+                                                Quantity = SafeInt(ra["asset_quantity"])
+                                            });
+                                        }
+                                        ra.Close();
+                                    }
+                                }
+
+                                // EVENT DATES
+                                var eventDates = new List<EventDateDTO>();
+                                using (SqlCommand cmdD = new SqlCommand(@"
+                            SELECT date, start_time, end_time 
+                            FROM Reservation_Dates 
+                            WHERE reservation_id = @RID", conn))
+                                {
+                                    cmdD.Parameters.AddWithValue("@RID", reservationID);
+                                    using (SqlDataReader rd = cmdD.ExecuteReader())
+                                    {
+                                        while (rd.Read())
+                                        {
+                                            eventDates.Add(new EventDateDTO
+                                            {
+                                                Date = SafeDateTime(rd["date"]),
+                                                StartTime = SafeString(rd["start_time"]),
+                                                EndTime = SafeString(rd["end_time"])
+                                            });
+                                        }
+                                        rd.Close();
+                                    }
+                                }
+
+                                // COORDINATION MEETINGS
+                                var meetings = new List<CoordinationMeetingDTO>();
+                                using (SqlCommand cmdM = new SqlCommand(@"
+                            SELECT meeting_date, meeting_time, remarks 
+                            FROM CoordinationMeetingDates 
+                            WHERE reservation_id = @RID", conn))
+                                {
+                                    cmdM.Parameters.AddWithValue("@RID", reservationID);
+                                    using (SqlDataReader rm = cmdM.ExecuteReader())
+                                    {
+                                        while (rm.Read())
+                                        {
+                                            meetings.Add(new CoordinationMeetingDTO
+                                            {
+                                                MeetingDate = SafeDateTime(rm["meeting_date"]),
+                                                MeetingTime = SafeTimeSpan(rm["meeting_time"]),
+                                                MeetingRemarks = SafeString(rm["remarks"])
+                                            });
+                                        }
+                                        rm.Close();
+                                    }
+                                }
+
+                                // EVENT NAME
+                                string eventName = GetScalar(conn,
+                                    "SELECT title FROM Events WHERE event_id = @EID",
+                                    "@EID", eventID);
+
+                                // PACKAGE NAME (FIXED: using packageID variable)
+                                string packageName = GetScalar(conn,
+                                    "SELECT package_name FROM Packages WHERE package_id = @PID",
+                                    "@PID", packageID);
+
+                                // BUILD DTO
+                                finalList.Add(new ReservationDTO
+                                {
+                                    ReservationID = reservationID,
+                                    ClientID = clientID,
+                                    Client = client,
+                                    StatusID = statusID,
+                                    StatusName = statusName,
+                                    PreviousStatusID = prevStatusID,
+                                    PreviousStatusName = prevStatusName,
+                                    Remarks = r.Remarks,
+                                    EventID = eventID,
+                                    EventName = eventName,
+                                    Reference = r.Reference,
+                                    Reason = r.Reason,
+                                    SelectedAssets = assets,
+                                    PackageID = packageID,
+                                    PackageName = packageName,
+                                    EventDates = eventDates,
+                                    Meetings = meetings
+                                });
+                            } // foreach reservations
+                        } // reader using
+                    } // cmd using
+                } // conn using
+
+                return JsonConvert.SerializeObject(finalList, Formatting.Indented);
+            }
+            catch (Exception ex)
+            {
+                // Return the message but you might want to log it server-side as well
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
+        // ----------------- Helper methods -----------------
+        private int SafeInt(object val) => val == null || val == DBNull.Value ? 0 : Convert.ToInt32(val);
+        private string SafeString(object val) => val == null || val == DBNull.Value ? "" : val.ToString();
+        private DateTime SafeDateTime(object val) => val == null || val == DBNull.Value ? DateTime.MinValue : Convert.ToDateTime(val);
+        private TimeSpan SafeTimeSpan(object val)
+        {
+            if (val == null || val == DBNull.Value) return TimeSpan.Zero;
+            TimeSpan ts;
+            if (TimeSpan.TryParse(val.ToString(), out ts)) return ts;
+            // If stored as string HH:mm:ss or similar, try parse; otherwise return zero
+            return TimeSpan.Zero;
+        }
+
+        private string GetScalar(SqlConnection conn, string sql, string paramName, object value)
+        {
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue(paramName, value ?? DBNull.Value);
+                var res = cmd.ExecuteScalar();
+                return res == null || res == DBNull.Value ? "" : res.ToString();
+            }
+        }
+
+        private object ExecuteScalarObject(SqlConnection conn, string sql, string paramName, object value)
+        {
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue(paramName, value ?? DBNull.Value);
+                return cmd.ExecuteScalar();
+            }
+        }
+
+        public string GetRatings(RatingDTO ratingDTO)
+        {
+            try
+            {
+                List<RatingDTO> ratings = new List<RatingDTO>();
+
+                string query = @"SELECT rating_id, reservation_id, number_of_stars 
+                         FROM Ratings 
+                         WHERE reservation_id = @ReservationID";
+
+                using (SqlConnection conn = new SqlConnection(connectionString))
+                {
+                    conn.Open();
+
+                    using (SqlCommand cmd = new SqlCommand(query, conn))
+                    {
+                        cmd.Parameters.AddWithValue("@ReservationID", ratingDTO.ReservationID);
+
+                        using (SqlDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                ratings.Add(new RatingDTO
+                                {
+                                    RatingID = Convert.ToInt32(reader["rating_id"]),
                                     ReservationID = Convert.ToInt32(reader["reservation_id"]),
-                                    ClientID = Convert.ToInt32(reader["client_id"]),
-                                    StatusID = Convert.ToInt32(reader["status_id"]),
-                                    Remarks = reader["remarks"].ToString(),
-                                    EventID = Convert.ToInt32(reader["event_id"]),
-                                    Reference = reader["hashed_reference"].ToString(),
-                                    Reason = reader["reason"]?.ToString()
+                                    NumberOfStars = Convert.ToInt32(reader["number_of_stars"])
                                 });
                             }
                         }
                     }
-
-                    // ---------------------- LOOP THROUGH RESERVATIONS ----------------------
-                    List<ReservationDTO> finalList = new List<ReservationDTO>();
-
-                    foreach (dynamic r in reservations)
-                    {
-                        int reservationID = r.ReservationID;
-                        int clientID = r.ClientID;
-                        int statusID = r.StatusID;
-                        int eventID = r.EventID;
-
-                        // ----- GET CLIENT + ORGANIZATION -----
-                        UserDTO client = null;
-                        string organizationName = "";
-
-                        using (SqlCommand cmd = new SqlCommand(@"
-                    SELECT u.user_id, u.first_name, u.middle_initial, u.last_name,
-                           u.role_id, u.email, c.organization_id
-                    FROM Users u
-                    INNER JOIN Client c ON u.user_id = c.user_id
-                    WHERE c.client_id = @CID", conn))
-                        {
-                            cmd.Parameters.AddWithValue("@CID", clientID);
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                if (reader.Read())
-                                {
-                                    client = new UserDTO
-                                    {
-                                        UserID = Convert.ToInt32(reader["user_id"]),
-                                        FirstName = reader["first_name"].ToString(),
-                                        MiddleInitial = reader["middle_initial"].ToString(),
-                                        LastName = reader["last_name"].ToString(),
-                                        RoleID = Convert.ToInt32(reader["role_id"]),
-                                        Email = reader["email"].ToString(),
-                                        OrganizationID = Convert.ToInt32(reader["organization_id"])
-                                    };
-                                }
-                            }
-                        }
-
-                        // Organization name
-                        if (client != null && client.OrganizationID > 0)
-                        {
-                            using (SqlCommand cmd = new SqlCommand(
-                                @"SELECT organization_name FROM Organization WHERE organization_id = @OID", conn))
-                            {
-                                cmd.Parameters.AddWithValue("@OID", client.OrganizationID);
-                                organizationName = cmd.ExecuteScalar()?.ToString() ?? "";
-                            }
-                            client.Organization = organizationName;
-                        }
-
-                        // ----- GET STATUS NAME -----
-                        string statusName = "";
-                        using (SqlCommand cmd = new SqlCommand(
-                            @"SELECT status_name FROM reservation_status WHERE status_id = @SID", conn))
-                        {
-                            cmd.Parameters.AddWithValue("@SID", statusID);
-                            statusName = cmd.ExecuteScalar()?.ToString() ?? "";
-                        }
-
-                        // ----- GET PREVIOUS STATUS IF CANCELLATION -----
-                        int? prevStatusID = null;
-                        string prevStatusName = null;
-                        if (statusID == 8)
-                        {
-                            using (SqlCommand cmd = new SqlCommand(
-                                @"SELECT previous_status_id FROM CancellationRequests WHERE reservation_id = @RID", conn))
-                            {
-                                cmd.Parameters.AddWithValue("@RID", reservationID);
-                                var resPrev = cmd.ExecuteScalar();
-                                if (resPrev != null && resPrev != DBNull.Value)
-                                    prevStatusID = Convert.ToInt32(resPrev);
-                            }
-
-                            if (prevStatusID.HasValue)
-                            {
-                                using (SqlCommand cmd = new SqlCommand(
-                                    @"SELECT status_name FROM reservation_status WHERE status_id = @PID", conn))
-                                {
-                                    cmd.Parameters.AddWithValue("@PID", prevStatusID);
-                                    prevStatusName = cmd.ExecuteScalar()?.ToString();
-                                }
-                            }
-                        }
-
-                        // ----- GET ASSETS -----
-                        List<AssetDTO> assets = new List<AssetDTO>();
-                        using (SqlCommand cmd = new SqlCommand(@"
-                    SELECT a.asset_name, aor.asset_quantity
-                    FROM AssetOnReservation aor
-                    INNER JOIN Assets a ON aor.asset_id = a.asset_id
-                    WHERE aor.reservation_id = @RID", conn))
-                        {
-                            cmd.Parameters.AddWithValue("@RID", reservationID);
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    assets.Add(new AssetDTO
-                                    {
-                                        AssetName = reader["asset_name"].ToString(),
-                                        Quantity = Convert.ToInt32(reader["asset_quantity"])
-                                    });
-                                }
-                            }
-                        }
-
-                        // ----- GET EVENT DATES -----
-                        List<EventDateDTO> eventDates = new List<EventDateDTO>();
-                        using (SqlCommand cmd = new SqlCommand(@"
-                    SELECT date, start_time, end_time 
-                    FROM Reservation_Dates 
-                    WHERE reservation_id = @RID", conn))
-                        {
-                            cmd.Parameters.AddWithValue("@RID", reservationID);
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    eventDates.Add(new EventDateDTO
-                                    {
-                                        Date = Convert.ToDateTime(reader["date"]),
-                                        StartTime = reader["start_time"].ToString(),
-                                        EndTime = reader["end_time"].ToString()
-                                    });
-                                }
-                            }
-                        }
-
-                        // ----- GET COORDINATION MEETINGS -----
-                        List<CoordinationMeetingDTO> meetings = new List<CoordinationMeetingDTO>();
-                        using (SqlCommand cmd = new SqlCommand(@"
-                    SELECT meeting_date, meeting_time, remarks 
-                    FROM CoordinationMeetingDates 
-                    WHERE reservation_id = @RID", conn))
-                        {
-                            cmd.Parameters.AddWithValue("@RID", reservationID);
-                            using (var reader = cmd.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    meetings.Add(new CoordinationMeetingDTO
-                                    {
-                                        MeetingDate = Convert.ToDateTime(reader["meeting_date"]),
-                                        MeetingTime = TimeSpan.Parse(reader["meeting_time"].ToString()),
-                                        MeetingRemarks = reader["remarks"].ToString()
-                                    });
-                                }
-                            }
-                        }
-
-                        // ----- GET EVENT NAME -----
-                        string eventName = "";
-                        using (SqlCommand cmd = new SqlCommand(
-                            @"SELECT title FROM Events WHERE event_id = @EID", conn))
-                        {
-                            cmd.Parameters.AddWithValue("@EID", eventID);
-                            eventName = cmd.ExecuteScalar()?.ToString() ?? "";
-                        }
-
-                        // ----- ADD TO FINAL LIST -----
-                        finalList.Add(new ReservationDTO
-                        {
-                            ReservationID = reservationID,
-                            ClientID = clientID,
-                            Client = client,
-                            StatusID = statusID,
-                            StatusName = statusName,
-                            PreviousStatusID = prevStatusID ?? 0,
-                            PreviousStatusName = prevStatusName,
-                            Remarks = r.Remarks,
-                            EventID = eventID,
-                            EventName = eventName,
-                            Reference = r.Reference,
-                            Reason = r.Reason,
-                            SelectedAssets = assets,
-                            EventDates = eventDates,
-                            Meetings = meetings
-                        });
-                    }
-
-                    return JsonConvert.SerializeObject(finalList, Formatting.Indented);
                 }
+
+                return JsonConvert.SerializeObject(new
+                {
+                    success = true,
+                    data = ratings
+                });
             }
             catch (Exception ex)
             {
-                return JsonConvert.SerializeObject(new { error = ex.Message });
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    error = ex.Message
+                });
             }
         }
 
@@ -1641,6 +1722,7 @@ namespace MCCSC_Scheduler.Database
             var assets = reservationData.SelectedAssets;
             var dates = reservationData.EventDates;
             var orgID = reservationData.OrganizationID;
+            int packageID = reservationData.PackageID;
 
             int eventId;
             int reservationId;
@@ -1771,9 +1853,9 @@ namespace MCCSC_Scheduler.Database
 
                         // 3️⃣ Insert Reservation
                         string insertReservation = @"
-                    INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference)
+                    INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference, package_id)
                     OUTPUT INSERTED.reservation_id
-                    VALUES (@ClientID, @StatusID, @EventID, @Reference)";
+                    VALUES (@ClientID, @StatusID, @EventID, @Reference, @PackageID)";
                         using (SqlCommand cmd = new SqlCommand(insertReservation, conn, trans))
                         {
                             cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -1781,6 +1863,7 @@ namespace MCCSC_Scheduler.Database
                             cmd.Parameters.AddWithValue("@EventID", eventId);
                             string reference = Guid.NewGuid().ToString().Substring(0, 8);
                             cmd.Parameters.AddWithValue("@Reference", reference);
+                            cmd.Parameters.AddWithValue("@PackageID", packageID);
 
                             reservationId = (int)cmd.ExecuteScalar();
                         }
@@ -1956,6 +2039,50 @@ namespace MCCSC_Scheduler.Database
             }
             //return JsonConvert.SerializeObject(notificationData);
         }
+        public string SubmitRatings(RatingDTO ratingDTO)
+        {
+            try
+            {
+                string query = @"INSERT INTO Ratings 
+                (client_id, reservation_id, organization_id, number_of_stars, feedback)
+                VALUES (@ClientID, @ReservationID, @OrganizationID, @NumberOfStars, @Feedback)";
+
+                string updateIsRated = @"UPDATE Notifications 
+                                 SET is_rated = 1 
+                                 WHERE reservation_id = @ReservationID";
+
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+
+                    // Insert Rating
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@ClientID", ratingDTO.ClientID);
+                        cmd.Parameters.AddWithValue("@ReservationID", ratingDTO.ReservationID);
+                        cmd.Parameters.AddWithValue("@OrganizationID", ratingDTO.OrganizationID);
+                        cmd.Parameters.AddWithValue("@NumberOfStars", ratingDTO.NumberOfStars);
+                        cmd.Parameters.AddWithValue("@Feedback", ratingDTO.Feedback);
+
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // Update Notification is_rated = 1
+                    using (SqlCommand cmd2 = new SqlCommand(updateIsRated, con))
+                    {
+                        cmd2.Parameters.AddWithValue("@ReservationID", ratingDTO.ReservationID);
+                        cmd2.ExecuteNonQuery();
+                    }
+                }
+
+                return "Ratings submitted";
+            }
+            catch (Exception ex)
+            {
+                return $"Error: {ex.Message}";
+            }
+        }
+
         public string GetNotifications(NotificationDTO notificationDTO)
         {
             try
@@ -1970,18 +2097,29 @@ namespace MCCSC_Scheduler.Database
                     conn.Open();
 
                     string query = "";
-
                     if (notificationDTO.PageType == "Admin")
                     {
-                        query = @"SELECT * FROM Notifications 
-                          WHERE NoteFor = 'Admin'
-                          ORDER BY created_at DESC";
+                        query = @"
+                    SELECT n.notification_id, n.user_id, n.client_id, n.reservation_id, n.status_id, 
+                           n.is_read, n.created_at, n.NoteFor, n.is_rated,
+                           u.first_name, u.last_name
+                    FROM Notifications n
+                    LEFT JOIN Users u ON n.user_id = u.user_id
+                    WHERE n.NoteFor = 'Admin'
+                    ORDER BY n.created_at DESC";
                     }
                     else if (notificationDTO.PageType == "Client")
                     {
-                        query = @"SELECT * FROM Notifications 
-                          WHERE NoteFor = 'Client' AND client_id = @ClientID
-                          ORDER BY created_at DESC";
+                        query = @"
+                    SELECT n.notification_id, n.user_id, n.client_id, n.reservation_id, n.status_id, 
+                           n.is_read, n.created_at, n.NoteFor, n.is_rated,
+                           r.event_id, e.title AS event_name, rd.date
+                    FROM Notifications n
+                    LEFT JOIN Reservation r ON n.reservation_id = r.reservation_id
+                    LEFT JOIN Events e ON r.event_id = e.event_id
+                    LEFT JOIN Reservation_Dates rd ON r.reservation_id = rd.reservation_id
+                    WHERE n.NoteFor = 'Client' AND n.client_id = @ClientID
+                    ORDER BY n.created_at DESC";
                     }
 
                     using (SqlCommand cmd = new SqlCommand(query, conn))
@@ -1993,60 +2131,72 @@ namespace MCCSC_Scheduler.Database
 
                         using (SqlDataReader reader = cmd.ExecuteReader())
                         {
+                            Dictionary<int, NotificationDTO> clientNotifications = new Dictionary<int, NotificationDTO>();
+
                             while (reader.Read())
                             {
-                                results.Add(new NotificationDTO
+                                if (notificationDTO.PageType == "Admin")
                                 {
-                                    NotificationID = Convert.ToInt32(reader["notification_id"]),
-                                    UserID = Convert.ToInt32(reader["user_id"]),   // ✔ use this value
-                                    ClientID = reader["client_id"] != DBNull.Value ? Convert.ToInt32(reader["client_id"]) : 0,
-                                    ReservationID = reader["reservation_id"] != DBNull.Value ? Convert.ToInt32(reader["reservation_id"]) : 0,
-                                    StatusID = Convert.ToInt32(reader["status_id"]),
-                                    IsRead = Convert.ToBoolean(reader["is_read"]),
-                                    CreatedAt = Convert.ToDateTime(reader["created_at"]),
-                                    NoteFor = reader["NoteFor"] != DBNull.Value ? reader["NoteFor"].ToString() : "",
-                                    ClientName = ""
-                                });
-                            }
-                        }
-                    }
-
-                    // ✔ ADMIN ONLY: Get client name using stored UserID
-                    if (notificationDTO.PageType == "Admin")
-                    {
-                        foreach (var item in results)
-                        {
-                            if (item.UserID > 0)
-                            {
-                                string queryUser = @"SELECT first_name, last_name 
-                                             FROM Users 
-                                             WHERE user_id = @UserID";
-
-                                using (SqlCommand userCmd = new SqlCommand(queryUser, conn))
-                                {
-                                    userCmd.Parameters.AddWithValue("@UserID", item.UserID);
-
-                                    using (SqlDataReader userReader = userCmd.ExecuteReader())
+                                    var notification = new NotificationDTO
                                     {
-                                        if (userReader.Read())
+                                        NotificationID = Convert.ToInt32(reader["notification_id"]),
+                                        UserID = Convert.ToInt32(reader["user_id"]),
+                                        ClientID = reader["client_id"] != DBNull.Value ? Convert.ToInt32(reader["client_id"]) : 0,
+                                        ReservationID = reader["reservation_id"] != DBNull.Value ? Convert.ToInt32(reader["reservation_id"]) : 0,
+                                        StatusID = Convert.ToInt32(reader["status_id"]),
+                                        IsRead = Convert.ToBoolean(reader["is_read"]),
+                                        IsRated = reader["is_rated"] != DBNull.Value && Convert.ToBoolean(reader["is_rated"]),
+                                        CreatedAt = Convert.ToDateTime(reader["created_at"]),
+                                        NoteFor = reader["NoteFor"].ToString(),
+                                        ClientName = reader["last_name"] != DBNull.Value ? reader["last_name"].ToString() : ""
+                                    };
+                                    results.Add(notification);
+                                }
+                                else if (notificationDTO.PageType == "Client")
+                                {
+                                    int resId = reader["reservation_id"] != DBNull.Value ? Convert.ToInt32(reader["reservation_id"]) : 0;
+
+                                    if (!clientNotifications.ContainsKey(resId))
+                                    {
+                                        clientNotifications[resId] = new NotificationDTO
                                         {
-                                            item.ClientName = $"{userReader["first_name"]} {userReader["last_name"]}";
-                                        }
+                                            NotificationID = Convert.ToInt32(reader["notification_id"]),
+                                            UserID = Convert.ToInt32(reader["user_id"]),
+                                            ClientID = reader["client_id"] != DBNull.Value ? Convert.ToInt32(reader["client_id"]) : 0,
+                                            ReservationID = resId,
+                                            StatusID = Convert.ToInt32(reader["status_id"]),
+                                            IsRead = Convert.ToBoolean(reader["is_read"]),
+                                            IsRated = reader["is_rated"] != DBNull.Value && Convert.ToBoolean(reader["is_rated"]),
+                                            CreatedAt = Convert.ToDateTime(reader["created_at"]),
+                                            NoteFor = reader["NoteFor"].ToString(),
+                                            EventID = reader["event_id"] != DBNull.Value ? Convert.ToInt32(reader["event_id"]) : 0,
+                                            EventName = reader["event_name"] != DBNull.Value ? reader["event_name"].ToString() : "",
+                                            ReservationDates = new List<DateTime>()
+                                        };
+                                    }
+
+                                    if (reader["date"] != DBNull.Value)
+                                    {
+                                        clientNotifications[resId].ReservationDates.Add(Convert.ToDateTime(reader["date"]));
                                     }
                                 }
+                            }
+
+                            if (notificationDTO.PageType == "Client")
+                            {
+                                results.AddRange(clientNotifications.Values);
                             }
                         }
                     }
                 }
 
-                return JsonConvert.SerializeObject(results);
+                return JsonConvert.SerializeObject(new { success = true, data = results });
             }
             catch (Exception ex)
             {
                 return JsonConvert.SerializeObject(new { success = false, error = ex.Message });
             }
         }
-
 
         public string MarkAsRead(NotificationDTO notificationDTO)
         {

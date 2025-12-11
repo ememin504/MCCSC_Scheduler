@@ -11,6 +11,7 @@ using System.Web.Services;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using MCCSC_Scheduler.Database;
+using MCCSC_Scheduler.DTO;
 using Newtonsoft.Json;
 
 namespace MCCSC_Scheduler
@@ -57,6 +58,34 @@ namespace MCCSC_Scheduler
                 return new List<AssetDTO>();
             }
         }
+        [WebMethod]
+        public static string GetPackages()
+        {
+            try
+            {
+                var requests = dbContext.GetPackages();
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string SubmitRatings(RatingDTO ratingDTO)
+        {
+            try
+            {
+                var requests = dbContext.SubmitRatings(ratingDTO);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
+
         [WebMethod]
 
         public static string GetClientInfo(object clientData)
@@ -209,5 +238,21 @@ namespace MCCSC_Scheduler
                 return JsonConvert.SerializeObject(new { error = ex.Message });
             }
         }
+        [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+
+        public static string GetReservationDates(ReservationDTO requestData)
+        {
+            try
+            {
+                var requests = dbContext.GetReservation(requestData);
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
     }
 }

@@ -988,3 +988,14 @@ tbody .btn {
         margin-bottom: 1rem;
     }
 }
+#ratingModal .star {
+    font-size: 2rem;
+    color: gray;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+}
+
+    #ratingModal .star.filled {
+        color: gold;
+    }

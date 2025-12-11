@@ -9,6 +9,8 @@ public class ReservationDTO
     public string EventDescription { get; set; }
     public string EventName { get; set; }
     public int ClientID { get; set; }
+    public int PackageID { get; set; }
+    public string PackageName { get; set; }
     public int StatusID { get; set; }
     public string StatusName { get; set; }
     public int OrganizationID { get; set; }
