@@ -1912,93 +1912,89 @@ namespace MCCSC_Scheduler.Database
                 {
                     try
                     {
-                        // 1️⃣ Check for date conflicts (supports overnight)
+                        // 1️⃣ Conflict detection (status_id = 9 only)
                         foreach (var d in dates)
                         {
                             DateTime dateOnly = d.Date.Date;
                             TimeSpan startTime = TimeSpan.Parse(d.StartTime);
                             TimeSpan endTime = TimeSpan.Parse(d.EndTime);
 
-                            // Split overnight reservations into two checks
-                            if (startTime < endTime)
+                            if (startTime < endTime) // Same-day reservation
                             {
-                                // Normal reservation (same day)
                                 string conflictQuery = @"
-                            SELECT COUNT(*) FROM Reservation_Dates
-                            WHERE date = @Date
-                            AND (
-                                (@StartTime < @EndTime AND (
-                                    (@StartTime BETWEEN start_time AND end_time)
-                                    OR (@EndTime BETWEEN start_time AND end_time)
-                                    OR (start_time BETWEEN @StartTime AND @EndTime)
-                                    OR (end_time BETWEEN @StartTime AND @EndTime)
-                                ))
-                            )";
+                            SELECT COUNT(*) 
+                            FROM Reservation_Dates rd
+                            INNER JOIN Reservation r ON rd.reservation_id = r.reservation_id
+                            WHERE rd.date = @Date
+                              AND r.status_id = 9
+                              AND @StartTime < rd.end_time
+                              AND @EndTime > rd.start_time";
+
                                 using (SqlCommand checkCmd = new SqlCommand(conflictQuery, conn, trans))
                                 {
                                     checkCmd.Parameters.AddWithValue("@Date", dateOnly);
                                     checkCmd.Parameters.AddWithValue("@StartTime", startTime);
                                     checkCmd.Parameters.AddWithValue("@EndTime", endTime);
 
-                                    int exists = (int)checkCmd.ExecuteScalar();
-                                    if (exists > 0)
+                                    if ((int)checkCmd.ExecuteScalar() > 0)
                                     {
                                         trans.Rollback();
                                         return JsonConvert.SerializeObject(new
                                         {
                                             success = false,
-                                            error = $"Reservation failed: the date {dateOnly:yyyy-MM-dd} {startTime}-{endTime} is already booked."
+                                            error = $"Reservation failed: {dateOnly:yyyy-MM-dd} {startTime}-{endTime} overlaps another reservation."
                                         });
                                     }
                                 }
                             }
-                            else
+                            else // Overnight reservation
                             {
-                                // Overnight reservation (spans two dates)
                                 // Day 1
-                                string conflictQuery1 = @"
-                            SELECT COUNT(*) FROM Reservation_Dates
-                            WHERE date = @Date
-                            AND (
-                                (@StartTime BETWEEN start_time AND end_time)
-                                OR (start_time BETWEEN @StartTime AND CAST('23:59:59.9999999' AS TIME))
-                            )";
-                                using (SqlCommand cmd1 = new SqlCommand(conflictQuery1, conn, trans))
+                                string conflictDay1 = @"
+                            SELECT COUNT(*)
+                            FROM Reservation_Dates rd
+                            INNER JOIN Reservation r ON rd.reservation_id = r.reservation_id
+                            WHERE rd.date = @Date
+                              AND r.status_id = 9
+                              AND @StartTime < rd.end_time";
+
+                                using (SqlCommand cmd1 = new SqlCommand(conflictDay1, conn, trans))
                                 {
                                     cmd1.Parameters.AddWithValue("@Date", dateOnly);
                                     cmd1.Parameters.AddWithValue("@StartTime", startTime);
-                                    int exists1 = (int)cmd1.ExecuteScalar();
-                                    if (exists1 > 0)
+
+                                    if ((int)cmd1.ExecuteScalar() > 0)
                                     {
                                         trans.Rollback();
                                         return JsonConvert.SerializeObject(new
                                         {
                                             success = false,
-                                            error = $"Reservation failed: the date {dateOnly:yyyy-MM-dd} {startTime}-{endTime} (overnight) is already booked."
+                                            error = $"Reservation failed: {dateOnly:yyyy-MM-dd} {startTime}-24:00 overlaps another reservation."
                                         });
                                     }
                                 }
 
                                 // Day 2
-                                string conflictQuery2 = @"
-                            SELECT COUNT(*) FROM Reservation_Dates
-                            WHERE date = @NextDate
-                            AND (
-                                (@EndTime BETWEEN start_time AND end_time)
-                                OR (start_time BETWEEN CAST('00:00:00' AS TIME) AND @EndTime)
-                            )";
-                                using (SqlCommand cmd2 = new SqlCommand(conflictQuery2, conn, trans))
+                                string conflictDay2 = @"
+                            SELECT COUNT(*)
+                            FROM Reservation_Dates rd
+                            INNER JOIN Reservation r ON rd.reservation_id = r.reservation_id
+                            WHERE rd.date = @NextDate
+                              AND r.status_id = 9
+                              AND @EndTime > rd.start_time";
+
+                                using (SqlCommand cmd2 = new SqlCommand(conflictDay2, conn, trans))
                                 {
                                     cmd2.Parameters.AddWithValue("@NextDate", dateOnly.AddDays(1));
                                     cmd2.Parameters.AddWithValue("@EndTime", endTime);
-                                    int exists2 = (int)cmd2.ExecuteScalar();
-                                    if (exists2 > 0)
+
+                                    if ((int)cmd2.ExecuteScalar() > 0)
                                     {
                                         trans.Rollback();
                                         return JsonConvert.SerializeObject(new
                                         {
                                             success = false,
-                                            error = $"Reservation failed: the date {dateOnly.AddDays(1):yyyy-MM-dd} 00:00-{endTime} (overnight) is already booked."
+                                            error = $"Reservation failed: {dateOnly.AddDays(1):yyyy-MM-dd} 00:00-{endTime} overlaps another reservation."
                                         });
                                     }
                                 }
@@ -2020,6 +2016,7 @@ namespace MCCSC_Scheduler.Database
                         INSERT INTO Events (title, description, organization_id)
                         OUTPUT INSERTED.event_id
                         VALUES (@Title, @Description, @OrganizationID)";
+
                             using (SqlCommand insertCmd = new SqlCommand(insertEventQuery, conn, trans))
                             {
                                 insertCmd.Parameters.AddWithValue("@Title", eventName);
@@ -2034,17 +2031,19 @@ namespace MCCSC_Scheduler.Database
                     INSERT INTO Reservation (client_id, status_id, event_id, hashed_reference, package_id)
                     OUTPUT INSERTED.reservation_id
                     VALUES (@ClientID, @StatusID, @EventID, @Reference, @PackageID)";
+
                         using (SqlCommand cmd = new SqlCommand(insertReservation, conn, trans))
                         {
                             cmd.Parameters.AddWithValue("@ClientID", clientId);
                             cmd.Parameters.AddWithValue("@StatusID", 2); // Pending
                             cmd.Parameters.AddWithValue("@EventID", eventId);
-                            string reference = Guid.NewGuid().ToString().Substring(0, 8);
-                            cmd.Parameters.AddWithValue("@Reference", reference);
+                            cmd.Parameters.AddWithValue("@Reference", Guid.NewGuid().ToString().Substring(0, 8));
                             cmd.Parameters.AddWithValue("@PackageID", packageID);
 
                             reservationId = (int)cmd.ExecuteScalar();
                         }
+
+                        // 4️⃣ Insert Suggestions
                         string insertSuggestion = @"
                     INSERT INTO Suggestions (package_id, suggestion_message, client_id)
                     VALUES (@PackageID, @Message, @ClientID)";
@@ -2054,16 +2053,16 @@ namespace MCCSC_Scheduler.Database
                             suggestionsCmd.Parameters.AddWithValue("@PackageID", packageID);
                             suggestionsCmd.Parameters.AddWithValue("@Message", suggestions ?? (object)DBNull.Value);
                             suggestionsCmd.Parameters.AddWithValue("@ClientID", clientId);
-
                             suggestionsCmd.ExecuteNonQuery();
                         }
 
-                        // 4️⃣ Insert Assets
+                        // 5️⃣ Insert Assets
                         foreach (var asset in assets)
                         {
                             string insertAssetQuery = @"
                         INSERT INTO AssetOnReservation (reservation_id, asset_id, asset_quantity)
                         VALUES (@ReservationID, @AssetID, @Qty)";
+
                             using (SqlCommand assetCmd = new SqlCommand(insertAssetQuery, conn, trans))
                             {
                                 assetCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -2073,7 +2072,7 @@ namespace MCCSC_Scheduler.Database
                             }
                         }
 
-                        // 5️⃣ Insert Dates (split overnight if needed)
+                        // 6️⃣ Insert Dates
                         foreach (var d in dates)
                         {
                             DateTime dateOnly = d.Date.Date;
@@ -2085,6 +2084,7 @@ namespace MCCSC_Scheduler.Database
                                 string insertDateQuery = @"
                             INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
                             VALUES (@ReservationID, @Date, @StartTime, @EndTime)";
+
                                 using (SqlCommand dateCmd = new SqlCommand(insertDateQuery, conn, trans))
                                 {
                                     dateCmd.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -2099,6 +2099,7 @@ namespace MCCSC_Scheduler.Database
                                 string insertDate1 = @"
                             INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
                             VALUES (@ReservationID, @Date, @StartTime, CAST('23:59:59.9999999' AS TIME))";
+
                                 using (SqlCommand cmd1 = new SqlCommand(insertDate1, conn, trans))
                                 {
                                     cmd1.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -2110,6 +2111,7 @@ namespace MCCSC_Scheduler.Database
                                 string insertDate2 = @"
                             INSERT INTO Reservation_Dates (reservation_id, date, start_time, end_time)
                             VALUES (@ReservationID, @NextDate, CAST('00:00:00' AS TIME), @EndTime)";
+
                                 using (SqlCommand cmd2 = new SqlCommand(insertDate2, conn, trans))
                                 {
                                     cmd2.Parameters.AddWithValue("@ReservationID", reservationId);
@@ -2120,17 +2122,14 @@ namespace MCCSC_Scheduler.Database
                             }
                         }
 
-                        // ✅ Commit transaction
                         trans.Commit();
 
-                        // Return reservation_id along with success message
                         return JsonConvert.SerializeObject(new
                         {
                             success = true,
                             reservation_id = reservationId,
                             message = "Reservation submitted successfully."
                         });
-
                     }
                     catch (Exception ex)
                     {
@@ -2144,6 +2143,8 @@ namespace MCCSC_Scheduler.Database
                 }
             }
         }
+
+
 
         private TimeSpan SafeParseTime(string time)
         {

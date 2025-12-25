@@ -8,7 +8,7 @@ const roleTypeIDStr = sessionStorage.getItem("role_type_id");
 const roleTypeID = roleTypeIDStr ? Number(roleTypeIDStr) : 0;
 const roleTypeDescription = sessionStorage.getItem("role_type_description");
 var organizationID = 0;
-console.log(roleId, userId, userEmail);
+console.log(roleId, userId, userEmail);p
 let selectedAssets = []; // use array in case multiple assets are checked
 let n = 0;
 let noteFor = "Admin";

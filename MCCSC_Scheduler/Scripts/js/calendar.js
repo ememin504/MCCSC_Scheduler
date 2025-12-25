@@ -59,14 +59,15 @@ function showSection(sectionName, event) {
 
 
 // Calendar Generation
-function generateCalendar(date, reservations = [], data) {
+// ------------------- GENERATE CALENDAR -------------------
+// ------------------- GENERATE CALENDAR -------------------
+function generateCalendar(date, reservations = [], data = []) {
     const calendar = document.getElementById('calendar');
     calendar.innerHTML = '';
-
     const year = date.getFullYear();
     const month = date.getMonth();
 
-    // Create calendar header
+    // Calendar header
     const header = document.createElement('div');
     header.className = 'calendar-header';
     header.innerHTML = `
@@ -76,11 +77,10 @@ function generateCalendar(date, reservations = [], data) {
     `;
     calendar.appendChild(header);
 
-    // Create day headers
+    // Day headers
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dayHeaderGrid = document.createElement('div');
     dayHeaderGrid.className = 'calendar-grid';
-
     daysOfWeek.forEach(day => {
         const dayHeader = document.createElement('div');
         dayHeader.className = 'calendar-day-header';
@@ -89,39 +89,31 @@ function generateCalendar(date, reservations = [], data) {
     });
     calendar.appendChild(dayHeaderGrid);
 
-    // Create calendar grid
+    // Calendar grid
     const calendarGrid = document.createElement('div');
     calendarGrid.className = 'calendar-grid';
 
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
-
     const today = new Date();
     const isCurrentMonth = today.getMonth() === month && today.getFullYear() === year;
 
     // Previous month's days
     for (let i = firstDay - 1; i >= 0; i--) {
-        const dayCell = createDayCell(daysInPrevMonth - i, true, data);
+        const dayCell = createDayCell(daysInPrevMonth - i, true, [], null, data);
         calendarGrid.appendChild(dayCell);
     }
 
-    /// Current month's days
     // Current month's days
     for (let day = 1; day <= daysInMonth; day++) {
-        const dayEvents = getEventsForDay(year, month, day, reservations);
-
-        // Check if holiday
         const holidayName = isHoliday(year, month, day);
-
-        // Pass holidayName to createDayCell
-        const dayCell = createDayCell(day, false, dayEvents, holidayName, data);
+        const dayCell = createDayCell(day, false, [], holidayName, data);
 
         if (isCurrentMonth && day === today.getDate()) {
             dayCell.classList.add('today');
         }
 
-        // Only make clickable if NOT holiday
         if (!holidayName) {
             dayCell.addEventListener('click', function () {
                 selectDate(year, month, day);
@@ -131,14 +123,12 @@ function generateCalendar(date, reservations = [], data) {
         calendarGrid.appendChild(dayCell);
     }
 
-
     // Next month's days
     const remainingCells = 42 - (firstDay + daysInMonth);
     for (let day = 1; day <= remainingCells; day++) {
-        const dayCell = createDayCell(day, true, data);
+        const dayCell = createDayCell(day, true, [], null, data);
         calendarGrid.appendChild(dayCell);
     }
-
 
     calendar.appendChild(calendarGrid);
 }
@@ -153,7 +143,9 @@ function getEventsForDay(year, month, day, reservations) {
     });
 }
 
-function createDayCell(day, isOtherMonth, events = [], holidayName = null, data) {
+// ------------------- CREATE DAY CELL -------------------
+// ------------------- CREATE DAY CELL -------------------
+function createDayCell(day, isOtherMonth, events = [], holidayName = null, data = []) {
     const dayCell = document.createElement('div');
     dayCell.className = 'calendar-day';
     dayCell.style.position = 'relative';
@@ -165,14 +157,12 @@ function createDayCell(day, isOtherMonth, events = [], holidayName = null, data)
     dayCell.style.boxSizing = 'border-box';
     dayCell.style.textAlign = 'center';
 
-    // Blur/disabled style
     if (isOtherMonth || holidayName) {
         dayCell.style.filter = 'blur(0.5px)';
         dayCell.style.opacity = '0.6';
-        dayCell.style.pointerEvents = 'none'; // disables clicks
+        dayCell.style.pointerEvents = 'none';
     }
 
-    // DATE NUMBER
     const dateLabel = document.createElement('div');
     dateLabel.className = 'date-number';
     dateLabel.textContent = day;
@@ -180,72 +170,76 @@ function createDayCell(day, isOtherMonth, events = [], holidayName = null, data)
     dateLabel.style.marginBottom = holidayName ? '2px' : '0';
     dayCell.appendChild(dateLabel);
 
-    // HOLIDAY LABEL
     if (holidayName) {
         const holidayLabel = document.createElement('div');
         holidayLabel.className = 'holiday-label';
         holidayLabel.textContent = holidayName;
         holidayLabel.style.fontSize = '10px';
-        holidayLabel.style.color = '##FFB7B7';
+        holidayLabel.style.color = '#FFB7B7';
         dayCell.appendChild(holidayLabel);
         dayCell.classList.add('holiday');
-        dayCell.title = holidayName; // tooltip
+        dayCell.title = holidayName;
     }
 
-    // EVENTS
-    // EVENTS
-    if (!isOtherMonth && events.length > 0) {
-        events.forEach(res => { // renamed to 'res' to match your function
-            const start = timeToMinutes(res.StartTime);
-            const end = timeToMinutes(res.EndTime);
+    // Use full reservation objects
+    if (!isOtherMonth && data.length > 0) {
+        const columns = [];
 
-            const clampedStart = Math.max(start, DAY_START);
-            const clampedEnd = Math.min(end, DAY_END);
+        data.forEach(reservation => {
+            reservation.EventDates.forEach(eventDate => {
+                const eventDay = new Date(eventDate.Date);
+                if (eventDay.getDate() !== day || eventDay.getMonth() !== eventDay.getMonth()) return;
 
-            const top = minutesToPercent(clampedStart - DAY_START);
-            const height = minutesToPercent(clampedEnd - clampedStart);
+                const start = timeToMinutes(eventDate.StartTime);
+                const end = timeToMinutes(eventDate.EndTime);
+                const clampedStart = Math.max(start, DAY_START);
+                const clampedEnd = Math.min(end, DAY_END);
 
-            const block = document.createElement('div');
-            block.className = 'event-block';
-            block.style.position = 'absolute';
-            block.style.left = '5%';
-            block.style.width = '90%';
-            block.style.top = `${top}%`;
-            block.style.height = `${height}%`;
-            block.style.background = '#0d6efd';
-            block.style.color = '#fff';
-            block.style.fontSize = '10px';
-            block.style.borderRadius = '4px';
-            block.style.padding = '2px';
-            block.style.overflow = 'hidden';
-            block.style.zIndex = '1'; // LOWER than date number
-            block.textContent = res.EventName;
-            
-            // ✅ Make block clickable
-            block.style.cursor = 'pointer';
-            block.addEventListener('click', function (e) {
-                console.log("Event Calendar", data);
-                e.stopPropagation(); // prevent day cell click
-                // Extract single object from array if it exists
-                const reservation = Array.isArray(data) && data.length > 0 ? data[0] : data;
+                const top = minutesToPercent(clampedStart - DAY_START);
+                const height = minutesToPercent(clampedEnd - clampedStart);
 
-                console.log("Event Calendar", reservation);
-                openReservationInfoModal(reservation);
-                
+                let colIndex = 0;
+                while (columns[colIndex] && columns[colIndex].some(ev => !(clampedEnd <= ev.start || clampedStart >= ev.end))) {
+                    colIndex++;
+                }
+                if (!columns[colIndex]) columns[colIndex] = [];
+                columns[colIndex].push({ start: clampedStart, end: clampedEnd });
+
+                const totalColumns = columns.length;
+                const widthPercent = 100 / totalColumns;
+                const leftPercent = colIndex * widthPercent;
+
+                const block = document.createElement('div');
+                block.className = 'event-block';
+                block.style.position = 'absolute';
+                block.style.left = `${leftPercent + 2}%`;
+                block.style.width = `${widthPercent - 4}%`;
+                block.style.top = `${top}%`;
+                block.style.height = `${height}%`;
+                block.style.background = '#0d6efd';
+                block.style.color = '#fff';
+                block.style.fontSize = '10px';
+                block.style.borderRadius = '4px';
+                block.style.padding = '2px';
+                block.style.overflow = 'hidden';
+                block.style.cursor = 'pointer';
+                block.style.zIndex = 1;
+                block.textContent = reservation.EventName;
+
+                block.addEventListener('click', e => {
+                    e.stopPropagation();
+                    openReservationInfoModal(reservation); // full object intact
+                    
+                });
+                console.log("gago",reservation);
+                dayCell.appendChild(block);
             });
-
-            dayCell.appendChild(block);
         });
     }
 
-
-    if (isOtherMonth) {
-        dayCell.classList.add('other-month');
-    }
-
+    if (isOtherMonth) dayCell.classList.add('other-month');
     return dayCell;
 }
-
 
 function selectDate(year, month, day) {
     selectedDate = new Date(year, month, day);

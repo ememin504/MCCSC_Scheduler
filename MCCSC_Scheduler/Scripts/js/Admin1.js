@@ -787,6 +787,7 @@ function getApprovedReservation() {
             // ✅ CALL ONCE, AFTER LOOP
             calendarReservations = allReservations;
             generateCalendar(currentDate, calendarReservations, data);
+            console.log("Approved Reservation: ",data);
         },
 
         error: function (xhr) {
