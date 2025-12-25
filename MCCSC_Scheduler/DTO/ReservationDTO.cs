@@ -14,10 +14,12 @@ public class ReservationDTO
     public int StatusID { get; set; }
     public string StatusName { get; set; }
     public int OrganizationID { get; set; }
+    public string OrganizationName { get; set; }
     public string Remarks { get; set; }
     public string Reason { get; set; }
     public int PreviousStatusID { get; set; }
     public string PreviousStatusName { get; set; }
+    public string Suggestions { get; set; }
     public List<AssetDTO> SelectedAssets { get; set; }
     public List<EventDateDTO> EventDates { get; set; }
     public List<CoordinationMeetingDTO> Meetings { get; set; }

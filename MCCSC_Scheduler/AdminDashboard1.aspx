@@ -3,15 +3,21 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
-    <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
-    <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <script type="text/javascript" src="Scripts/js/global.js"></script>
-    <script type="text/javascript" src="Scripts/js/Admin1.js"></script>
-    <link rel="stylesheet" type="text/css" href="Scripts/css/AdminDashboard1.css" />
-    <link rel="stylesheet" type="text/css" href="Scripts/css/Sidebar.css" />
+    <link rel="stylesheet" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="Scripts/css/AdminDashboard1.css" />
+    <link rel="stylesheet" href="Scripts/css/Sidebar.css" />
+    <link rel="stylesheet" href="Scripts/css/default.css" />
+    <script src="Scripts/js/global.js"></script>
+    <script src="Scripts/js/calendar.js"></script>
+    <script src="Scripts/js/Admin1.js"></script>
+
+    <script src="Lib/jquery/3.6.4/jquery-3.6.4.min.js"></script>
+    <script src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
+    <script src="Lib/chartjs/chart.min.js"></script>
+
     <title>MCCSC Admin Dashboard</title>
 </head>
+
 <body>
     <script>
         window.AppData = {
@@ -25,23 +31,64 @@
             middleInitial: '<%= Session["middle_initial"] %>',
             lastName: '<%= Session["last_name"] %>'
         };
-
         // Logout confirmation
         function confirmLogout() {
-            if (confirm('Are you sure you want to logout?')) {
-                window.location.href = 'Default.aspx';
+            const modal = document.createElement('div');
+            modal.className = 'logout-modal';
+            modal.innerHTML = `
+        <div class="logout-modal-content">
+            <div class="logout-modal-header">
+                <h3>Confirm Logout</h3>
+            </div>
+            <div class="logout-modal-body">
+                <p>Are you sure you want to logout?</p>
+            </div>
+            <div class="logout-modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+                <button type="button" class="btn-confirm" onclick="performLogout()">Yes, Logout</button>
+            </div>
+        </div>
+    `;
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        function closeLogoutModal() {
+            const modal = document.querySelector('.logout-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.remove();
+                }, 300);
             }
         }
+
+        function performLogout() {
+            window.location.href = 'Default.aspx';
+            localStorage.clear();
+            sessionStorage.clear();
+        }
+
+        document.addEventListener('click', function (e) {
+            if (e.target.classList.contains('logout-modal')) {
+                closeLogoutModal();
+            }
+        });
+
 
         // Section navigation configurations
         const sectionConfigs = {
             reservationSubmenu: {
                 tabs: [
-                    { id: 'registrationSection', icon: '📝', text: 'Requests' },
+                    { id: 'reservationRequestSection', icon: '📝', text: 'Requests' },
                     { id: 'acceptedSection', icon: '✅', text: 'Accepted' },
                     { id: 'statusSection', icon: '🤝', text: 'Coordination' },
                     { id: 'approvedSection', icon: '✔️', text: 'Approved' },
-                    { id: 'cancellationSection', icon: '⚠️', text: 'Cancellation' }
+                    { id: 'cancellationSection', icon: '⚠️', text: 'Cancellation' },
+                    { id: 'calendarViewSection', icon: '📆', text: 'View Calendar'}
                 ]
             },
             assetSubmenu: {
@@ -59,7 +106,9 @@
             historySubmenu: {
                 tabs: [
                     { id: 'finishedSection', icon: '✅', text: 'Finished' },
-                    { id: 'cancelledSection', icon: '❌', text: 'Cancelled' }
+                    { id: 'unfinishedSection', icon: '', text: 'Unfinished' },
+                    { id: 'cancelledSection', icon: '❌', text: 'Cancelled' },
+                    { id: 'rejectedSection', icon: '-', text: 'Rejected' }
                 ]
             }
         };
@@ -84,6 +133,7 @@
 
         // Show header tabs
         function showHeaderTabs(tabs, submenuId) {
+
             const headerNav = document.getElementById('headerNav');
             headerNav.innerHTML = '';
 
@@ -104,6 +154,7 @@
 
         // Show specific section
         function showSection(sectionId, submenuId) {
+
             // Hide all sections
             document.querySelectorAll('.section-card').forEach(section => {
                 section.style.display = 'none';
@@ -138,7 +189,8 @@
         // Helper function to match section IDs to tab text
         function getTabTextForSection(sectionId) {
             const mapping = {
-                'registrationSection': 'Requests',
+                'dashboardSection': 'Dashboard',
+                'reservationRequestSection': 'Requests',
                 'acceptedSection': 'Accepted',
                 'statusSection': 'Coordination',
                 'approvedSection': 'Approved',
@@ -150,7 +202,10 @@
                 'usersSection': 'Users',
                 'eventsSection': 'Event',
                 'finishedSection': 'Finished',
-                'cancelledSection': 'Cancelled'
+                'unfinishedSection': 'Unfinished',
+                'cancelledSection': 'Cancelled',
+                'rejectedSection': 'Rejected',
+                'calendarViewSection': 'Calendar'
             };
             return mapping[sectionId] || '';
         }
@@ -206,9 +261,14 @@
                         switch (n.StatusID) {
                             case 2:
                                 message = "New reservation request submitted";
+                                getReservationRequests();
                                 break;
                             case 8:
                                 message = "Cancellation request received";
+                                getReservationRequests();
+                                getAcceptedReservation();
+                                getStatusCMReservation();
+                                getReservationCancellationRequests();
                                 break;
                             default:
                                 message = "Status updated";
@@ -302,24 +362,36 @@
                 }
             });
         }
-
+        function ongoingExpiredSearch() {
+            $.ajax({
+                type: "POST",
+                url: "AdminDashboard1.aspx/OngoingExpiredSearch",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error:", xhr.responseText);
+                }
+            });
+        }
+        
         // Initialize
         window.addEventListener('DOMContentLoaded', function () {
             // Set user info in sidebar
-            document.getElementById('sidebarFullname').textContent = `${window.AppData.firstName} ${window.AppData.lastName}`;
-            document.getElementById('sidebarRole').textContent = `${window.AppData.roleName}`;
-
-            // Set header info
-            document.getElementById('fullname').textContent = `${window.AppData.firstName} ${window.AppData.lastName}`;
-            document.getElementById('roles').textContent = `${window.AppData.roleName}/${window.AppData.roleTypeDescription}`;
 
             // Load initial notification count
             loadNotificationsUI();
 
             // Poll for new notifications every 5 seconds
             setInterval(loadNotificationsUI, 5000);
-        });
+            setInterval(ongoingExpiredSearch, 5000);
+            showSection('dashboardSection');
 
+            
+        });
+        
         // Close sidebar when clicking outside on mobile
         document.addEventListener('click', function (event) {
             const sidebar = document.getElementById('sidebar');
@@ -342,14 +414,23 @@
             <!-- SIDEBAR -->
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
-                    <h2>MCCSC Admin</h2>
+                    <div class="logo-section">
+                        <img src="Images/SportsOfficeLogo.png" class="logo"/>
+                        <span class="logo-text"><b>MCCSC</b></span>
+                    </div>
                     <div class="sidebar-user">
                         <div id="sidebarFullname"></div>
                         <div id="sidebarRole" style="font-size: 0.8rem; opacity: 0.9;"></div>
                     </div>
                 </div>
-
                 <ul class="sidebar-menu">
+                    <!-- ADMIN DASHBOARD -->
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" onclick="event.preventDefault(); showSection('dashboardSection', this)">
+                            <span class="sidebar-icon">🏠</span>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
                     <!-- RESERVATION MANAGEMENT -->
                     <li class="sidebar-item">
                         <a class="sidebar-link" onclick="event.preventDefault(); toggleSubmenu('reservationSubmenu', this)">
@@ -358,17 +439,9 @@
                         </a>
                     </li>
 
-                    <!-- ASSET MANAGEMENT -->
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="event.preventDefault(); toggleSubmenu('assetSubmenu', this)">
-                            <span class="sidebar-icon">📦</span>
-                            <span>Asset Management</span>
-                        </a>
-                    </li>
-
                     <!-- PACKAGE MANAGEMENT -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="event.preventDefault(); showSection('packagesSection')">
+                        <a class="sidebar-link" onclick="event.preventDefault(); showSection('packagesSection', this)">
                             <span class="sidebar-icon">📦</span>
                             <span>Package Management</span>
                         </a>
@@ -384,7 +457,7 @@
 
                     <!-- EVENT MANAGEMENT -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="event.preventDefault(); showSection('eventsSection')">
+                        <a class="sidebar-link" onclick="event.preventDefault(); showSection('eventsSection', this)">
                             <span class="sidebar-icon">🎉</span>
                             <span>Event Management</span>
                         </a>
@@ -400,7 +473,7 @@
 
                     <!-- NOTIFICATIONS -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" onclick="event.preventDefault(); toggleNotificationSidebar()">
+                        <a class="sidebar-link" onclick="event.preventDefault(); toggleNotificationSidebar(), this">
                             <span class="sidebar-icon">🔔</span>
                             <span>Notifications</span>
                             <span class="notification-badge" id="sidebarNotificationBadge" style="display: none; margin-left: auto; background: #e74c3c; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 0.7rem; display: flex; align-items: center; justify-content: center;">0</span>
@@ -421,11 +494,10 @@
                 <header class="admin-header">
                     <div class="header-top">
                         <div class="welcome-section">
-                            <h1>Hello <span id="fullname"></span></h1>
+                            <h1>Hello, Admin</h1>
                             <p id="roles"></p>
                         </div>
                         <div class="header-actions">
-                            <asp:Button ID="btnReserve" runat="server" class="btn-primary" OnClientClick="openReservationModal(); return false;" Text="Request +" />
                         </div>
                     </div>
 
@@ -450,17 +522,33 @@
                 <div class="notification-overlay" id="notificationOverlay" onclick="toggleNotificationSidebar()"></div>
 
                 <div class="dashboard-container">
-                    <!-- RESERVATION REQUESTS -->
-                    <div id="registrationSection" class="section-card" style="display: none;">
-                        <h3>Reservation Requests</h3>
+                    <!-- RESERVATION CALENDAR -->
+                    <div id="calendarViewSection" class="section-card" style="display: none;">
+                    <h3>Calendar</h3>
+                    <div class="calendar-container">
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+                    <div id="dashboardSection" class="section-card" style="display: none;">
+                        <h3>Insights</h3>
+                        <!-- KPI Cards -->
+                        <div class="dashboard-cards">
+
+                       </div>
+
+                    </div>
+                    <!-- RESERVATIONS REQUESTS -->
+                    <div id="reservationRequestSection" class="section-card" style="display: none;">
+                        <h3>Requests</h3>
                         <div class="table-container">
                             <table class="table table-striped table-bordered" id="reservationTable">
                                 <thead>
                                     <tr>
-                                        <th>Reservation ID</th>
                                         <th>Event Title</th>
+                                        <th>Package</th>
+                                        <th>Organization</th>
                                         <th>Dates</th>
-                                        <th>Remarks</th>
+                                        <th>Suggestions</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
@@ -474,25 +562,28 @@
 
                     <!-- ACCEPTED RESERVATIONS -->
                     <div id="acceptedSection" class="section-card" style="display: none;">
-                        <h3>Accepted Reservations</h3>
-                        <div class="table-container">
-                            <table class="table table-striped table-bordered" id="acceptedReservationTable">
-                                <thead>
-                                    <tr>
-                                        <th>Reservation ID</th>
-                                        <th>Event Title</th>
-                                        <th>Dates</th>
-                                        <th>Remarks</th>
-                                        <th>Reference</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="acceptedReservationTableBody">
-                                    <!-- Data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
+                    <h3>Accepted Reservations</h3>
+                    <div class="table-container">
+                        <table class="table table-striped table-bordered" id="acceptedReservationTable">
+                            <thead>
+                                <tr>
+                                    <th>Event Title</th>
+                                    <th>Package</th>
+                                    <th>Organization</th>
+                                    <th>Dates</th>
+                                    <th>Suggestions</th>
+                                    <th>Reference</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="acceptedReservationTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center">No approved reservations</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                </div>
 
                     <!-- COORDINATION MEETING -->
                     <div id="statusSection" class="section-card" style="display: none;">
@@ -501,12 +592,13 @@
                             <table class="table table-striped table-bordered" id="statusCMReservationTable">
                                 <thead>
                                     <tr>
-                                        <th>Reservation ID</th>
-                                        <th>Event Tittle</th>
+                                        <th>Event Title</th>
+                                        <th>Package</th>
+                                        <th>Organization</th>
                                         <th>Event Dates</th>
-                                        <th>Meeting Date</th>
-                                        <th>Meeting Time</th>
-                                        <th>Remarks</th>
+                                        <th>Meeting Date & Time</th>
+                                        <th>Meeting Remarks</th>
+                                        <th>Suggestions</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
@@ -525,10 +617,11 @@
                             <table class="table table-striped table-bordered" id="approvedReservationTable">
                                 <thead>
                                     <tr>
-                                        <th>Reservation ID</th>
                                         <th>Event Title</th>
+                                        <th>Package</th>
+                                        <th>Organization</th>
                                         <th>Dates</th>
-                                        <th>Remarks</th>
+                                        <th>Suggestions</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
@@ -549,60 +642,16 @@
                             <table class="table table-striped table-bordered" id="cancellationRequestTable">
                                 <thead>
                                     <tr>
-                                        <th>Reservation ID</th>
                                         <th>Event Title</th>
+                                        <th>Package</th>
+                                        <th>Organization</th>
                                         <th>Dates</th>
-                                        <th>Remarks</th>
+                                        <th>Suggestions</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cancellationRequestTableBody">
-                                    <!-- Data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- ASSETS -->
-                    <div id="assetsSection" class="section-card" style="display: none;">
-                        <h3>Assets</h3>
-                        <button class="btn-add" onclick="openCreateAssetModal(); return false">+ Add Asset</button>
-                        <div class="table-container">
-                            <table class="table table-striped table-bordered" id="assetTable">
-                                <thead>
-                                    <tr>
-                                        <th>Asset ID</th>
-                                        <th>Asset Name</th>
-                                        <th>Quantity Available</th>
-                                        <th>Category ID</th>
-                                        <th>Category Name</th>
-                                        <th>IsActive</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="assetTableBody">
-                                    <!-- Data will be populated by JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- ASSET CATEGORIES -->
-                    <div id="categoriesSection" class="section-card" style="display: none;">
-                        <h3>Asset Categories</h3>
-                        <button class="btn-add" onclick="openAddAssetCategoryModal(); return false">+ Add Category</button>
-                        <div class="table-container">
-                            <table class="table table-striped table-bordered" id="categoryTable">
-                                <thead>
-                                    <tr>
-                                        <th>Category ID</th>
-                                        <th>Category Name</th>
-                                        <th>Parent Category</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="categoryTableBody">
                                     <!-- Data will be populated by JavaScript -->
                                 </tbody>
                             </table>
@@ -622,6 +671,7 @@
                                         <th>Quantity Available</th>
                                         <th>Consecutive Days Allowed</th>
                                         <th>Days Before Event</th>
+                                        <th>Price</th>
                                         <th>IsActive</th>
                                         <th>Actions</th>
                                     </tr>
@@ -640,14 +690,10 @@
                             <table class="table table-striped table-bordered" id="registrationTable">
                                 <thead>
                                     <tr>
-                                        <th>Request ID</th>
                                         <th>FirstName</th>
-                                        <th>Middle Initial</th>
                                         <th>LastName</th>
-                                        <th>Email</th>
                                         <th>Organization</th>
                                         <th>Username</th>
-                                        <th>Status</th>
                                         <th>Date Requested</th>
                                         <th>Actions</th>
                                     </tr>
@@ -714,15 +760,40 @@
                             <table class="table table-striped table-bordered" id="finishedReservationTable">
                                 <thead>
                                     <tr>
-                                        <th>EVENT TITLE</th>
-                                        <th>ORGANIZATION</th>
-                                        <th>DATES</th>
-                                        <th>REFERENCE</th>
-                                        <th>RATINGS</th>
-                                        <th>ACTIONS</th>
+                                        <th>Event Title</th>
+                                         <th>Package</th>
+                                        <th>Organization</th>
+                                        <th>Date</th>
+                                        <th>Reference</th>
+                                        <th>Rating</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="finishedReservationTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center">No reservation found</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- UNFINISHED RESERVATIONS -->
+                    <div id="unfinishedSection" class="section-card" style="display: none;">
+                        <h3>Unfinished Reservations</h3>
+                        <div class="table-container">
+                            <table class="table table-striped table-bordered" id="unfinishedReservationTable">
+                                <thead>
+                                    <tr>
+                                        <th>Event Title</th>
+                                        <th>Package</th>
+                                        <th>Organization</th>
+                                        <th>Date</th>
+                                        <th>Reference</th>
+                                        <th>Rating</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="unfinishedReservationTableBody">
                                     <tr>
                                         <td colspan="6" class="text-center">No reservation found</td>
                                     </tr>
@@ -738,16 +809,38 @@
                             <table class="table table-striped table-bordered" id="cancelledReservationTable">
                                 <thead>
                                     <tr>
-                                        <th>Reservation ID</th>
                                         <th>Event Title</th>
-                                        <th>Date</th>
+                                        <th>Package</th>
                                         <th>Organization</th>
-                                        <th>Remarks</th>
+                                        <th>Date</th>
+                                        <th>Reason</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cancelledReservationTableBody">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- REJECTED RESERVATIONS -->
+                    <div id="rejectedSection" class="section-card" style="display: none;">
+                        <h3>Cancelled Reservation</h3>
+                        <div class="table-container">
+                            <table class="table table-striped table-bordered" id="rejectedReservationTable">
+                                <thead>
+                                    <tr>
+                                        <th>Event Title</th>
+                                        <th>Package</th>
+                                        <th>Organization</th>
+                                        <th>Date</th>
+                                        <th>Reference</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rejectedReservationTableBody">
                                     <!-- Data will be populated by JavaScript -->
                                 </tbody>
                             </table>

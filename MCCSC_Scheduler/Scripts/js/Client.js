@@ -17,16 +17,17 @@ let pageType = "Client"
 console.log(roleId, userId, userEmail);
 
 document.addEventListener("DOMContentLoaded", function () {
-    const alertModalDiv = document.getElementById('form1');
-    if (alertModalDiv) {
-        alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
-        alertModalDiv.insertAdjacentHTML('afterend', reservationModalEl);
-    }
 
-    getClientInfo();
-    getReservationDates()
-    getAsset(); // if independent
+    // Inject modals
+    const alertModalDiv = document.getElementById("form1");
+    if (alertModalDiv) {
+        alertModalDiv.insertAdjacentHTML("afterend", alertModalEl);
+        alertModalDiv.insertAdjacentHTML("afterend", reservationModalEl);
+    }
+    // Load data
+    getReservationDates();
 });
+
 
 function getClientInfo() {
     $.ajax({
@@ -36,9 +37,54 @@ function getClientInfo() {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
+
             let info = JSON.parse(response.d);
+            console.log(info);
             clientID = info.clientID;
             organizationID = info.organizationID;
+
+
+            /* ===== POPULATE HEADER HERE ===== */
+            const fullnameEl = document.getElementById("fullname");
+            const orgEl = document.getElementById("org");
+
+            if (fullnameEl) {
+                fullnameEl.textContent =
+                    `${info.name}`.trim();
+            }
+
+            if (orgEl) {
+                orgEl.textContent = info.organizationName;
+            }
+            /* ===== END HEADER ===== */
+            /* ===== CLIENT PROFILE CARD ===== */
+            const profileCard = document.getElementById("clientProfileCard");
+
+            document.getElementById("profile-fullname").textContent =
+                `Full Name: ${info.name}`;
+
+            document.getElementById("profile-org").textContent =
+                `Organization: ${info.organizationName}`;
+
+            document.getElementById("profile-email").textContent =
+                `Email: ${userEmail}`;
+
+            profileCard.style.display = "block";
+            /* ===== END CLIENT PROFILE ===== */
+
+
+            /* ===== SIDEBAR ===== */
+            const sidebarNameEl = document.getElementById("sidebarFullName");
+            const sidebarOrgEl = document.getElementById("user-org");
+
+            if (sidebarNameEl) {
+                sidebarNameEl.textContent =
+                    `${info.name}`.trim();
+            }
+
+            if (sidebarOrgEl) {
+                sidebarOrgEl.textContent = info.organizationName;
+            }
 
             getReservation();
         },
@@ -47,7 +93,6 @@ function getClientInfo() {
         }
     });
 }
-
 function getReservation() {
     $.ajax({
         type: "POST",
@@ -59,6 +104,7 @@ function getReservation() {
             let data = JSON.parse(response.d);
             // Render reservations table
             renderReservations(data);
+            console.log("Reservations: ", data);
         },
         error: function (xhr) {
             console.error("Error:", xhr.responseText);
@@ -91,12 +137,14 @@ let selectedPackageID; // store only the selected PackageID
 let currentPackages = [];
 
 function generateCalendar(packages) {
+    // Only include active packages
+    const activePackages = packages.filter(p => p.IsActive);
 
-    currentPackages = packages;
+    currentPackages = activePackages;
     let tabButtons = "";
     let tabContents = "";
 
-    packages.forEach((p, index) => {
+    activePackages.forEach((p, index) => {
         const isActive = index === 0 ? "active" : "";
         const showActive = index === 0 ? "show active" : "";
 
@@ -114,7 +162,7 @@ function generateCalendar(packages) {
         `;
 
         let itemsHTML = "";
-        p.ItemIncluded.forEach(item => {
+        p.ItemIncluded?.forEach(item => {
             itemsHTML += `<div>✔ ${item.ItemName} (${item.QuantityAvailable})</div>`;
         });
 
@@ -122,13 +170,12 @@ function generateCalendar(packages) {
             <div class="tab-pane fade ${showActive}"
                 id="package-${p.PackageID}"
                 role="tabpanel">
-
                 <h6 class="mb-2"><strong>${p.PackageName}</strong></h6>
                 <label><strong>Items Included:</strong></label>
                 <div class="mt-1 mb-3">${itemsHTML}</div>
-
                 <p><strong>Consecutive Days Allowed:</strong> ${p.ConsecutiveDaysAllowed}</p>
-                <p><strong>Days Prior Required:</strong> ${p.DaysPrior}</p>
+                <p><strong>Days before the event:</strong> ${p.DaysPrior}</p>
+                <p><strong>Price:</strong> ${p.Price}</p>
             </div>
         `;
     });
@@ -136,15 +183,23 @@ function generateCalendar(packages) {
     document.getElementById("packageTabs").innerHTML = tabButtons;
     document.getElementById("packageTabContent").innerHTML = tabContents;
 
-    // Auto-select the first package
-    if (packages.length > 0) {
-        selectedPackageID = packages[0].PackageID;
-        selectedDaysPrior = packages[0].DaysPrior;
+    // Auto-select first active package
+    if (activePackages.length > 0) {
+        const firstPackage = activePackages[0];
+        selectedPackageID = firstPackage.PackageID;
+        selectedDaysPrior = firstPackage.DaysPrior;
     }
-
     generateCalendarDays();
 }
-
+getClientInfo();
+function showProfile() {
+    document.getElementById("notificationSection").classList.add("d-none");
+    document.getElementById("clientProfileCard").classList.remove("d-none");
+}
+function showDashboard(){
+    document.getElementById("clientProfileCard").classList.add("d-none");
+    document.getElementById("notificationSection").classList.remove("d-none");
+}
 function selectPackage(packageID, daysPrior) {
     selectedPackageID = packageID;
     selectedDaysPrior = daysPrior;
@@ -170,7 +225,7 @@ function getReservationDates() {
                 console.error("JSON parse error:", e);
                 data = [];
             }
-
+            console.log(data);
             // Build correct structure
             reservationDatesGlobal = data.flatMap(req =>
                 req.EventDates.map(d => ({
@@ -310,7 +365,7 @@ function isFullyReserved(dateStr) {
         res.StartTime <= "08:00" &&
         res.EndTime >= "22:00"
     );
-    console.log("Reservation Dates: ",reservationDatesGlobal);
+    console.log("Reservation Dates: ", reservationDatesGlobal);
 }
 
 function hasLessThan2HoursRemaining(dateStr) {
@@ -371,40 +426,44 @@ function setDaysPrior(days) {
     selectedDaysPrior = days;
     generateCalendarDays();
 }
+let allEventDates = [];
 let eventDates;
 function saveTime() {
-    // Get the modal element
-    const modalEl = document.getElementById("timePickerModal");
-    if (!modalEl) return;
+    const container = document.getElementById("dateRowsContainer");
+    if (!container) return;
 
-    // Example: If you’re using single start/end inputs (like in your current HTML)
-    const startTime = modalEl.querySelector("#startTime").value;
-    const endTime = modalEl.querySelector("#endTime").value;
+    const rows = container.querySelectorAll(".date-group");
+    if (!rows.length) return;
 
-    if (!startTime || !endTime) {
-        alert("Please fill both start and end times.");
-        return;
-    }
+    rows.forEach(row => {
+        const date = row.dataset.date;
+        const startTime = row.querySelector(".start-time").value;
+        const endTime = row.querySelector(".end-time").value;
 
-    // Save/update the selected date in the global array
-    const dateStr = formatDate(selectedDate); // assuming selectedDate is set in selectDate()
+        if (!startTime || !endTime) {
+            console.log(`Skipping ${date} as start or end time is missing`);
+            return; // skip incomplete rows
+        }
 
-    const existing = allEventDates.find(d => d.date === dateStr);
-    if (existing) {
-        existing.startTime = startTime;
-        existing.endTime = endTime;
-    } else {
-        allEventDates.push({ date: dateStr, startTime, endTime });
-    }
+        const existing = allEventDates.find(d => d.date === date);
+        if (existing) {
+            existing.startTime = startTime;
+            existing.endTime = endTime;
+        } else {
+            allEventDates.push({ date, startTime, endTime });
+        }
+    });
 
-    console.log("All Event Dates:", allEventDates);
-    eventDates = allEventDates;
+    console.log("All saved event dates:", allEventDates);
 
+    // Hide time modal
+    const timeModalEl = document.getElementById("timePickerModal");
+    bootstrap.Modal.getInstance(timeModalEl)?.hide();
+
+    // Reset consecutive days if needed
     setConsecutiveDays();
-    // Close time modal
-    const timeModalInstance = bootstrap.Modal.getInstance(modalEl);
-    if (timeModalInstance) timeModalInstance.hide();
 }
+
 
 let consecutiveTriggered = false;
 let allowedDates = []; // globally
@@ -627,7 +686,7 @@ function getMonthName(month) {
     ];
     return months[month];
 }
-let allEventDates = [];
+
 let selectedDate = null; // set when clicking calendar
 
 function selectDate(year, month, day) {
@@ -651,17 +710,129 @@ function selectDate(year, month, day) {
         row.dataset.date = formattedDate;
 
         row.innerHTML = `
+            <small class="time-error text-danger d-none mb-1"></small>
+
             <div class="d-flex align-items-center gap-2">
                 <span class="fw-bold">${formattedDate}</span>
-                <input type="time" id= "startTime" class="start-time form-control" placeholder="Start Time">
-                <input type="time" id= "endTime" class="end-time form-control" placeholder="End Time">
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeDateRow(this)">Remove</button>
+
+                <input type="time"
+                       class="start-time form-control"
+                       min="08:00"
+                       max="22:00">
+
+                <input type="time"
+                       class="end-time form-control"
+                       min="08:00"
+                       max="22:00"
+                       disabled>
+
+                <button type="button"
+                        class="btn btn-sm btn-danger"
+                        onclick="removeDateRow('${formattedDate}')">
+                    Remove
+                </button>
             </div>
         `;
+
+
 
         container.appendChild(row);
     }
 }
+document.addEventListener("input", function (e) {
+    if (!e.target.matches(".start-time, .end-time")) return;
+
+    const row = e.target.closest(".date-group");
+    if (!row) return;
+
+    const startInput = row.querySelector(".start-time");
+    const endInput = row.querySelector(".end-time");
+    const errorEl = row.querySelector(".time-error");
+
+    const start = startInput.value;
+    const end = endInput.value;
+
+    errorEl.classList.add("d-none");
+    errorEl.textContent = "";
+
+    const showError = (msg) => {
+        errorEl.textContent = msg;
+        errorEl.classList.remove("d-none");
+    };
+
+    if (start && (start < "08:00" || start > "22:00")) {
+        startInput.value = "";
+        endInput.disabled = true;
+        showError("Allowed time is 8:00 AM – 10:00 PM");
+    }
+
+    if (end && (end < "08:00" || end > "22:00")) {
+        endInput.value = "";
+        showError("Allowed time is 8:00 AM – 10:00 PM");
+    }
+
+    if (start) {
+        endInput.disabled = false;
+        endInput.min = start;
+    }
+
+    if (start && end && end <= start) {
+        endInput.value = "";
+        showError("End time must be later than start time");
+    }
+
+    if (start && end) {
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+
+        if ((eh * 60 + em) - (sh * 60 + sm) < 180) {
+            showError("Minimum reservation time is 3 hours");
+        }
+    }
+
+    // 🔒 FINAL AUTHORITY
+    updateSaveButtonState();
+});
+
+function updateSaveButtonState() {
+    const saveBtn = document.getElementById("saveTimeBtn");
+    const rows = document.querySelectorAll(".date-group");
+
+    let hasError = false;
+
+    rows.forEach(row => {
+        const errorEl = row.querySelector(".time-error");
+        const start = row.querySelector(".start-time")?.value;
+        const end = row.querySelector(".end-time")?.value;
+
+        // visible error
+        if (errorEl && !errorEl.classList.contains("d-none")) {
+            hasError = true;
+        }
+
+        // incomplete time selection
+        if (!start || !end) {
+            hasError = true;
+        }
+    });
+
+    saveBtn.disabled = hasError;
+}
+
+
+function removeDateRow(date) {
+    // Remove the row from the DOM
+    const row = document.querySelector(`[data-date='${date}']`);
+    if (row) row.remove();
+
+    // Remove from allEventDates array
+    allEventDates = allEventDates.filter(d => d.date !== date);
+
+    console.log("Removed date:", date);
+    console.log("Remaining allEventDates:", allEventDates);
+}
+
+
 
 function formatDate(date) {
     const y = date.getFullYear();
@@ -670,12 +841,9 @@ function formatDate(date) {
     return `${y}-${m}-${d}`;
 }
 function renderReservations(data) {
-    
-    // Clear tables first
-    $("#reservationTableBody").empty();
-    $("#reservationHistoryTableBody").empty();
 
-    // Helper to convert 24-hour to 12-hour time
+    $("#reservationTableBody").empty();
+
     function to12Hour(time) {
         if (!time) return "";
         let [hour, minute] = time.split(':').map(Number);
@@ -684,48 +852,52 @@ function renderReservations(data) {
         return `${hour}:${minute.toString().padStart(2, '0')} ${ampm}`;
     }
 
+    // ✅ Handle empty data
+    if (!Array.isArray(data) || data.length === 0) {
+        $("#reservationTableBody").append(`
+            <tr>
+                <td colspan="7" class="text-center">No Reservation Found</td>
+            </tr>
+        `);
+        return;
+    }
+
     data.forEach(res => {
-        // Format event dates
-        let dates = res.EventDates.length
+
+        let dates = res.EventDates?.length
             ? res.EventDates.map(d => {
                 let formattedDate = d.Date.split('T')[0];
-                let start = to12Hour(d.StartTime);
-                let end = to12Hour(d.EndTime);
-                return `${formattedDate} (${start} - ${end})`;
+                return `${formattedDate} (${to12Hour(d.StartTime)} - ${to12Hour(d.EndTime)})`;
             }).join("<br>")
             : "No dates";
 
-        // Determine button properties
-        let container ;
+        let row = `
+            <tr>
+                <td>${res.EventName}</td>
+                <td>${res.EventDescription}</td>
+                <td>${res.PackageName}</td>
+                <td>${res.StatusName}</td>
+                <td>${dates}</td>
+                <td>${res.Reference}</td>
+                <td>
+                    <button
+                        type="button"
+                        class="btn btn-primary btn-sm view-info-btn"
+                        data-id="${res.ReservationID}">
+                        View Info
+                    </button>
+                </td>
+            </tr>
+        `;
 
-        switch (res.StatusName) {
-            case "Rejected":
-            case "Expired":
-            case "Cancelled":
-                container = $("#reservationHistoryTableBody");
-                break;
+        $("#reservationTableBody").append(row);
+    });
 
-            default:
-                container = $("#reservationTableBody");
-                break;
-        }
-        let safeRes = JSON.stringify(res).replace(/"/g, '&quot;');
-        // Create button with data attributes
-        let buttonHTML = `<button class="btn btn-primary btn-sm" onclick="viewInfo(${safeRes}, ${res.ReservationID}); return false;">View Info</button>`;
-
-
-        // Append row
-        let row = `<tr>
-            <td>${res.EventName}</td>
-            <td>${res.EventDescription}</td>
-            <td>${formatAssets(res.SelectedAssets)}</td>
-            <td>${res.StatusName}</td>
-            <td>${dates}</td>
-            <td>${res.Reference}</td>
-            <td>${buttonHTML}</td>
-        </tr>`;
-
-        container.append(row);
+    // ✅ Attach click event once
+    $(".view-info-btn").off("click").on("click", function () {
+        let reservationId = $(this).data("id");
+        let reservation = data.find(r => r.ReservationID === reservationId);
+        viewInfo(reservation, reservationId);
     });
 }
 
@@ -745,21 +917,13 @@ function viewInfo(res, reservationID) {
         case "Pending":
             buttonText = "Cancel Reservation";
             buttonClass = "btn btn-danger btn";
-            callFunction = "cancelReservation";
+            callFunction = "openCancellationModal";
             break;
 
         case "Cancellation Request":
             buttonText = "Undo Cancellation";
-            buttonClass = "btn btn-secondary btn";
+            buttonClass = "btn btn-warning btn";
             callFunction = "undoCancellation";
-            break;
-
-        case "Rejected":
-        case "Expired":
-        case "Cancelled":
-            buttonText = "View Info";
-            buttonClass = "btn btn-secondary btn";
-            callFunction = "viewInfo";
             break;
 
         default:
@@ -776,13 +940,6 @@ function viewInfo(res, reservationID) {
     let assetDetails = "";
     let dateDetails = "";
 
-    res.SelectedAssets.forEach(a => {
-        assetDetails += `
-            <p><strong>Asset:</strong> ${a.AssetName}</p>
-            <p><strong>Quantity:</strong> ${a.Quantity}</p>
-        `;
-    });
-
     res.EventDates.forEach(d => {
         dateDetails += `
             <p><strong>Date:</strong> ${d.Date.split("T")[0]}</p>
@@ -794,30 +951,49 @@ function viewInfo(res, reservationID) {
     // Encode the object safely for onclick
     const safeRes = encodeURIComponent(JSON.stringify(res));
 
+    // Decide which status ID to pass
+    let lastStatusParam =
+        callFunction === "undoCancellation"
+            ? res.PreviousStatusID
+            : res.StatusID;
+
     let modalHTML = `
-        <div class='modal fade' id='viewReservationModal'>
-            <div class='modal-dialog'>
-                <div class='modal-content'>
-                    <div class='modal-header'>
-                        <h4>Reservation Info</h4>
-                        <button class='btn-close' data-bs-dismiss='modal'></button>
-                    </div>
-                    <div class='modal-body'>
-                        <p><strong>Event:</strong> ${res.EventName}</p>                       
-                        <p><strong>Status:</strong> ${res.StatusName}</p>
-                        ${assetDetails}
-                        ${dateDetails}
-                        <p><strong>Reference:</strong> ${res.Reference}</p>
-                        <p><strong>Remarks:</strong> ${res.Remarks}</p>
-                    </div>
-                    <div class='modal-footer'>
-                        ${buttonText ? `<button class="${buttonClass}" onclick="${callFunction}('${safeRes}', ${res.ReservationID}, ${res.PreviousStatusID}); return false;">${buttonText}</button>` : ""}
-                        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
+    <div class='modal fade' id='viewReservationModal'>
+        <div class='modal-dialog'>
+            <div class='modal-content'>
+                <div class='modal-header'>
+                    <h4>Reservation Info</h4>
+                    <button class='btn-close' data-bs-dismiss='modal'></button>
+                </div>
+                <div class='modal-body'>
+                    <p><strong>Event:</strong> ${res.EventName}</p>  
+                    <p><strong>Package:</strong> ${res.PackageName}</p>
+                    <p><strong>Status:</strong> ${res.StatusName}</p>
+                    ${dateDetails}
+                    <p><strong>Reference:</strong> ${res.Reference}</p>
+                    ${res.Suggestions !== null && res.Suggestions !== ""
+                        ? `<p><strong>Suggestions:</strong> ${res.Suggestions}</p>`
+                        : ""
+                    }
+                    ${res.Remarks !== ""
+                        ? `<p><strong>Remarks:</strong> ${res.Remarks}</p>`
+                        : ""
+                    }
+                </div>
+                <div class='modal-footer'>
+                    ${buttonText
+            ? `<button class="${buttonClass}"
+                                onclick="${callFunction}('${safeRes}', ${res.ReservationID}, ${lastStatusParam}); return false;">
+                                ${buttonText}
+                               </button>`
+            : ""
+        }
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
-    `;
+    </div>
+`;
 
     document.getElementById("viewReservationModal")?.remove();
     document.body.insertAdjacentHTML("beforeend", modalHTML);
@@ -829,7 +1005,7 @@ function viewInfo(res, reservationID) {
 
 
 function undoCancellation(data, reservationID, previousStatusID) {
-    console.log("Undoing Cancellation");
+
     let reservationInfo = {
         PreviousStatusID: previousStatusID,
         ReservationID: reservationID
@@ -843,6 +1019,7 @@ function undoCancellation(data, reservationID, previousStatusID) {
         success: function (response) {
             alert(response.d);
             $('#viewReservationModal').modal('hide');
+            console.log("Undoing Cancellation", );
             getReservation();
         },
         error: function (xhr, status, error) {
@@ -852,7 +1029,7 @@ function undoCancellation(data, reservationID, previousStatusID) {
     });
 }
 
-function requestCancellation(res, reservationID) {
+function requestCancellation(res, reservationID, status_id) {
     document.getElementById("viewReservationModal")?.remove();
     openReservationCancellationModal();
 
@@ -862,11 +1039,11 @@ function requestCancellation(res, reservationID) {
             const reason = document.getElementById("cancelReasonInput").value.trim();
 
             if (!reason) {
-                openAlertModal("Missing Reason", "Please provide a reason before submitting.");
+                alert("Missing Reason", "Please provide a reason before submitting.");
                 return;
             }
 
-            sendCancellationRequest(reservationID, res.StatusID, reason);
+            sendCancellationRequest(reservationID, status_id, reason);
         };
     }, 200);
 }
@@ -893,6 +1070,11 @@ function sendCancellationRequest(reservationID, statusID, reason) {
             alert("Success", "Your cancellation request has been submitted successfully.");
             getReservation();
             addNotification(reservationID, userId, 8);
+            let modalEl = document.getElementById('reservationCancellationModal');
+            if (modalEl) {
+                let cancellationModal = bootstrap.Modal.getInstance(modalEl);
+                if (cancellationModal) cancellationModal.hide();
+            }
         },
 
         error: function (xhr, status, error) {
@@ -901,11 +1083,60 @@ function sendCancellationRequest(reservationID, statusID, reason) {
         }
     });
 }
+function openCancellationModal(res, reservationID, statusID) {
+    // Hide viewReservationModal properly
+    let viewModalEl = document.getElementById("viewReservationModal");
+    if (viewModalEl) {
+        let viewModal = bootstrap.Modal.getInstance(viewModalEl);
+        if (viewModal) viewModal.hide();
+    }
 
-function cancelReservation(reservationID, clientId, statusID, eventID, referenc, remarks) {
+    // Remove existing cancellation modal
+    $('#cancellationModal').remove();
+
+    // Create modal
+    let modal = `<div class='modal fade' id='cancellationModal' role='dialog'>
+                    <div class='modal-dialog'>
+                        <div class='modal-content'>
+                            <div class='modal-header'>
+                                <h4 class='modal-title'>Cancellation</h4>
+                                <button type='button' class='btn-close' data-bs-dismiss='modal'></button>
+                            </div>
+                            <div class='modal-body'>
+                                <p>Please provide your reason for cancellation:</p>
+                                <textarea id='ReasonInput' class='form-control' rows='3' placeholder='Reason...'></textarea>
+                            </div>
+                            <div class='modal-footer'>
+                                <button type='button' id='cancelBtn' class='btn btn-danger'>Submit</button>
+                                <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+    // Append to body
+    $('body').append(modal);
+
+    // Show modal
+    let cancellationModal = new bootstrap.Modal(document.getElementById('cancellationModal'));
+    cancellationModal.show();
+
+    // Handle submit button click (remove previous handlers first)
+    $('#cancelBtn').off('click').on('click', function () {
+        let remarks = $('#ReasonInput').val().trim();
+        if (!remarks) {
+            alert("Please provide a reason for cancellation.");
+            return;
+        }
+        cancelReservation(res, reservationID, statusID, res.EventID, res.Reference, remarks);
+    });
+}
+
+function cancelReservation(res, reservationID, statusID, eventID, referenc, remarks) {
     console.log("Cancelling Reservation");
     let reservationInfo = {
-        ReservationID: reservationID
+        ReservationID: reservationID,
+        Remarks: remarks
     }
     $.ajax({
         type: "POST",
@@ -920,6 +1151,12 @@ function cancelReservation(reservationID, clientId, statusID, eventID, referenc,
                 alert("Your reservation is successfully cancelled");
                 getReservation();
                 addNotification(reservationID, 7);
+                // Close the modal here
+                let modalEl = document.getElementById('cancellationModal');
+                if (modalEl) {
+                    let cancellationModal = bootstrap.Modal.getInstance(modalEl);
+                    if (cancellationModal) cancellationModal.hide();
+                }
             }
         },
         error: function (xhr, status, error) {
@@ -1074,22 +1311,46 @@ function submitReservation() {
     console.log(packageId);
     const eventName = document.getElementById("eventName").value.trim();
     const eventDescription = document.getElementById("eventDescription").value.trim();
-    const alleventDates = eventDates;
-    console.log(alleventDates);
+    //const alleventDates = eventDates; // assuming this is an array of objects
+    const suggestions = document.getElementById("suggestions").value.trim();
+    console.log(allEventDates);
+
     // ✅ VALIDATION SECTION
+    if (isNaN(packageId)) {
+        alert("Please select a package.");
+        return;
+    }
     if (!eventName) {
         alert("Please enter the event name.");
         return;
     }
-
-    /*if (!eventDates || eventDates.length === 0) {
+    if (!allEventDates || allEventDates.length === 0) {
         alert("Please add at least one event date.");
         return;
-    }*/
-
+    }
     if (!clientID) {
         alert("Client ID is missing. Please log in again.");
         return;
+    }
+
+    // ⏱ Validate each event duration
+    for (let i = 0; i < allEventDates.length; i++) {
+        let date = allEventDates[i];
+        let start = date.startTime.split(":"); // e.g., "15:26"
+        let end = date.endTime.split(":");     // e.g., "15:27"
+
+        let startDate = new Date();
+        startDate.setHours(parseInt(start[0]), parseInt(start[1]), 0, 0);
+
+        let endDate = new Date();
+        endDate.setHours(parseInt(end[0]), parseInt(end[1]), 0, 0);
+
+        let diffHours = (endDate - startDate) / (1000 * 60 * 60); // difference in hours
+
+        if (diffHours < 3) {
+            alert(`The event on ${date.date} must be at least 3 hours long.`);
+            return;
+        }
     }
 
     // Continue if validation passed
@@ -1098,9 +1359,10 @@ function submitReservation() {
         EventDescription: eventDescription,
         SelectedAssets: selectedAssets,
         PackageID: packageId,
-        EventDates: eventDates,
+        EventDates: allEventDates,
         ClientID: parseInt(clientID),
-        organizationID: organizationID
+        organizationID: organizationID,
+        Suggestions: suggestions
     };
 
     reservationInfo = sanitizeObject(reservationInfo);
@@ -1206,4 +1468,3 @@ function connectDB() {
         openAlertModal('App Info', 'DB connection status: ' + response.d);
     };
 }
-

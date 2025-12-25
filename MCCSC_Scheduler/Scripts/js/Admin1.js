@@ -1,5 +1,5 @@
-﻿const roleIdStr = sessionStorage.getItem("role_id");
-const roleId = roleIdStr ? Number(roleIdStr) : 0;
+﻿//const roleIdStr = sessionStorage.getItem("role_id");
+//const roleId = roleIdStr ? Number(roleIdStr) : 0;
 const userIdStr = sessionStorage.getItem("user_id");
 const userId = userIdStr ? Number(userIdStr) : 0;
 const userEmail = sessionStorage.getItem("user_email");
@@ -22,29 +22,28 @@ document.addEventListener("DOMContentLoaded", function () {
         //alertModalDiv.insertAdjacentHTML("afterend", userModalEl);
     }
 
-    document.getElementById("fullname").textContent = `${firstName} ${lastName}`;
-    document.getElementById("roles").textContent = `${roleName}/${roleTypeDescription}`;
     document.body.insertAdjacentHTML("beforeend", userModalEl);
-
-    // Initial data load
     loadAssetCategories();
     getRegistrationRequests();
     getReservationRequests();
     getUsers();
-    getAssets();
     getPackages();
     getAcceptedReservation();
     getStatusCMReservation();
     getReservationCancellationRequests();
     getCancelledReservation();
+    getRejectedReservation();
     getApprovedReservation();
     getFinishedReservation();
     getEvents();
-    loadNotifications();
+    //loadNotifications();
     startNotificationPolling();
     startReservationDateCheck();
+
+
 });
-console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
+
+//console.log(roleId, userId, userEmail, roleName, roleTypeID, roleTypeDescription, firstName, middleInitial, lastName);
 // categoryLoader.js
 // 🌐 Global Variables
 let eventID;
@@ -143,7 +142,7 @@ function loadNotifications() {
         url: "AdminDashboard1.aspx/GetNotifications",
         data: JSON.stringify({ notificationDTO: notificationInfo }),
         contentType: "application/json; charset=utf-8",
-        dataType: "json",   
+        dataType: "json",
         success: function (response) {
             let notifications = JSON.parse(response.d);
             //console.log(notifications)
@@ -342,11 +341,10 @@ function populateCategoryTable(categories) {
                         onclick="openEditCategoryModal(${item.CategoryID}, '${safeName}', ${item.ParentCategoryID ?? 'null'}); return false;">
                     Edit
                 </button>
-                ${
-                item.IsActive == 1
-                    ? `<button class="btn btn-danger btn-sm" onclick="deactivateCategory(${item.CategoryID}); return false;">Deactivate</button>`
-                    : `<button class="btn btn-success btn-sm" onclick="activateCategory(${item.CategoryID}) return false;">Activate</button>`
-                }
+                ${item.IsActive == 1
+                ? `<button class="btn btn-danger btn-sm" onclick="deactivateCategory(${item.CategoryID}); return false;">Deactivate</button>`
+                : `<button class="btn btn-success btn-sm" onclick="activateCategory(${item.CategoryID}) return false;">Activate</button>`
+            }
             </td>
         `;
         tableBody.appendChild(row);
@@ -407,9 +405,9 @@ function populateCategoryDropdown(categories, action) {
         select = document.getElementById("populateEditAssetCategory");
     } else if (action === "add_category") {
         select = document.getElementById("parentCategorySelect");
-    }else if (action === "edit_category") {
+    } else if (action === "edit_category") {
         select = document.getElementById("populateEditCategoryParent");
-    } 
+    }
 
     if (!select) {
         console.warn("⚠️ Dropdown element not found for action:", action);
@@ -449,7 +447,7 @@ document.addEventListener("shown.bs.modal", event => {
         action = "edit_asset";
     } else if (event.target.id === "addAssetCategoryModal") {
         action = "add_category";
-    }else if (event.target.id === "editCategoryModal") {
+    } else if (event.target.id === "editCategoryModal") {
         action = "edit_category";
     }
 
@@ -535,7 +533,7 @@ function getEvents() {
                 tbody.innerHTML = `<tr><td colspan="9" class="text-center">No User found</td></tr>`;
                 return;
             }
-            
+
             // Loop through the data and build table rows
             data.forEach(req => {
                 var actionType = "";
@@ -594,7 +592,7 @@ function prioritizeEvent(actionType, eventID) {
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
-        });
+    });
 }
 function getUsers() {
     $.ajax({
@@ -645,7 +643,6 @@ function getUsers() {
     });
 }
 function getReservationRequests() {
-    console.log("getting reservation requests!");
     let reservationType = "Reservation Request";
     let requestInfo = {
         ReservationType: reservationType
@@ -665,80 +662,8 @@ function getReservationRequests() {
                 console.error("JSON parse error:", e);
                 data = [];
             }
-            
-
-
-            console.log("Parsed data:", data);
 
             let tbody = document.getElementById("reservationTableBody");
-            tbody.innerHTML = "";
-
-            // Check if there are any records
-            if (!Array.isArray(data) || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Reservation Request found</td></tr>`;
-                return;
-            }
-
-            // Loop through the data and build table rows
-            data.forEach(req => {   
-                let dates = req.EventDates.length
-                    ? req.EventDates.map(d => {
-                        let formattedDate = d.Date.split('T')[0];
-                        let start = to12Hour(d.StartTime);
-                        let end = to12Hour(d.EndTime);
-                        return `${formattedDate} (${start} - ${end})`;
-                    }).join("<br>")
-                    : "No dates";
-
-                let row = `
-                    <tr>
-                        <td>${req.ReservationID}</td>
-                        <td>${req.EventName}</td>
-                        <td>${dates}</td>
-
-                        <td>${req.Remarks}</td>
-                        <td>${req.Reference}</td>
-                        <td>
-                            <button class="btn btn-success btn-sm"
-                                onclick='openReservationInfoModal(${JSON.stringify(req)}); return false;'>
-                                View
-                            </button>
-                        </td>
-
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        },
-        error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
-        }
-    });
-}
-function getApprovedReservation() {
-    console.log("getting approved reservation!");
-    let reservationType = "Approved Reservation";
-    let requestInfo = {
-        ReservationType: reservationType
-    }
-    $.ajax({
-        type: "POST",
-        url: "AdminDashboard1.aspx/GetReservation",
-        data: JSON.stringify({ requestData: requestInfo }),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-            let data = [];
-
-            try {
-                data = JSON.parse(response.d);
-            } catch (e) {
-                console.error("JSON parse error:", e);
-                data = [];
-            }
-
-
-            let tbody = document.getElementById("approvedReservationTableBody");
             tbody.innerHTML = "";
 
             // Check if there are any records
@@ -760,11 +685,11 @@ function getApprovedReservation() {
 
                 let row = `
                     <tr>
-                        <td>${req.ReservationID}</td>
                         <td>${req.EventName}</td>
+                        <td>${req.PackageName}</td>
+                        <td>${req.OrganizationName}</td>
                         <td>${dates}</td>
-
-                        <td>${req.Remarks}</td>
+                        <td>${req.Suggestions}</td>
                         <td>${req.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
@@ -776,7 +701,6 @@ function getApprovedReservation() {
                     </tr>
                 `;
                 tbody.innerHTML += row;
-                //startReservationDateCheckPolling();
             });
         },
         error: function (xhr, status, error) {
@@ -784,6 +708,93 @@ function getApprovedReservation() {
         }
     });
 }
+let currentDate = new Date(); // ✅ MUST be Date
+let allReservations = [];
+let calendarReservations = [];
+
+function getApprovedReservation() {
+    console.log("getting approved reservation!");
+
+    let reservationType = "Approved Reservation";
+    let requestInfo = { ReservationType: reservationType };
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+
+        success: function (response) {
+
+            let data = [];
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+                return;
+            }
+            console.log(data);
+            let tbody = document.getElementById("approvedReservationTableBody");
+            tbody.innerHTML = "";
+
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML =
+                    `<tr><td colspan="6" class="text-center">No Reservation Request found</td></tr>`;
+                return;
+            }
+
+            let allReservations = []; // ✅ DECLARE ONCE
+
+            data.forEach(req => {
+                let dates = req.EventDates.length
+                    ? req.EventDates.map(d => {
+                        let formattedDate = d.Date.split('T')[0];
+                        let start = to12Hour(d.StartTime);
+                        let end = to12Hour(d.EndTime);
+
+                        // ✅ collect calendar data
+                        allReservations.push({
+                            Date: d.Date,
+                            StartTime: d.StartTime,
+                            EndTime: d.EndTime,
+                            EventName: req.EventName
+                        });
+
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
+                let row = `
+                    <tr>
+                        <td>${req.EventName}</td>
+                        <td>${req.PackageName}</td>
+                        <td>${req.OrganizationName}</td>
+                        <td>${dates}</td>
+                        <td>${req.Suggestions}</td>
+                        <td>${req.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                                onclick='openReservationInfoModal(${JSON.stringify(req)}); return false;'>
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+
+                tbody.innerHTML += row;
+                // build table row...
+            });
+            // ✅ CALL ONCE, AFTER LOOP
+            calendarReservations = allReservations;
+            generateCalendar(currentDate, calendarReservations, data);
+        },
+
+        error: function (xhr) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+
 
 async function getFinishedReservation() {
     console.log("getting finished reservation!");
@@ -839,6 +850,81 @@ async function getFinishedReservation() {
                 let row = `
                     <tr>
                         <td>${req.EventName}</td>
+                        <td>${req.PackageName}</td>
+                        <td>${req.OrganizationName}</td>
+                        <td>${dates}</td>
+                        <td>${req.Reference}</td>
+                        <td>${ratingDisplay}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                                onclick='openReservationInfoModal(${JSON.stringify(req)}); return false;'>
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+
+                tbody.innerHTML += row;
+            }
+
+        }
+    });
+}
+async function getUninishedReservation() {
+    console.log("getting unfinished reservation!");
+
+    let reservationType = "Unfinished Reservation";
+    let requestInfo = { ReservationType: reservationType };
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: async function (response) {
+
+            let data = [];
+            try { data = JSON.parse(response.d); }
+            catch { data = []; }
+
+            let tbody = document.getElementById("unfinishedReservationTableBody");
+            tbody.innerHTML = "";
+
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Reservation Request found</td></tr>`;
+                return;
+            }
+
+            for (const req of data) {
+
+                let ratings = await getRatings(req.ReservationID);
+                // Extract rating value from array [{ Rating: 4 }]
+                let ratingValue =
+                    ratings.length > 0 ? Number(ratings[0].number_of_stars) : null;
+
+                let ratingDisplay =
+                    ratings.length > 0
+                        ? renderStars(ratings[0].NumberOfStars)
+                        : "No Rating";
+
+                console.log("Raw ratings:", ratings);
+                console.log("Rating Value:", ratingValue, "Type:", typeof ratingValue);
+
+
+                let dates = req.EventDates.length
+                    ? req.EventDates.map(d => {
+                        let formattedDate = d.Date.split('T')[0];
+                        let start = to12Hour(d.StartTime);
+                        let end = to12Hour(d.EndTime);
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
+
+                let row = `
+                    <tr>
+                        <td>${req.EventName}</td>
+                        <td>${req.PackageName}</td>
                         <td>${req.OrganizationName}</td>
                         <td>${dates}</td>
                         <td>${req.Reference}</td>
@@ -946,10 +1032,11 @@ function getAcceptedReservation() {
                     : "No dates";
                 let row = `
                     <tr>
-                        <td>${res.ReservationID}</td>
                         <td>${res.EventName}</td>
+                        <td>${res.PackageName}</td>
+                        <td>${res.OrganizationName}</td>
                         <td>${dates}</td>
-                        <td>${res.Remarks}</td>
+                        <td>${res.Suggestions}</td>
                         <td>${res.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
@@ -1002,7 +1089,6 @@ function getStatusCMReservation() {
                 return;
             }
             // Loop through the data and build table rows
-            console.log("Status CM data: ", data);
             data.forEach(res => {
                 let dates = res.EventDates?.length
                     ? res.EventDates.map(d => {
@@ -1014,12 +1100,13 @@ function getStatusCMReservation() {
                     : "No dates";
                 let row = `
                     <tr>
-                        <td>${res.ReservationID}</td>
                         <td>${res.EventName}</td>
-                        <td>${dates}</td>
-                        <td>${formatDate(res.Meetings[0].MeetingDate)}</td>
-                        <td>${formatTime(res.Meetings[0].MeetingTime)}</td>
+                        <td>${res.PackageName}</td>
+                        <td>${res.OrganizationName}</td>
+                        <td>${formatDate(dates)}</td>
+                        <td>${formatDate(res.Meetings[0].MeetingDate)}<br>${formatTime(res.Meetings[0].MeetingTime)}</td>
                         <td>${res.Meetings[0].MeetingRemarks}</td>
+                        <td>${res.Suggestions}</td>
                         <td>${res.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
@@ -1027,7 +1114,6 @@ function getStatusCMReservation() {
                                 View
                             </button>
                         </td>
-
                     </tr>
                 `;
                 tbody.innerHTML += row;
@@ -1083,8 +1169,6 @@ function getReservationCancellationRequests() {
                 console.error("JSON parse error:", e);
             }
 
-            console.log("Parsed data:", data);
-
             let tbody = document.getElementById("cancellationRequestTableBody");
             tbody.innerHTML = "";
 
@@ -1093,8 +1177,10 @@ function getReservationCancellationRequests() {
                 tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Cancellation Request found</td></tr>`;
                 return;
             }
+           
             // Loop through the data and build table rows
             data.forEach(res => {
+                res.Reason = res.Reason ? res.Reason.replace(/'/g, '`') : '';
                 let dates = res.EventDates?.length
                     ? res.EventDates.map(d => {
                         const formattedDate = d?.Date?.split('T')[0] ?? 'No date';
@@ -1105,14 +1191,15 @@ function getReservationCancellationRequests() {
                     : "No dates";
                 let row = `
                     <tr>
-                        <td>${res.ReservationID}</td>
                         <td>${res.EventName}</td>
+                        <td>${res.PackageName}</td>
+                        <td>${res.OrganizationName}</td>
                         <td>${dates}</td>
-                        <td>${res.Remarks}</td>
+                        <td>${res.Suggestions}</td>
                         <td>${res.Reference}</td>
                         <td>
                            <button class="btn btn-success btn-sm"
-                                onclick='openReservationInfoModal(${JSON.stringify(res)}); return false;'>
+                                type="button" onclick='openReservationInfoModal(${JSON.stringify(res)}); return false;'>
                                 View
                             </button>
                         </td>
@@ -1170,11 +1257,11 @@ function getCancelledReservation() {
                     : "No dates";
                 let row = `
                     <tr>
-                        <td>${res.ReservationID}</td>
                         <td>${res.EventName}</td>
+                        <td>${res.PackageName}</td>
+                        <td>${res.OrganizationName}</td>
                         <td>${dates}</td>
-                        <td>${res.Client.Organization}</td>
-                        <td>${res.Remarks}</td>
+                        <td>${res.Reason}</td>
                         <td>${res.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"
@@ -1196,38 +1283,52 @@ function getCancelledReservation() {
 }
 
 function openReservationInfoModal(res) {
-
+    console.log(res);
     let assetDetails = "";
     let dateDetails = "";
     let callFunction = "";
     let buttonText = "";
     let buttonClass = "";
-
+    let newCallFunction = "";
+    let newButtonText = "";
+    let newButtonClass = "";
+    
     // FIXED: use StatusName, not StatusID
     switch (res.StatusName) {
         case "Accepted":
             callFunction = "coordinationMeetingSetUp";
             buttonText = "Set Coordination Meeting";
             buttonClass = "btn btn-primary"
-            break;
 
+            newCallFunction = "openRejectModal";
+            newButtonText = "Reject Reservation";
+            newButtonClass = "btn btn-danger";
+            break;
         case "Pending":
         case "Reservation Request": // if this is your actual name
             callFunction = "acceptReservation";
             buttonText = "Accept";
-            buttonClass = "btn btn-primary"
+            buttonClass = "btn btn-primary";
+
+            newCallFunction = "openRejectModal";
+            newButtonText = "Reject Reservation";
+            newButtonClass = "btn btn-danger";
             break;
 
         case "Coordination Meeting":
             callFunction = "approveReservation";
             buttonText = "Approve Reservation";
-            buttonClass = "btn btn-primary"
+            buttonClass = "btn btn-primary";
+
+            newCallFunction = "openRejectModal";
+            newButtonText = "Reject Reservation";
+            newButtonClass = "btn btn-danger";
             break;
 
         case "Cancellation Request":
             callFunction = "confirmCancellation";
             buttonText = "Confirm Cancellation";
-            buttonClass = "btn btn-danger"
+            buttonClass = "btn btn-danger";
             break;
 
         default:
@@ -1236,51 +1337,56 @@ function openReservationInfoModal(res) {
             break;
     }
 
-    res.SelectedAssets.forEach(a => {
-        assetDetails += `
-        <p><strong>Asset:</strong> ${a.AssetName}</p>
-        <p><strong>Quantity:</strong> ${a.Quantity}</p>
-    `;
-    });
-
     res.EventDates.forEach(d => {
         dateDetails += `
-        <p><strong>Date:</strong> ${d.Date}</p>
-        <p><strong>Start:</strong> ${d.StartTime}</p>
-        <p><strong>End:</strong> ${d.EndTime}</p>
+        <p><strong>Date:</strong> ${formatDate(d.Date)}</p >
+        <p><strong>Start:</strong> ${to12Hour(d.StartTime)}</p>
+        <p><strong>End:</strong> ${to12Hour(d.EndTime)}</p>
     `;
     });
 
     let safeRes = encodeURIComponent(JSON.stringify(res));
 
     let modalHTML = `
-<div class='modal fade' id='viewReservationModal'>
-    <div class='modal-dialog'>
-        <div class='modal-content'>
-            <div class='modal-header'>
-                <h4>Reservation Info</h4>
-                <button class='btn-close' data-bs-dismiss='modal'></button>
-            </div>
-            <div class='modal-body'>
-                <p><strong>Event:</strong> ${res.EventName}</p>
-                <p><strong>Client:</strong> ${res.Client.FirstName} ${res.Client.MiddleInitial ?? ""} ${res.Client.LastName}</p>
-                <p><strong>Organization:</strong> ${res.Client.Organization}</p>
-                <p><strong>Status:</strong> ${res.StatusName}</p>
-                ${assetDetails}
-                ${dateDetails}
-                <p><strong>Reference:</strong> ${res.Reference}</p>
-                <p><strong>Remarks:</strong> ${res.Remarks}</p>
-            </div>
-            <div class='modal-footer'>
-                ${callFunction !== ""
-            ? `<button class='${buttonClass}' onclick="${callFunction}('${safeRes}', ${res.ReservationID}); return false;">${buttonText}</button>`
-            : ""}
-                <button class='btn btn-danger' data-bs-dismiss='modal'>Close</button>
+        <div class='modal fade' id='viewReservationModal'>
+            <div class='modal-dialog'>
+                <div class='modal-content'>
+                    <div class='modal-header'>
+                        <h4>Reservation Info</h4>
+                        <button class='btn-close' data-bs-dismiss='modal'></button>
+                    </div>
+                    <div class='modal-body'>
+                        <p><strong>Event:</strong> ${res.EventName}</p>
+                        <p><strong>Package:</strong> ${res.PackageName}</p>
+                        <p><strong>Client:</strong> ${res.Client.FirstName} ${res.Client.MiddleInitial ?? ""} ${res.Client.LastName}</p>
+                        <p><strong>Organization:</strong> ${res.Client.Organization}</p>
+                        <p><strong>Status:</strong> ${res.StatusName}</p>
+                        ${assetDetails}
+                        ${dateDetails}
+                        <p><strong>Reference:</strong> ${res.Reference}</p>
+                        ${res.Suggestions !== ""
+                        ? `<p><strong>Suggestions:</strong> ${res.Suggestions}</p>`
+                        :""
+                        }
+                        ${res.Reason !== ""
+                        ? `<p><strong>Reason:</strong> ${res.Reason}</p>`
+                        :""
+                        }
+                    </div>
+                    <div class='modal-footer'>
+                        ${callFunction !== ""
+                        ? `<button class='${buttonClass}' onclick="${callFunction}('${safeRes}', ${res.ReservationID}); return false;">${buttonText}</button>`
+                        : ""}
+                        ${newCallFunction !== ""
+                        ? `<button class='${newButtonClass}' onclick="${newCallFunction}('${safeRes}', ${res.ReservationID}); return false;">${newButtonText}</button>`
+                        : ""}
+               
+                        <button class='btn btn-secondary btn' data-bs-dismiss='modal'>Close</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
-`;
+        `;
 
     // Remove old modal
     let old = document.getElementById("viewReservationModal");
@@ -1293,11 +1399,200 @@ function openReservationInfoModal(res) {
     }).show();
 }
 
-function approveReservation(res ,reservationID, clientID) {
+var rejectContext = null;
+function openRejectModal(res, reservationID, clientID) {
+
+    // Hide viewReservationModal properly
+    let viewModalEl = document.getElementById("viewReservationModal");
+    if (viewModalEl) {
+        let viewModal = bootstrap.Modal.getInstance(viewModalEl);
+        if (viewModal) viewModal.hide();
+    }
+
+    // Remove existing reject modal
+    $('#rejectModal').remove();
+
+    // Create modal
+    let modal = `
+        <div class="modal fade" id="rejectModal" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Reject Reservation</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <p>Please provide your reason for rejection:</p>
+                        <textarea id="RejectReasonInput"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="Reason..."></textarea>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" id="rejectBtn" class="btn btn-danger">
+                            Reject
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Close
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Append modal to body
+    $('body').append(modal);
+
+    // Show modal
+    let rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
+    rejectModal.show();
+
+    // Handle submit
+    $('#rejectBtn').off('click').on('click', function () {
+        let remarks = $('#RejectReasonInput').val().trim();
+
+        if (!remarks) {
+            alert("Please provide a reason for rejection.");
+            return;
+        }
+
+        rejectReservation(reservationID, clientID, remarks);
+    });
+}
+
+function rejectReservation(reservationID, clientID, remarks) {
+
     let reservationInfo = {
         ReservationID: reservationID,
-        ClientID: clientID
+        ClientID: clientID,
+        Remarks: remarks
+    };
+
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/RejectReservation",
+        data: JSON.stringify({ reservationData: reservationInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            console.log(response.d);
+
+            alert("This reservation is successfully rejected");
+
+            getRejectedReservation();
+            getStatusCMReservation();
+            addNotification(reservationID, 4);
+
+            // Close reject modal
+            let modalEl = document.getElementById('rejectModal');
+            if (modalEl) {
+                let rejectModal = bootstrap.Modal.getInstance(modalEl);
+                if (rejectModal) rejectModal.hide();
+            }
+        },
+        error: function (xhr) {
+            console.error("Error:", xhr.responseText);
+        }
+    });
+}
+
+function getRejectedReservation() {
+    let reservationType = "Rejected";
+    let requestInfo = {
+        ReservationType: reservationType
     }
+    $.ajax({
+        type: "POST",
+        url: "AdminDashboard1.aspx/GetReservation",
+        data: JSON.stringify({ requestData: requestInfo }),
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (response) {
+            // Parse the string into a real array
+            let data = [];
+
+            try {
+                data = JSON.parse(response.d);
+            } catch (e) {
+                console.error("JSON parse error:", e);
+            }
+
+            let tbody = document.getElementById("rejectedReservationTableBody");
+            tbody.innerHTML = "";
+
+            // Check if there are any records
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Rejected Reservation found</td></tr>`;
+                return;
+            }
+            // Loop through the data and build table rows
+            data.forEach(res => {
+                let dates = res.EventDates?.length
+                    ? res.EventDates.map(d => {
+                        const formattedDate = d?.Date?.split('T')[0] ?? 'No date';
+                        const start = d?.StartTime ? to12Hour(d.StartTime) : '--:--';
+                        const end = d?.EndTime ? to12Hour(d.EndTime) : '--:--';
+                        return `${formattedDate} (${start} - ${end})`;
+                    }).join("<br>")
+                    : "No dates";
+                let row = `
+                    <tr>
+                        <td>${res.EventName}</td>
+                        <td>${res.PackageName}</td>
+                        <td>${res.OrganizationName}</td>
+                        <td>${dates}</td>
+                        <td>${res.Reason}</td>
+                        <td>${res.Reference}</td>
+                        <td>
+                            <button class="btn btn-success btn-sm"
+                                onclick='openReservationInfoModal(${JSON.stringify(res)}); return false;'>
+                                View
+                            </button>
+                        </td>
+
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+
+        },
+        error: function (xhr, status, error) {
+            console.error("Error:", xhr.responseText);
+        }
+    })
+}
+
+var approveContext = null;
+function approveReservation(res, reservationID, clientID) {
+
+    approveContext = {
+        res: res,
+        reservationID: reservationID,
+        clientID: clientID
+    };
+    // ✅ Properly hide Bootstrap 5 modal
+    const viewModalEl = document.getElementById("viewReservationModal");
+    const viewModal = bootstrap.Modal.getInstance(viewModalEl);
+    if (viewModal) viewModal.hide();
+    openConfirmationModal(
+        "Are you sure you want to approve this reservation?",
+        approveReservationConfirmed
+    );
+}
+function approveReservationConfirmed() {
+
+    if (!approveContext) return;
+
+    let reservationInfo = {
+        ReservationID: approveContext.reservationID,
+        ClientID: approveContext.clientID
+    };
+
     $.ajax({
         type: "POST",
         url: "AdminDashboard1.aspx/ApproveReservation",
@@ -1309,7 +1604,8 @@ function approveReservation(res ,reservationID, clientID) {
             $('#viewReservationModal').modal('hide');
             getStatusCMReservation();
             getApprovedReservation();
-            addNotification(reservationID, 9);
+            addNotification(approveContext.reservationID, 9);
+            approveContext = null;
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
@@ -1319,12 +1615,38 @@ function approveReservation(res ,reservationID, clientID) {
 function editReservationInfo(data, reservationID) {
     openEditReservationModal();
 }
-function confirmCancellation(data, reservationID, clientID) {
+var cancelContext = null;
+function confirmCancellation(res, reservationID, clientID) {
+    cancelContext = {
+        res: res,
+        reservationID: reservationID,
+        clientID: clientID
+    };
+    console.log(cancelContext);
+    // ✅ Properly hide Bootstrap 5 modal
+    const viewModalEl = document.getElementById("viewReservationModal");
+    const viewModal = bootstrap.Modal.getInstance(viewModalEl);
+    if (viewModal) viewModal.hide();
+    openConfirmationModal(
+        "Please confirm to cancel this reservation?",
+        confirmCancellationConfirmed
+    );
+}
+function confirmCancellationConfirmed() {
+    if (!cancelContext) return;
+
+    // Decode the Reason if needed
+    let decodedRes = typeof cancelContext.res === "string"
+        ? JSON.parse(decodeURIComponent(cancelContext.res))
+        : cancelContext.res;
+
     let reservationInfo = {
-        ReservationID: reservationID,
-        ClientID: clientID
-    }
+        ReservationID: cancelContext.reservationID,
+        ClientID: decodedRes.ClientID,
+        Remarks: decodedRes.Reason
+    };
     console.log(reservationInfo);
+    console.log(decodedRes);
     $.ajax({
         type: "POST",
         url: "AdminDashboard1.aspx/CancelReservation",
@@ -1332,19 +1654,18 @@ function confirmCancellation(data, reservationID, clientID) {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log(response.d);
-            $('#viewReservationModal').modal('hide');
-            alert("This reservation is successfully cancelled");
-            getReservationRequests();
-            getAcceptedReservation();
-            getCancelledReservation();
+            alert('Reservation cancelled successfully.');
             getReservationCancellationRequests();
-            addNotification(reservationID, 7);
+            getCancelledReservation();
+            addNotification(reservationInfo.ReservationID, 7);
         },
         error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
+            console.error('Error cancelling reservation:', error);
+            alert('An error occurred. Please try again.');
         }
-    })
+    });
+
+    cancelContext = null;
 }
 let reservationIDGlobal = 0;
 function coordinationMeetingSetUp(dataStr, reservationID) {
@@ -1365,7 +1686,7 @@ function saveCoordinationMeeting() {
         ReservationID: reservationIDGlobal,
         MeetingDate: meetingDate,
         MeetingTime: meetingTime,
-        Remarks: meetingRemarks
+        MeetingRemarks: meetingRemarks
     };
     console.log(meetingInfo);
     $.ajax({
@@ -1389,15 +1710,32 @@ function saveCoordinationMeeting() {
         }
     });
 }
+var acceptContext = null;
+function acceptReservation(res, reservationID, clientID) {
 
+    acceptContext = {
+        res: res,
+        reservationID: reservationID,
+        clientID: clientID
+    };
+    // ✅ Properly hide Bootstrap 5 modal
+    const viewModalEl = document.getElementById("viewReservationModal");
+    const viewModal = bootstrap.Modal.getInstance(viewModalEl);
+    if (viewModal) viewModal.hide();
+    openConfirmationModal(
+        "Have you received the Letter of Intent?",
+        acceptReservationConfirmed
+    );
+}
+function acceptReservationConfirmed() {
 
-function acceptReservation(data, reservationID, clientID) {
-    console.log(reservationID);
+    if (!acceptContext) return;
+
     let reservationInfo = {
-        ReservationID: reservationID,
-        ClientID: clientID
-    }
-    console.log("Reservation Info: ",reservationInfo);
+        ReservationID: acceptContext.reservationID,
+        ClientID: acceptContext.clientID
+    };
+
     $.ajax({
         type: "POST",
         url: "AdminDashboard1.aspx/AcceptReservation",
@@ -1405,17 +1743,16 @@ function acceptReservation(data, reservationID, clientID) {
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {
-            console.log(response.d);
             $('#viewReservationModal').modal('hide');
-            getReservationRequests();
             getAcceptedReservation();
-            console.log(reservationID, userId);
-            addNotification(reservationID, 3);
+            getReservationRequests();
+            addNotification(acceptContext.reservationID, 3);
+            acceptContext = null;
         },
         error: function (xhr, status, error) {
             console.error("Error:", xhr.responseText);
         }
-    })
+    });
 }
 function openReservationModal() {
     console.log(roleId, userId, userEmail);
@@ -1476,12 +1813,10 @@ function getRegistrationRequests() {
 
             // Loop through the data and build table rows
             data.forEach(req => {
-                console.log("Get Registration data:",req);
+                console.log("Get Registration data:", req);
                 let row = `
                     <tr>
-                        <td>${req.RequestID}</td>
                         <td>${req.FirstName}</td>
-                        <td>${req.MiddleInitial}</td>
                         <td>${req.LastName}</td>
                         <td>${req.Organization}</td>
                         <td>${req.UserName}</td>
@@ -1549,68 +1884,6 @@ function UserConfirmation(request_id) {
     });
 }
 
-function getAssets() {
-    $.ajax({
-        type: "POST",
-        url: "AdminDashboard1.aspx/GetAssets",
-        data: "{}",
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function (response) {
-
-            // Parse the string into a real array
-            let data = [];
-
-            try {
-                data = JSON.parse(response.d);
-            } catch (e) {
-                console.error("JSON parse error:", e);
-            }
-
-            console.log("Parsed data:", data);
-
-            let tbody = document.getElementById("assetTableBody");
-            tbody.innerHTML = "";
-
-            // Check if there are any records
-            if (!Array.isArray(data) || data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center">No Assets found</td></tr>`;
-                return;
-            }
-
-            // Loop through the data and build table rows
-            data.forEach(req => {
-                let row = `
-                    <tr>
-                        <td>${req.AssetId}</td>
-                        <td>${req.AssetName}</td>
-                        <td>${req.Quantity}</td>
-                        <td>${req.CategoryID}</td>
-                        <td>${req.CategoryName}</td>
-                        <td>${req.IsActive}</td>
-                        <td>
-                          <button class="btn btn-primary btn-sm"
-                              onclick="editAsset(${req.AssetId}, '${req.AssetName}', ${req.Quantity},${req.CategoryID},'${req.CategoryName}'); return false;">
-                              Edit
-                          </button>
-                           ${
-                            req.IsActive == 1
-                                ? `<button class="btn btn-danger btn-sm" onclick="deactivateAsset(${req.AssetId}); return false;">Deactivate</button>`
-                                : `<button class="btn btn-success btn-sm" onclick="activateAsset(${req.AssetId}); return false;">Activate</button>`
-                          }
-                          </td>
-                        </td>
-                    </tr>
-                `;
-                tbody.innerHTML += row;
-            });
-        },
-        error: function (xhr, status, error) {
-            console.error("Error:", xhr.responseText);
-        }
-    });
-}
-
 function editAsset(asset_id, asset_name, asset_quantity, categor_id, category_name) {
     console.log("Editing asset with ID:", asset_id, asset_name, asset_quantity, categor_id, category_name);
     openAssetEditorModal(asset_name, asset_quantity, categor_id, category_name);
@@ -1648,7 +1921,6 @@ function createAsset() {
             const modalEl = document.getElementById("createAssetModal");
             const modalInstance = bootstrap.Modal.getInstance(modalEl);
             modalInstance.hide();
-            getAssets();
         },
         error: function (xhr, status, error) {
             console.error("❌ Error Adding asset:", error);
@@ -1797,10 +2069,11 @@ function getPackages() {
                         <td>${itemsStr}</td>
                         <td>${pkg.ConsecutiveDaysAllowed}</td>
                         <td>${pkg.DaysPrior}</td>
+                        <td>${pkg.Price}</td>
                         <td>${pkg.IsActive ? "Active" : "Inactive"}</td>
                         <td>
                             <button class="btn btn-primary btn-sm"
-                                onclick='editPackage(${pkg.PackageID}, "${pkg.PackageName}", ${JSON.stringify(pkg.ItemIncluded)}, ${pkg.ConsecutiveDaysAllowed}, ${pkg.DaysPrior}); return false;'>
+                                onclick='editPackage(${pkg.PackageID}, "${pkg.PackageName}", ${JSON.stringify(pkg.ItemIncluded)}, ${pkg.ConsecutiveDaysAllowed}, ${pkg.DaysPrior}, ${pkg.Price}); return false;'>
                                 Edit
                             </button>
                             ${pkg.IsActive
@@ -1822,8 +2095,9 @@ function CreatePackage() {
     const packageName = document.getElementById("createPackageName").value.trim();
     const daysAllowed = parseInt(document.getElementById("createDaysAllowed").value);
     const daysPrior = parseInt(document.getElementById("createDaysPrior").value);
+    const price = parseInt(document.getElementById("createPrice").value);
 
-    if (!packageName || isNaN(daysAllowed) || isNaN(daysPrior)) {
+    if (!packageName || isNaN(daysAllowed) || isNaN(daysPrior) || isNaN(price)) {
         alert("Please fill in all fields.");
         return;
     }
@@ -1839,7 +2113,7 @@ function CreatePackage() {
             itemIncluded.push({
                 ItemID: 0, // New item
                 ItemName: itemName,
-                QuantityAvailable: quantity
+                QuantityAvailable: quantity,
             });
         }
     });
@@ -1853,7 +2127,8 @@ function CreatePackage() {
         PackageName: packageName,
         ConsecutiveDaysAllowed: daysAllowed,
         DaysPrior: daysPrior,
-        ItemIncluded: itemIncluded
+        ItemIncluded: itemIncluded,
+        Price: price
     };
 
     console.log("Payload:", payload);
@@ -1882,9 +2157,9 @@ function CreatePackage() {
     });
 }
 
-function editPackage(packageID, packageName, itemIncluded, daysAllowed, daysPrior) {
-    console.log(packageID, packageName, itemIncluded, daysAllowed, daysPrior);
-    openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed, daysPrior);
+function editPackage(packageID, packageName, itemIncluded, daysAllowed, daysPrior, price) {
+    console.log(packageID, packageName, itemIncluded, daysAllowed, daysPrior, price);
+    openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed, daysPrior, price);
 }
 
 function savePackageChanges() {
@@ -1895,8 +2170,9 @@ function savePackageChanges() {
     const packageName = modal.querySelector('#editPackageName').value.trim();
     const daysAllowed = parseInt(modal.querySelector('#editDaysAllowed').value);
     const daysPrior = parseInt(modal.querySelector('#editDaysPrior').value);
+    const price = parseInt(modal.querySelector('#editPrice').value);
 
-    if (!packageName || isNaN(daysAllowed)) {
+    if (!packageName || isNaN(daysAllowed) || isNaN(price)) {
         alert("Please fill in all fields.");
         return;
     }
@@ -1926,14 +2202,15 @@ function savePackageChanges() {
         PackageName: packageName,
         ConsecutiveDaysAllowed: daysAllowed,
         DaysPrior: daysPrior,
-        ItemIncluded: items
+        ItemIncluded: items,
+        Price: price
     };
     console.log(payload);
     // AJAX call
     $.ajax({
         type: "POST",
         url: "AdminDashboard1.aspx/SavePackage",
-        data: JSON.stringify({packageDTO: payload}),
+        data: JSON.stringify({ packageDTO: payload }),
         contentType: "application/json; charset=utf-8",
         dataType: "json",
         success: function (response) {

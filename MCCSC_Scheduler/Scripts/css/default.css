@@ -53,10 +53,10 @@ header {
 }
 
 .logo {
-    width: 70px;
-    height: 70px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
-    border: 3px solid white;
+    border: 1px solid white;
     background: white;
 }
 

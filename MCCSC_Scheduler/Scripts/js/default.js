@@ -16,11 +16,205 @@ var role_type_description = "";
 var first_name = "";
 var middle_initial = "";
 var last_name = "";
+    
+function attachEmailValidation() {
+    const emailInput = document.getElementById("email");
+    if (!emailInput || emailInput.dataset.bound === "true") return;
+
+    emailInput.dataset.bound = "true";
+    const requiredDomain = "@gmail.com";
+
+    // Create or reuse error message element
+    let errorMsg = document.getElementById("email-error-msg");
+    if (!errorMsg) {
+        errorMsg = document.createElement("small");
+        errorMsg.id = "email-error-msg";
+        errorMsg.style.color = "#dc3545";
+        errorMsg.style.display = "none";
+        errorMsg.style.marginTop = "5px";
+        errorMsg.textContent = "Email must end with @gmail.com";
+
+        emailInput.parentNode.appendChild(errorMsg);
+    }
+
+    emailInput.addEventListener("input", function () {
+        const value = emailInput.value.toLowerCase();
+
+        if (value.length > 0 && !value.endsWith(requiredDomain)) {
+            emailInput.style.backgroundColor = "#f8d7da";
+            emailInput.style.borderColor = "#dc3545";
+            errorMsg.style.display = "block";
+        }
+        else if (value.endsWith(requiredDomain)) {
+            emailInput.style.backgroundColor = "#d1e7dd";
+            emailInput.style.borderColor = "#198754";
+            errorMsg.style.display = "none";
+        }
+        else {
+            emailInput.style.backgroundColor = "";
+            emailInput.style.borderColor = "";
+            errorMsg.style.display = "none";
+        }
+    });
+
+    console.log("Email validation + message attached");
+}
+function attachContactValidation() {
+    const contactInput = document.getElementById("contactNumber");
+    if (!contactInput || contactInput.dataset.bound === "true") return;
+
+    contactInput.dataset.bound = "true";
+
+    // Regex for PH mobile numbers
+    const phMobileRegex = /^(09\d{9}|\+639\d{9})$/;
+
+    // Create or reuse error message
+    let errorMsg = document.getElementById("contact-error-msg");
+    if (!errorMsg) {
+        errorMsg = document.createElement("small");
+        errorMsg.id = "contact-error-msg";
+        errorMsg.style.color = "#dc3545";
+        errorMsg.style.display = "none";
+        errorMsg.style.marginTop = "5px";
+        errorMsg.textContent = "Enter a valid PH mobile number (09XXXXXXXXX or +639XXXXXXXXX)";
+
+        contactInput.parentNode.appendChild(errorMsg);
+    }
+
+    contactInput.addEventListener("input", function () {
+        const value = contactInput.value.trim();
+
+        // Remove non-numeric except +
+        contactInput.value = value.replace(/[^0-9+]/g, "");
+
+        if (contactInput.value.length > 0 && !phMobileRegex.test(contactInput.value)) {
+            contactInput.style.backgroundColor = "#f8d7da";
+            contactInput.style.borderColor = "#dc3545";
+            errorMsg.style.display = "block";
+        }
+        else if (phMobileRegex.test(contactInput.value)) {
+            contactInput.style.backgroundColor = "#d1e7dd";
+            contactInput.style.borderColor = "#198754";
+            errorMsg.style.display = "none";
+        }
+        else {
+            contactInput.style.backgroundColor = "";
+            contactInput.style.borderColor = "";
+            errorMsg.style.display = "none";
+        }
+    });
+
+    console.log("Contact number validation attached");
+}
+function attachPasswordValidation() {
+    const passwordInput = document.getElementById("password");
+    const confirmInput = document.getElementById("confirm_password");
+
+    if (!passwordInput || !confirmInput) return;
+    if (passwordInput.dataset.bound === "true") return;
+
+    passwordInput.dataset.bound = "true";
+    confirmInput.dataset.bound = "true";
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+    /* ---------- PASSWORD MESSAGE ---------- */
+    let passMsg = document.getElementById("password-error-msg");
+    if (!passMsg) {
+        passMsg = document.createElement("small");
+        passMsg.id = "password-error-msg";
+        passMsg.style.color = "#dc3545";
+        passMsg.style.display = "none";
+        passMsg.style.marginTop = "5px";
+        passMsg.textContent =
+            "Password must be at least 8 characters, include 1 uppercase letter and 1 number";
+
+        passwordInput.parentNode.appendChild(passMsg);
+    }
+
+    /* ---------- CONFIRM PASSWORD MESSAGE ---------- */
+    let confirmMsg = document.getElementById("confirm-password-error-msg");
+    if (!confirmMsg) {
+        confirmMsg = document.createElement("small");
+        confirmMsg.id = "confirm-password-error-msg";
+        confirmMsg.style.color = "#dc3545";
+        confirmMsg.style.display = "none";
+        confirmMsg.style.marginTop = "5px";
+        confirmMsg.textContent = "Passwords do not match";
+
+        confirmInput.parentNode.appendChild(confirmMsg);
+    }
+
+    /* ---------- PASSWORD INPUT ---------- */
+    passwordInput.addEventListener("input", function () {
+        const value = passwordInput.value;
+
+        if (value.length > 0 && !passwordRegex.test(value)) {
+            passwordInput.style.backgroundColor = "#f8d7da";
+            passwordInput.style.borderColor = "#dc3545";
+            passMsg.style.display = "block";
+        }
+        else if (passwordRegex.test(value)) {
+            passwordInput.style.backgroundColor = "#d1e7dd";
+            passwordInput.style.borderColor = "#198754";
+            passMsg.style.display = "none";
+        }
+        else {
+            passwordInput.style.backgroundColor = "";
+            passwordInput.style.borderColor = "";
+            passMsg.style.display = "none";
+        }
+
+        // Re-check confirm password while typing password
+        validateConfirmPassword();
+    });
+
+    /* ---------- CONFIRM PASSWORD INPUT ---------- */
+    confirmInput.addEventListener("input", validateConfirmPassword);
+
+    function validateConfirmPassword() {
+        if (confirmInput.value.length === 0) {
+            confirmInput.style.backgroundColor = "";
+            confirmInput.style.borderColor = "";
+            confirmMsg.style.display = "none";
+            return;
+        }
+
+        if (confirmInput.value !== passwordInput.value) {
+            confirmInput.style.backgroundColor = "#f8d7da";
+            confirmInput.style.borderColor = "#dc3545";
+            confirmMsg.style.display = "block";
+        } else {
+            confirmInput.style.backgroundColor = "#d1e7dd";
+            confirmInput.style.borderColor = "#198754";
+            confirmMsg.style.display = "none";
+        }
+    }
+
+    console.log("Password validation attached");
+}
+
+
+
+// Watch DOM for dynamically injected registration form
+const observer = new MutationObserver(() => {
+    attachEmailValidation();
+    attachContactValidation();
+    attachPasswordValidation()
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+
+
 
 // ===== PAGE LOAD EVENT =====
 document.addEventListener("DOMContentLoaded", function () {
     console.log("DOM Content Loaded - Initializing...");
     // inject alert modal
+    
     const alertModalDiv = document.getElementById('form1');
     if (alertModalDiv) {
         alertModalDiv.insertAdjacentHTML('afterend', alertModalEl);
@@ -419,12 +613,6 @@ function generateCalendar(date) {
         let disabled = false;
         let reason = [];
 
-        // 1️⃣ Disable if before one month from today
-        if (dateObj < oneMonthFromNow) {
-            disabled = true;
-            reason.push("Before one month from today");
-        }
-
         // 2️⃣ Disable if holiday
         if (holidayName) {
             disabled = true;
@@ -441,6 +629,12 @@ function generateCalendar(date) {
             cell.classList.add("fully-booked");
         }
 
+        if (hasLessThan2HoursRemaining(dateStr)) {
+            disabled = true;
+            reason.push("only less than 2 hours vacant");
+            cell.classList.add("fully-booked");
+        }
+        
         if (!disabled) {
             cell.onclick = () => selectDate(year, month, day);
         } else {
@@ -553,23 +747,46 @@ function submitRegistrationRequest() {
     let firstName = document.getElementById("firstName").value.trim();
     let lastName = document.getElementById("lastName").value.trim();
     let e_mail = document.getElementById("email").value.trim();
-    let contactNumber = parseInt(document.getElementById("contactNumber").value.trim());
+    let contactNumber = document.getElementById("contactNumber").value.trim();
     let orgs = document.getElementById("organization").value.trim();
     let userName = document.getElementById("username").value.trim();
     let passWord = document.getElementById("password").value.trim();
+    let confirmPassword = document.getElementById("confirm_password").value.trim();
 
-    // Validate inputs
-    if (!firstName || !lastName || !e_mail || !contactNumber || !orgs || !userName || !passWord) {
+    // --------- VALIDATION ---------
+    if (!firstName || !lastName || !e_mail || !contactNumber || !orgs || !userName || !passWord || !confirmPassword) {
         alert("Please fill in all required fields.");
         return false;
     }
 
-    // Validate date selection
-    if (!selectedDate) {
-        alert('Please select a date from the calendar first!');
+    // Email validation
+    const requiredDomain = "@gmail.com";
+    if (!e_mail.toLowerCase().endsWith(requiredDomain)) {
+        alert(`Email must end with ${requiredDomain}`);
         return false;
     }
 
+    // Contact number validation (PH mobile)
+    const phMobileRegex = /^(09\d{9}|\+639\d{9})$/;
+    if (!phMobileRegex.test(contactNumber)) {
+        alert("Enter a valid PH mobile number (09XXXXXXXXX or +639XXXXXXXXX)");
+        return false;
+    }
+
+    // Password validation
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(passWord)) {
+        alert("Password must be at least 8 characters, include 1 uppercase letter and 1 number");
+        return false;
+    }
+
+    // Confirm password match
+    if (passWord !== confirmPassword) {
+        alert("Passwords do not match");
+        return false;
+    }
+
+    // --------- PREPARE DATA ---------
     let userData = {
         FirstName: firstName,
         MiddleInitial: "",
@@ -580,35 +797,38 @@ function submitRegistrationRequest() {
         UserName: userName,
         PassWord: passWord
     };
+
     console.log(userData);
-    // Try to submit to backend if available
+
+    // --------- SUBMIT TO BACKEND ---------
     let submitUrl = 'Default.aspx/registrationRequestResult';
     let options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({ userDTO: userData })
     };
+
     fetch(submitUrl, options)
         .then(response => response.json())
         .then(data => {
             let result = data.d;
             console.log("Backend registration result:", result);
-            if (result == "Username already exists. Please create another one.")
+
+            if (result === "Username already exists. Please create another one.") {
                 alert(result);
+            }
+            else if (result === "Email already registered. Please use another email.") {
+                alert(result);
+            }
             else {
-                alert(result);
+                alert("Registration Successful! Please wait for the admin approval.");
                 resetRegistrationForm();
             }
-            // Show success message
-            //alert(`Registration Successful!\n\nWelcome, ${firstName} ${lastName}!\n\nYour reservation for ${formatDate(selectedDate)} has been recorded.\n\nOrganization: ${orgs}\nUsername: ${userName}\n\nThis is a FREE booking service. Please arrive on time for your event.`);
-
-
         })
         .catch(error => {
-            x``
             console.error("Backend registration error:", error);
 
-            // Fallback: Store in memory
+            // Fallback: store in memory
             const user = {
                 firstName,
                 lastName,
@@ -622,9 +842,7 @@ function submitRegistrationRequest() {
 
             registeredUsers.push(user);
             console.log('Stored in memory:', registeredUsers);
-
-            // Show success message
-            //alert(`Registration Successful!\n\nWelcome, ${firstName} ${lastName}!\n\nYour reservation for ${formatDate(selectedDate)} has been recorded.\n\nOrganization: ${orgs}\nUsername: ${userName}\n\nThis is a FREE booking service. Please arrive on time for your event.`);
+            alert("Registration saved locally (offline mode).");
         });
 
     return false;
@@ -718,7 +936,8 @@ function authenticateUser() {
                         window.location.href = "AdminDashboard2.aspx";
                 }
             } else {
-                alert("Login failed: " + user.Message);
+                alert(`Login failed: ${user.Message || "Unknown error"} \nIf you already submitted your registration, wait for admin approval.`);
+
                 console.log("All user data:", user.Success);
             }
         })

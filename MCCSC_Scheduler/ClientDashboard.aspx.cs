@@ -111,6 +111,19 @@ namespace MCCSC_Scheduler
             public int EventID { get; set; }
             public string Reference { get; set; }
         }
+        [WebMethod]
+        public static string OngoingExpiredSearch()
+        {
+            try
+            {
+                var requests = dbContext.OngoingExpiredSearch();
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
 
         [WebMethod]
         public static string GetClientReservation(object clientData)
@@ -132,10 +145,29 @@ namespace MCCSC_Scheduler
         [WebMethod]
         public static string SubmitReservation(ReservationDTO reservationData)
         {
-            DBContext dbContext = new DBContext();
-            return dbContext.SubmitReservation(reservationData);
+            try {
+                DBContext dbContext = new DBContext();
+                return dbContext.SubmitReservation(reservationData);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
         }
 
+        [WebMethod]
+        public static string EditReservation(ReservationDTO reservationDTO)
+        {
+            try
+            {
+                var requests = dbContext.EditReservation(reservationDTO);
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
         [WebMethod]
         [ScriptMethod(ResponseFormat = ResponseFormat.Json)]
         public static string RequestCancellation(ReservationDTO reservationData)

@@ -30,7 +30,7 @@ function showSection(sectionName, event) {
 
 
 // Calendar Generation
-function generateCalendar(date) {
+function generateCalendar(date, reservations = []) {
     const calendar = document.getElementById('calendar');
     calendar.innerHTML = '';
 
@@ -79,14 +79,13 @@ function generateCalendar(date) {
 
     // Current month's days
     for (let day = 1; day <= daysInMonth; day++) {
-        const dayCell = createDayCell(day, false);
-
-        // Highlight today
+        const dayEvents = getEventsForDay(year, month, day, reservations);
+        const dayCell = createDayCell(day, false, dayEvents);
+        console.log(dayEvents);
         if (isCurrentMonth && day === today.getDate()) {
             dayCell.classList.add('today');
         }
 
-        // Add click event
         dayCell.addEventListener('click', function () {
             selectDate(year, month, day);
         });
@@ -101,13 +100,31 @@ function generateCalendar(date) {
         calendarGrid.appendChild(dayCell);
     }
 
+
     calendar.appendChild(calendarGrid);
 }
+function getEventsForDay(year, month, day, reservations) {
+    return reservations.filter(r => {
+        const d = new Date(r.Date);
+        return (
+            d.getFullYear() === year &&
+            d.getMonth() === month &&
+            d.getDate() === day
+        );
+    });
+}
 
-function createDayCell(day, isOtherMonth) {
+function createDayCell(day, isOtherMonth, events = []) {
     const dayCell = document.createElement('div');
     dayCell.className = 'calendar-day';
     dayCell.textContent = day;
+
+    if (events.length > 0) {
+        const label = document.createElement('div');
+        label.className = 'event-label';
+        label.textContent = events[0].EventName; // first event
+        dayCell.appendChild(label);
+    }
 
     if (isOtherMonth) {
         dayCell.classList.add('other-month');
@@ -115,6 +132,7 @@ function createDayCell(day, isOtherMonth) {
 
     return dayCell;
 }
+
 
 function selectDate(year, month, day) {
     selectedDate = new Date(year, month, day);
@@ -135,8 +153,9 @@ function selectDate(year, month, day) {
 
 function changeMonth(direction) {
     currentDate.setMonth(currentDate.getMonth() + direction);
-    generateCalendar(currentDate);
+    generateCalendar(currentDate, calendarReservations);
 }
+
 
 function getMonthName(month) {
     const months = [

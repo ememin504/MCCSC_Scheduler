@@ -1,7 +1,6 @@
 ﻿//declare modal object
 var alertModal;
 var otpModal;
-var reservationModal;
 var registrationModal;
 var assetEditorModal;
 var createAssetModal;
@@ -11,6 +10,71 @@ var coordinationMeetingModal;
 var reservationCancellationModal;
 var editReservationModal;
 var categoryID;
+var confirmationModal;
+
+var confirmationModalEl = `
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmationMessage">
+                <!-- Message goes here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="confirmationConfirmBtn">
+                    Confirm
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+`;
+function openConfirmationModal(message, onConfirm) {
+
+    let modalElement = document.getElementById('confirmationModal');
+
+    // Insert modal into DOM if it doesn't exist
+    if (!modalElement) {
+        document.body.insertAdjacentHTML('beforeend', confirmationModalEl);
+        modalElement = document.getElementById('confirmationModal');
+    }
+
+    if (!modalElement) {
+        console.error("❌ Failed to insert confirmation modal into DOM!");
+        return;
+    }
+
+    // Set message
+    document.getElementById("confirmationMessage").innerText = message;
+
+    // Initialize or get modal instance
+    confirmationModal = bootstrap.Modal.getOrCreateInstance(modalElement, {
+        backdrop: 'static',
+        keyboard: false
+    });
+
+    // Reset confirm button listener
+    const confirmBtn = document.getElementById("confirmationConfirmBtn");
+    confirmBtn.replaceWith(confirmBtn.cloneNode(true));
+
+    const newConfirmBtn = document.getElementById("confirmationConfirmBtn");
+    newConfirmBtn.addEventListener("click", function () {
+        if (typeof onConfirm === "function") {
+            onConfirm();
+        }
+        confirmationModal.hide();
+    });
+
+    // Show modal
+    confirmationModal.show();
+}
+
 
 var coordinationMeetingModalEl = `
 <div class="modal fade" id="coordinationMeetingModal" tabindex="-1" role="dialog" aria-labelledby="coordinationMeetingModalLabel" aria-hidden="true">
@@ -74,12 +138,8 @@ function openCoordinationMeetingModal(data, reservationID) {
     }
     let assetDetails = "";
     let dateDetails = "";
-    data.SelectedAssets.forEach(a => {
-        assetDetails += `<p><strong>Asset:</strong> ${a.AssetName}</p>
-                     <p><strong>Quantity:</strong> ${a.Quantity}</p>`;
-    });
     data.EventDates.forEach(d => {
-        dateDetails += `<p><strong>Date:</strong> ${d.Date}</p>
+        dateDetails += `<p><strong>Date:</strong> ${formatDate(d.Date)}</p>
                      <p><strong>Starting Time:</strong> ${d.StartTime}</p>
                      <p><strong>Ending Time:</strong> ${d.EndTime}</p>`;
     });
@@ -87,7 +147,7 @@ function openCoordinationMeetingModal(data, reservationID) {
     document.getElementById('reservationInfo').innerHTML = `
         <p><strong>Event Title:</strong> ${data.EventName}</p>
         <p><strong>Client:</strong> ${data.Client.FirstName} ${data.Client.MiddleInitial || ""} ${data.Client.LastName}</p>
-        <p><strong>Organization:</strong> ${data.Organization}</p>
+        <p><strong>Organization:</strong> ${data.OrganizationName}</p>
         <p><strong>Status:</strong> ${data.StatusName}</p>
         ${assetDetails}<br>
         ${dateDetails}
@@ -121,10 +181,28 @@ var userModalEl = `
 
 var userModal;
 function openUserModal() {
-    if (!userModal) {
-        userModal = new bootstrap.Modal(document.getElementById('userModal'));
+    console.log("Opening user category modal...");
+
+    // 1️⃣ Check if modal exists
+    let modalElement = document.getElementById('userModal');
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', userModalEl);
+        modalElement = document.getElementById('userModal');
     }
-    userModal.show();
+
+    // 2️⃣ Verify that insertion succeeded
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static'
+    });
+    modalInstance.show();
+
+    console.log("✅ Modal opened successfully.");
 }
 
 
@@ -402,15 +480,15 @@ let reservationModalEl =
     "</div>" +
 
     "<div class='modal-body'>" +
-    "<ul class='nav nav-tabs mb-3' id='packageTabs'></ul>"+
-    "<div id='packageTabContent' class='tab-content'></div>"+
+    "<ul class='nav nav-tabs mb-3' id='packageTabs'></ul>" +
+    "<div id='packageTabContent' class='tab-content'></div>" +
 
-    "<div class='modalCalendar-container'>"+
-        "<div id='modalCalendar'></div>"+
-        "<div class='selected-date'>"+
-            "<strong>Selected Date:</strong> <span id='displayDate'>Please select a date</span>"+
-        "</div>"+
-    "</div>"+
+    "<div class='modalCalendar-container'>" +
+    "<div id='modalCalendar'></div>" +
+    "<div class='selected-date'>" +
+    "<strong>Selected Date:</strong> <span id='displayDate'>Please select a date</span>" +
+    "</div>" +
+    "</div>" +
     /*"<div id='datesContainer'>" +
     "<label>Event Dates and Time</label>" +
     "<div class='date-group mb-3'>" +
@@ -427,14 +505,18 @@ let reservationModalEl =
     "</div>" +*/
 
     "<label for='eventName'>Event Name</label>" +
-    "<input type='text' id='eventName' class='form-control mb-2' placeholder='Singing Contest'>" +
+    "<input type='text' id='eventName' class='form-control mb-2' placeholder='Input Event Title'>" +
 
     "<label for='eventDescription'>Event Description</label>" +
-    "<input type='text' id='eventDescription' class='form-control mb-3' placeholder='Battle of the Bands'>" +
+    "<input type='text' id='eventDescription' class='form-control mb-3' placeholder='Input Event Description'>" +
 
+    "<div class='mb-3' >" +
+    "<label class='form-label'>Suggestions</label>" +
+        "<textarea id='suggestions' class='form-control' rows='3' placeholder='Write your suggestions here...'></textarea>"+
+    "</div>"+
     "<div class='modal-footer'>" +
     "<button type='button' class='btn btn-primary' id='btnSubmitReservation' onclick='submitReservation()'; return false;> Submit</button >"+
-    "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Clear</button>" +
+    "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>" +
     "</div>" +
 
     "</div>" +
@@ -493,7 +575,6 @@ function setDateRange(input) {
         }
     });
 }
-
 // Apply to all date inputs
 function applyDateLimits() {
     document.querySelectorAll('.event-date').forEach(setDateRange);
@@ -681,8 +762,8 @@ let reservationCancellationModalEl = `
             </div>
 
             <div class='modal-footer'>
-                <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
                 <button type='button' id='cancelRequestBtn' class='btn btn-danger'>Submit</button>
+                <button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>Close</button>
             </div>
 
         </div>
@@ -719,14 +800,57 @@ let editReservationModalEl = `
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <
+
+                <label for='editEventName'>Event Name</label>
+                <input type='text' id='editEventName' class='form-control mb-2' placeholder='Enter event name'>
+
+                <label for='editEventDescription'>Event Description</label>
+                <input type='text' id='editEventDescription' class='form-control mb-3' placeholder='Enter event description'>
+                
+                <div id='datesContainer'> 
+                <label>Event Dates and Time</label> 
+                <div class='date-group mb-3'> 
+                <div class='input-group mb-2'> 
+                    <input type='date' class='form-control event-date'> 
+                    <input type='time' class='form-control start-time'> 
+                    <input type='time' class='form-control end-time'> 
+                <button type='button' class='btn btn-danger remove-date ms-1'>−</button> 
+                </div> 
+                </div> 
+                </div> 
+
+                <button type='button' class='btn btn-success mb-3' id='addDate'>+ Add Another Date</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="saveReservationChanges()">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                 </div>
             </div>
         </div>
     </div>
 </div>
 `;
 function openEditReservationModal() {
-    console.log("Opening edit reservation modal");
+    let modalElement = document.getElementById('editReservationModal');
+    if (!modalElement) {
+        console.warn("Modal not found — inserting into DOM.");
+        document.body.insertAdjacentHTML('beforeend', editReservationModalEl);
+        modalElement = document.getElementById('editReservationModal');
+    }
+
+    // 2️⃣ Verify that insertion succeeded
+    if (!modalElement) {
+        console.error("❌ Failed to insert modal into DOM!");
+        return;
+    }
+
+    // 3️⃣ Create and show modal
+    const modalInstance = new bootstrap.Modal(modalElement, {
+        backdrop: 'static'
+    });
+    modalInstance.show();
+
+    console.log("✅ Modal opened successfully.");
 }
 
 function hideTooltip() {
@@ -815,7 +939,10 @@ let packageEditorModalEl = `
           <div id="editItemsContainer">
           </div>
 
-          <button type="button" class="btn btn-success btn-sm mt-2" id="addItemBtn">+ Add Item</button>
+          <button type="button" class="btn btn-success btn-sm mt-2" id="addItemBtn">+ Add Item</button><br>
+
+          <label for="editPrice" class="form-label">Edit Price: </label>
+          <input type="number" id="editPrice" class="form-control" required>
 
         </form>
       </div>
@@ -857,7 +984,7 @@ document.addEventListener('click', function (e) {
 // ---------------------------
 // Open edit modal
 // ---------------------------
-function openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed, daysPrior) {
+function openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed, daysPrior, price) {
     let modalElement = document.getElementById('packageEditorModal');
     if (!modalElement) {
         document.body.insertAdjacentHTML('beforeend', packageEditorModalEl);
@@ -871,6 +998,7 @@ function openEditPackageModal(packageID, packageName, itemIncluded, daysAllowed,
     modalElement.querySelector('#editPackageName').value = packageName;
     modalElement.querySelector('#editDaysAllowed').value = daysAllowed;
     modalElement.querySelector('#editDaysPrior').value = daysPrior;
+    modalElement.querySelector('#editPrice').value = price;
 
     // Populate items
     const itemsContainer = modalElement.querySelector('#editItemsContainer');
@@ -924,20 +1052,23 @@ let createPackageModalEl = `
           </div>
 
           <div class="mb-3">
-            <label for="createDaysAllowed" class="form-label">Consecutive Days Allowed</label>
+            <label for="createDaysAllowed" class="form-label">Consecutive Days Allowed: </label>
             <input type="number" id="createDaysAllowed" class="form-control" required>
           </div>
 
           <div class="mb-3">
-            <label for="createDaysPrior" class="form-label">Days Before the Event</label>
+            <label for="createDaysPrior" class="form-label">Days Before the Event: </label>
             <input type="number" id="createDaysPrior" class="form-control" required>
           </div>
 
-          <label for="createItemsContainer" class="form-label">Item Inclusions</label>
+          <label for="createItemsContainer" class="form-label">Item Inclusions: </label>
           <div id="createItemsContainer">
           </div>
 
           <button type="button" class="btn btn-success btn-sm mt-2" id="createAddItemBtn">+ Add Item</button>
+          <br>
+          <label for="createPrice" class="form-label">Price: </label>
+          <input type="number" id="createPrice" class="form-control" required>
 
         </form>
       </div>
@@ -1024,8 +1155,8 @@ let timeModalElHtml = `
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="saveTime()">Save</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" id="saveTimeBtn" onclick="saveTime()">Save</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
 
     </div>
@@ -1100,32 +1231,36 @@ function initRatingStars() {
 let selectedRating = 0;
 function openRatingModal(reservationId) {
     console.log("Opening Rating Modal");
-    //console.log(reservationId);
+
     reservation_Id = reservationId;
-    console.log(reservation_Id);
+
+    // Hide notification sidebar if open
+    let sidebar = document.getElementById("notificationSidebar");
+    if (sidebar) sidebar.classList.remove("show");
+
+    // 🔥 Hide the custom overlay (THIS is the dark background)
+    let overlay = document.getElementById("notificationOverlay");
+    if (overlay) overlay.classList.remove("show");
+
     let modalElement = document.getElementById('ratingModal');
 
     if (!modalElement) {
         document.body.insertAdjacentHTML('beforeend', ratingModalEl);
         modalElement = document.getElementById('ratingModal');
+
+
+        // Reset rating stars
+        selectedRating = 0;
+        document.querySelectorAll("#ratingModal .star").forEach(s => s.classList.remove("filled"));
+        initRatingStars();
+
+        const modalInstance = new bootstrap.Modal(modalElement, {
+            backdrop: 'static'
+        });
+        modalInstance.show();
     }
-
-    // Reset selected rating and clear previous stars
-    selectedRating = 0;
-    document.querySelectorAll("#ratingModal .star").forEach(s => s.classList.remove("filled"));
-
-    // Set hidden fields
-    // Initialize stars
-    initRatingStars();
-
-    // Show modal
-    const modalInstance = new bootstrap.Modal(modalElement, {
-        backdrop: 'static'
-    });
-    modalInstance.show();
-
-    console.log("✅ Modal opened successfully.");
 }
+
 let ratingModalEl = `
 <!-- Rating Modal -->
 <div class="modal fade" id="ratingModal" tabindex="-1" aria-hidden="true">
@@ -1154,20 +1289,13 @@ let ratingModalEl = `
                     <textarea id="ratingFeedback" class="form-control" rows="3"
                         placeholder="Write your feedback here..."></textarea>
                 </div>
-
             </div>
-
             <div class="modal-footer">
                 <button class="btn btn-primary" onclick="submitRatings()">Submit Rating</button>
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
-
         </div>
     </div>
 </div>
 `;
-
-
-
-
 

@@ -8,13 +8,19 @@
     <link rel="stylesheet" href="Scripts/css/sidebar.css" />
     <link rel="stylesheet" href="Scripts/css/client.css" />
     <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"/>
     <!-- jQuery (must be loaded before any script using it) -->
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="Lib/jquery/3.6.4/jquery-3.6.4.min.js"></script>
     <!-- Bootstrap JS (depends on jQuery for some features like modals) -->
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <script src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
     <!-- Your custom scripts -->
-    <script src="Scripts/js/global.js"></script>
     <script src="Scripts/js/Client.js"></script>
+    <script src="Scripts/js/global.js"></script>
     <title>Client Dashboard</title>
 </head>
 <body>
@@ -50,10 +56,24 @@
                     loadNotificationsUI();
                     // Poll for new notifications every 5 seconds
                     setInterval(loadNotificationsUI, 5000);
+                    setInterval(ongoingExpiredSearch, 5000);
                 }
             }, 1000);
         });
-
+        function ongoingExpiredSearch() {
+            $.ajax({
+                type: "POST",
+                url: "ClientDashboard.aspx/OngoingExpiredSearch",
+                data: "{}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (response) {
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error:", xhr.responseText);
+                }
+            });
+        }
         // Logout function with confirmation
         function confirmLogout() {
             const modal = document.createElement('div');
@@ -91,6 +111,8 @@
 
         function performLogout() {
             window.location.href = 'Default.aspx';
+            localStorage.clear();
+            sessionStorage.clear();
         }
 
         document.addEventListener('click', function (e) {
@@ -172,15 +194,31 @@
                         let message = "";
                         switch (n.StatusID) {
                             case 2: message = "Your reservation request has been submitted"; break;
-                            case 3: message = "Your reservation has been accepted"; break;
-                            case 4: message = "Your reservation was rejected"; break;
-                            case 5: message = "Coordination has been set for your reservation"; break;
-                            case 6: message = "Your reservation has been rescheduled"; break;
-                            case 7: message = "Your reservation has been cancelled"; break;
+                            case 3: message = "Your reservation has been accepted";
+                                    getReservation();
+                                    break;
+                            case 4: message = "Your reservation was rejected";
+                                    getReservation();
+                                    break;
+                            case 5: message = "Coordination has been set for your reservation";
+                                    getReservation();
+                                    break;
+                            case 6: message = "Your reservation has been rescheduled";
+                                    getReservation();
+                                    break;
+                            case 7: message = "Your reservation has been cancelled";
+                                    getReservation();
+                                    break;
                             case 8: message = "Cancellation request has been sent"; break;
-                            case 9: message = "Your reservation is now approved"; break;
-                            case 10: message = "Your reservation is now ongoing"; break;
-                            case 11: message = "Your reservation is now expired"; break;
+                            case 9: message = "Your reservation is now approved";
+                                    getReservation();
+                                    break;
+                            case 10: message = "Your reservation is now ongoing";
+                                    getReservation();
+                                    break;
+                            case 11: message = "Your reservation is now expired"; 
+                                    getReservation();
+                                    break;
                             default: message = "Status updated"; break;
                         }
 
@@ -219,7 +257,6 @@
                                 (first === last) ? firstFormatted : `${firstFormatted} - ${lastFormatted}`;
                         }
 
-
                         return {
                             id: n.NotificationID,
                             resID: n.ReservationID,
@@ -231,7 +268,6 @@
                             reservationDates: formattedResDate
                         };
                     });
-
 
                     displayNotificationsInSidebar(sidebarNotifications);
                 },
@@ -262,14 +298,13 @@
 
             const unreadCount = notifications.filter(n => !n.isRead).length;
             updateNotificationBadge(unreadCount);
-
+            console.log(notifications);
             notificationBody.innerHTML = notifications.map(notif => `
                 <div class="notification-item ${notif.isRead ? '' : 'unread'}" onclick="markNotificationAsRead(${notif.id}, '${notif.message}', ${notif.resID}, ${notif.isRated})">
                     <div class="notification-content">
                         ${!notif.isRead ? '<span class="notification-dot"></span>' : ''}
                         <div class="notification-message">${notif.message}</div>
                         <div class="notification-eventName">${notif.eventName}</div>
-                        <div class="notification-dates">${notif.reservationDates}</div>
                         <div class="notification-time">${notif.time}</div>
                     </div>
                 </div>
@@ -329,27 +364,31 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-section">
+                    <img src="Images/SportsOfficeLogo.png" class="logo"/>
                     <span class="logo-text">MCCSC</span>
                 </div>
             </div>
 
             <div class="user-profile">
-                <div class="user-avatar">
-                    <span id="userInitials"></span>
-                </div>
-                <div class="user-info">
-                    <div class="user-name" id="sidebarFullName"></div>
-                    <div class="user-role">Client</div>
+            <div class="user-avatar">
+                <span id="userInitials"></span>
+            </div>
+            <div class="user-info">
+                <div class="user-name" id="sidebarFullName"></div>
+                <div class="user-role">
+                    Client/<span id="user-org"></span>
                 </div>
             </div>
+        </div>
+
 
             <nav class="sidebar-menu">
                 <ul>
-                    <li class="active" onclick="showSection('notificationSection')">
+                    <li class="active" onclick="showSection('notificationSection');  showDashboard();">
                         <span class="menu-icon">🏠</span>
                         <span class="menu-text">Dashboard</span>
                     </li>
-                    <li onclick="showSection('clientProfileCard')">
+                    <li onclick="showSection('clientProfileCard');  showProfile();">
                         <span class="menu-icon">👤</span>
                         <span class="menu-text">My Profile</span>
                     </li>
@@ -383,31 +422,30 @@
             <header class="client-header">
                 <div class="header-content">
                     <div class="welcome-section">
-                        <h1>Hello! <span id="fullname"></span></h1>
-                        <p id="roles">Client Dashboard</p>
+                        <h1>Hello, <span id="fullname"></span></h1>
                     </div>
                     <div class="header-actions">
                         <asp:Button ID="btnReserve" runat="server" class="btn-primary" OnClientClick="openReservationModal(); return false;" Text="Request +" />
-                        <asp:Button ID="Button1" runat="server" class="btn-primary" OnClientClick="openRatingModal(); return false;" Text="Rate" />
                     </div>
                 </div>
             </header>
 
             <!-- DASHBOARD CONTAINER -->
             <div class="dashboard-container">
-                <div class="section-card" id="notificationSection">
+               <div class="section-card" id="notificationSection">
                     <h3>Dashboard Overview</h3>
                     <p>Welcome to your Client Dashboard! Use the menu to navigate through different sections.</p>
                 </div>
 
                 <!-- CLIENT PROFILE SECTION -->
-                <div class="section-card" id="clientProfileCard" style="display: none;">
+                <div class="section-card d-none" id="clientProfileCard">
                     <h3>My Profile</h3>
                     <div id="clientProfile" class="profile-content">
-                        <!-- Profile data will be populated by JavaScript -->
+                        <div id="profile-fullname"></div>
+                        <div id="profile-org"></div>
+                        <div id="profile-email"></div>
                     </div>
                 </div>
-
                 <!-- RESERVATION TRACKING SECTION -->
                 <div class="section-card" id="reservationSection" style="display: none;">
                     <h3>Reservation Tracking</h3>
@@ -417,7 +455,7 @@
                                 <tr>
                                     <th>Event Name</th>
                                     <th>Event Description</th>
-                                    <th>Assets To Be Borrowed</th>
+                                    <th>Package</th>
                                     <th>Status</th>
                                     <th>Event Dates</th>
                                     <th>Reference</th>
@@ -425,7 +463,9 @@
                                 </tr>
                             </thead>
                             <tbody id="reservationTableBody">
-                                <!-- Data will be populated by JavaScript -->
+                                <tr>
+                                    <td colspan="7" class="text-center">No reservation found</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -448,6 +488,9 @@
                             </thead>
                             <tbody id="reservationHistoryTableBody">
                                 <!-- Data will be populated by JavaScript -->
+                                <tr>
+                                    <td colspan="7" class="text-center">No reservation found</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>

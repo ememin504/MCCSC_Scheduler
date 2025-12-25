@@ -25,6 +25,42 @@ body {
     line-height: 1.6;
     min-height: 100vh;
 }
+.status-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.chart-wrapper {
+    width: 100%;
+    max-width: 360px; /* same max width */
+    height: 300px; /* fixed height */
+    position: relative;
+    margin: auto;
+}
+
+    .chart-wrapper canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+.status-card {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 10px;
+    font-size: 0.95rem;
+    background-color: transparent; /* no background */
+    border: none; /* no border */
+}
+
+    .status-card .label {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .status-card .value {
+        font-weight: 700;
+        color: #000;
+    }
 
 /* ADMIN HEADER */
 .admin-header {
@@ -44,6 +80,11 @@ body {
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
+}
+.logo-text {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .welcome-section h1 {
@@ -65,10 +106,7 @@ body {
 }
 
 .btn-primary {
-    background: white;
-    color: var(--primary-red);
     border: none;
-    padding: 0.75rem 1.5rem;
     font-size: 1rem;
     font-weight: bold;
     border-radius: 8px;
@@ -806,3 +844,25 @@ tbody .btn-edit {
         margin-bottom: 1rem;
     }
 }
+.calendar-day {
+    min-height: 100px;
+}
+    .calendar-day.holiday {
+        background-color: #f8d7da;
+        color: #E0B2B2;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+.calendar-day {
+    position: relative;
+}
+
+.date-number {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 15px;
+    z-index: 3;
+}
+

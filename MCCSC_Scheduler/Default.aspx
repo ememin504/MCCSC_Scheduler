@@ -6,7 +6,7 @@
     <link rel="stylesheet" type="text/css" href="Lib/bootstrap/5.3.6/css/bootstrap.min.css" />
     <script type="text/javascript" src="Lib/bootstrap/5.3.6/js/bootstrap.bundle.min.js"></script>
     <script type="text/javascript" src="Scripts/js/global.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="Lib/jquery/3.6.4/jquery-3.6.4.min.js"></script>
     <link rel="stylesheet" type="text/css" href="Scripts/css/default.css" />
     <script type="text/javascript" src="Scripts/js/default.js" defer></script>
 </head>
@@ -14,7 +14,7 @@
     <header>
         <div class="header-content">
             <div class="logo-title">
-                <img src="https://scontent.fmnl9-4.fna.fbcdn.net/v/t39.30808-1/518270094_122152807310398593_2388429758745708161_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=105&ccb=1-7&_nc_sid=2d3e12&_nc_eui2=AeGy2auOgKJ5uPZAbhy7feTGMHVHxYNVZ_gwdUfFg1Vn-N_zuyPYiU4R3CI8Tu9ziVN07H5NQQM4W1Xl6knp-rvI&_nc_ohc=l828_EmUgUMQ7kNvwF71nqv&_nc_oc=AdnM0IbunXXtD8ABTUZ3LtQuHmQleFjCJHpJeSAZZjwUFkBaI1Qub85uUD6zMXUBVvM&_nc_zt=24&_nc_ht=scontent.fmnl9-4.fna&_nc_gid=2YlrydcQBc37LN0jYWeC0A&oh=00_AfbU-vBBCMUbk_4BoGXreEwY-2exFQKKGNnMWKoYclxosA&oe=68DE8D6F" alt="Mandaue City College Logo" class="logo">
+                <img src="Images/SportsOfficeLogo.png" class="logo">
                 <div class="title-text">
                     <h1>MCCSC SCHEDULER</h1>
                     <p class="subtitle">Online Reservation for Mandaue City Sports and Cultural Complex</p>
@@ -41,7 +41,6 @@
                     <div class="calendar-container">
                         <div id="calendar"></div>
                         <div class="selected-date">
-                            <strong>Selected Date:</strong> <span id="displayDate">Please select a date</span>
                         </div>
                     </div>
                 
@@ -60,9 +59,10 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="email">Email</label>
+                                <label for="email">Gmail</label>
                                 <input type="email" id="email" required>
                             </div>
+                            <p id="problem"></p>
                             
                             <div class="form-group">
                                 <label for="contactNumber">Contact Number</label>
@@ -82,6 +82,11 @@
                             <div class="form-group">
                                 <label for="password">Password</label>
                                 <input type="password" id="password" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="confirm_password">Confirm Password</label>
+                                <input type="password" id="confirm_password" required>
                             </div>
 
                             <button type="button" class="submit-btn">Register</button>
@@ -125,7 +130,7 @@
                     <h2>About MCCSC Scheduler</h2>
                     <div class="about-box">
                         <h3>Mandaue City Sports and Cultural Complex</h3>
-                        <p>The MCCSC Scheduler is a free online reservation system designed to streamline the booking process for Mandaue City College's sports and cultural facilities.</p>
+                        <p>The MCCSC Scheduler is a free online reservation system designed to streamline the booking process for Mandaue City Cports and Cultural Complex.</p>
                     
                         <h4>Our Mission</h4>
                         <p>To provide easy and accessible booking services for students, faculty, organizations, and community members who wish to utilize our state-of-the-art facilities.</p>
@@ -136,7 +141,9 @@
                         <h4>Contact Information</h4>
                         <p>Mandaue City Sports and Cultural Complex<br>
                         Established: 2005<br>
-                        For inquiries, please contact the administration office.</p>
+                        Don Andress Soriano Avenue Centro, Mandaue City<br/>
+                        For inquiries, please contact the administration office.<br />
+                        Tel No. 0322365520</p>
                     </div>
                 </div>
             </div>
@@ -144,7 +151,7 @@
     </main>
 
     <footer>
-        <p>&copy; 2025 Mandaue City Sports and Cultural Complex. All rights reserved. | Reservation System</p>
+        <p>&copy; 2025 Mandaue City Cultural and Sports Complex. All rights reserved. | Reservation System</p>
     </footer>
 
     <form id="aspForm" runat="server"></form>

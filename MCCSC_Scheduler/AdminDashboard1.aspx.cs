@@ -28,6 +28,127 @@ namespace MCCSC_Scheduler
             ConnectDB();
         }
         [WebMethod]
+        public static object GetReservationsByPackage()
+        {
+            List<PackageReservationDTO> result = new List<PackageReservationDTO>();
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                string query = @"
+            SELECT 
+                p.package_id,
+                p.package_name,
+                COUNT(r.reservation_id) AS Total
+            FROM Reservation r
+            INNER JOIN Packages p ON r.package_id = p.package_id
+            GROUP BY p.package_id, p.package_name
+            ORDER BY Total DESC";
+
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    conn.Open();
+                    using (SqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            result.Add(new PackageReservationDTO
+                            {
+                                PackageId = Convert.ToInt32(reader["package_id"]),
+                                PackageName = reader["package_name"].ToString(),
+                                Total = Convert.ToInt32(reader["Total"])
+                            });
+                        }
+                    }
+                }
+            }
+
+            return new { success = true, data = result };
+        }
+        [WebMethod]
+        public static object GetChartData()
+        {
+            string conStr = ConfigurationManager.ConnectionStrings["MyConn"].ConnectionString;
+
+            List<string> months = new List<string>();
+            List<int> monthlyCounts = new List<int>();
+
+            Dictionary<string, int> statusData = new Dictionary<string, int>();
+
+            using (SqlConnection con = new SqlConnection(conStr))
+            {
+                con.Open();
+
+                // Monthly reservations
+                SqlCommand cmd = new SqlCommand(@"
+            SELECT DATENAME(MONTH, reservation_date) + ' ' + CAST(YEAR(reservation_date) AS VARCHAR),
+                   COUNT(*) 
+            FROM Reservation
+            GROUP BY YEAR(reservation_date), MONTH(reservation_date), reservation_date
+            ORDER BY YEAR(reservation_date), MONTH(reservation_date)", con);
+
+                SqlDataReader rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    months.Add(rdr[0].ToString());
+                    monthlyCounts.Add(Convert.ToInt32(rdr[1]));
+                }
+                rdr.Close();
+
+                // Reservation status breakdown
+                cmd = new SqlCommand(@"
+            SELECT s.status_name, COUNT(*) 
+            FROM Reservation r
+            JOIN Status s ON r.status_id = s.status_id
+            GROUP BY s.status_name", con);
+
+                rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                    statusData.Add(rdr[0].ToString(), Convert.ToInt32(rdr[1]));
+            }
+
+            return new { months, monthlyCounts, statusData };
+        }
+
+        [WebMethod]
+        public static object GetMonthlyReservationTrend()
+        {
+            try
+            {
+                DBContext db = new DBContext();
+                var data = db.GetMonthlyReservations();
+
+                return new
+                {
+                    success = true,
+                    data = data
+                };
+            }
+            catch (Exception ex)
+            {
+                return new
+                {
+                    success = false,
+                    error = ex.Message
+                };
+            }
+        }
+
+
+        [WebMethod]
+        public static object GetDashboardData()
+        {
+            var db = new DBContext();
+
+            int totalReservations = db.GetTotalReservations();
+            List<DashboardStatusDTO> statusCounts = db.GetReservationStatusCounts();
+
+            return new
+            {
+                totalReservations,
+                statusCounts
+            };
+        }
+        [WebMethod]
         public static string CreateNotification(NotificationDTO notificationDTO)
         {
             try
@@ -398,6 +519,20 @@ namespace MCCSC_Scheduler
 
         }
         [WebMethod]
+        public static string OngoingExpiredSearch()
+        {
+            try
+            {
+                var requests = dbContext.OngoingExpiredSearch();
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+
+        [WebMethod]
         public static string AcceptReservation(ReservationDTO reservationData)
         {
             int reservationID = reservationData.ReservationID;
@@ -405,6 +540,19 @@ namespace MCCSC_Scheduler
             string result = dbContext.AcceptReservation(reservationData);
             //return "{\"success\":true}";
             return result.ToString();
+        }
+        [WebMethod]
+        public static string RejectReservation(ReservationDTO reservationData)
+        {
+            try
+            {
+                var requests = dbContext.RejectReservation(reservationData);
+                return JsonConvert.SerializeObject(requests);
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
         }
         [WebMethod]
         public static string CancelReservation(ReservationDTO reservationData) {
@@ -432,11 +580,39 @@ namespace MCCSC_Scheduler
             }
         }
         [WebMethod]
+        [ScriptMethod(UseHttpGet = false, ResponseFormat = ResponseFormat.Json)]
+
+        public static string GetReservationDates(ReservationDTO requestData)
+        {
+            try
+            {
+                var requests = dbContext.GetReservation(requestData);
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
         public static string GetRatings(RatingDTO ratingDTO)
         {
             try
             {
                 var requests = dbContext.GetRatings(ratingDTO);
+                return requests;
+            }
+            catch (Exception ex)
+            {
+                return JsonConvert.SerializeObject(new { error = ex.Message });
+            }
+        }
+        [WebMethod]
+        public static string EditReservation(ReservationDTO reservationDTO)
+        {
+            try
+            {
+                var requests = dbContext.EditReservation(reservationDTO);
                 return requests;
             }
             catch (Exception ex)
