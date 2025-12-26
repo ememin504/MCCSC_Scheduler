@@ -827,7 +827,7 @@
 
                     <!-- REJECTED RESERVATIONS -->
                     <div id="rejectedSection" class="section-card" style="display: none;">
-                        <h3>Cancelled Reservation</h3>
+                        <h3>Rejected Reservation</h3>
                         <div class="table-container">
                             <table class="table table-striped table-bordered" id="rejectedReservationTable">
                                 <thead>
@@ -836,6 +836,7 @@
                                         <th>Package</th>
                                         <th>Organization</th>
                                         <th>Date</th>
+                                        <th>Reason</th>
                                         <th>Reference</th>
                                         <th>Actions</th>
                                     </tr>

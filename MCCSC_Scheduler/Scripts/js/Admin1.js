@@ -1366,12 +1366,16 @@ function openReservationInfoModal(res) {
                         ${dateDetails}
                         <p><strong>Reference:</strong> ${res.Reference}</p>
                         ${res.Suggestions !== ""
-                        ? `<p><strong>Suggestions:</strong> ${res.Suggestions}</p>`
-                        :""
+                            ? `<p><strong>Suggestions:</strong> ${res.Suggestions}</p>`
+                            :""
                         }
                         ${res.Reason !== ""
-                        ? `<p><strong>Reason:</strong> ${res.Reason}</p>`
-                        :""
+                            ? `<p><strong>Reason:</strong> ${res.Reason}</p>`
+                            :""
+                        }
+                        ${res.Remarks !== ""
+                            ? `<p><strong>Reason:</strong> ${res.Remarks}</p>`
+                            : ""
                         }
                     </div>
                     <div class='modal-footer'>
@@ -1547,7 +1551,7 @@ function getRejectedReservation() {
                         <td>${res.PackageName}</td>
                         <td>${res.OrganizationName}</td>
                         <td>${dates}</td>
-                        <td>${res.Reason}</td>
+                        <td>${res.Remarks}</td>
                         <td>${res.Reference}</td>
                         <td>
                             <button class="btn btn-success btn-sm"

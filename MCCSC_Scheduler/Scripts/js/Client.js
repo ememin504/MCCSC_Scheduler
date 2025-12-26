@@ -8,7 +8,7 @@ const roleTypeIDStr = sessionStorage.getItem("role_type_id");
 const roleTypeID = roleTypeIDStr ? Number(roleTypeIDStr) : 0;
 const roleTypeDescription = sessionStorage.getItem("role_type_description");
 var organizationID = 0;
-console.log(roleId, userId, userEmail);p
+console.log(roleId, userId, userEmail);
 let selectedAssets = []; // use array in case multiple assets are checked
 let n = 0;
 let noteFor = "Admin";
@@ -943,8 +943,8 @@ function viewInfo(res, reservationID) {
     res.EventDates.forEach(d => {
         dateDetails += `
             <p><strong>Date:</strong> ${d.Date.split("T")[0]}</p>
-            <p><strong>Start:</strong> ${d.StartTime}</p>
-            <p><strong>End:</strong> ${d.EndTime}</p>
+            <p><strong>Start:</strong> ${formatClientTime(d.StartTime)}</p>
+            <p><strong>End:</strong> ${formatClientTime(d.EndTime)}</p>
         `;
     });
 
@@ -979,6 +979,17 @@ function viewInfo(res, reservationID) {
                         ? `<p><strong>Remarks:</strong> ${res.Remarks}</p>`
                         : ""
                     }
+                    ${res.Meetings?.length > 0
+                        ? `
+                            <p><strong>Meeting Date:</strong> ${formatClientDate(res.Meetings[0].MeetingDate)}</p>
+                            <p><strong>Meeting Time:</strong> ${formatClientTime(res.Meetings[0].MeetingTime)}</p>
+                          `
+                        : ""
+                    }
+                    ${res.Meetings?.[0]?.MeetingRemarks
+                        ? `<p><strong>Meeting Remarks:</strong> ${res.Meetings[0].MeetingRemarks}</p>`
+                        : ""
+                    }
                 </div>
                 <div class='modal-footer'>
                     ${buttonText
@@ -1002,6 +1013,27 @@ function viewInfo(res, reservationID) {
         backdrop: "static"
     }).show();
 }
+function formatClientDate(dateString) {
+    if (!dateString) return "";
+
+    // Remove the T and time
+    return dateString.split("T")[0];
+}
+
+function formatClientTime(timeString) {
+    if (!timeString) return "";
+
+    let [hour, minute] = timeString.split(":");
+
+    hour = parseInt(hour);
+    let suffix = hour >= 12 ? "PM" : "AM";
+
+    if (hour === 0) hour = 12;
+    else if (hour > 12) hour -= 12;
+
+    return `${hour}:${minute} ${suffix}`;
+}
+
 
 
 function undoCancellation(data, reservationID, previousStatusID) {
