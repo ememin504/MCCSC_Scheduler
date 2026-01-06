@@ -209,7 +209,6 @@
                             case 7: message = "Your reservation has been cancelled";
                                     getReservation();
                                     break;
-                            case 8: message = "Cancellation request has been sent"; break;
                             case 9: message = "Your reservation is now approved";
                                     getReservation();
                                     break;
@@ -388,17 +387,13 @@
                         <span class="menu-icon">🏠</span>
                         <span class="menu-text">Dashboard</span>
                     </li>
-                    <li onclick="showSection('clientProfileCard');  showProfile();">
-                        <span class="menu-icon">👤</span>
-                        <span class="menu-text">My Profile</span>
-                    </li>
                     <li onclick="showSection('reservationSection')">
                         <span class="menu-icon">📅</span>
                         <span class="menu-text">Reservations</span>
                     </li>
-                    <li onclick="showSection('historySection')">
-                        <span class="menu-icon">📜</span>
-                        <span class="menu-text">History</span>
+                    <li onclick="showSection('clientProfileCard');  showProfile();">
+                        <span class="menu-icon">👤</span>
+                        <span class="menu-text">My Profile</span>
                     </li>
                     <li onclick="event.preventDefault(); toggleNotificationSidebar()">
                         <span class="menu-icon">🔔</span>

@@ -144,7 +144,6 @@ function getEventsForDay(year, month, day, reservations) {
 }
 
 // ------------------- CREATE DAY CELL -------------------
-// ------------------- CREATE DAY CELL -------------------
 function createDayCell(day, isOtherMonth, events = [], holidayName = null, data = []) {
     const dayCell = document.createElement('div');
     dayCell.className = 'calendar-day';

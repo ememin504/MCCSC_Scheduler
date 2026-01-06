@@ -59,7 +59,7 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="email">Gmail</label>
+                                <label for="email">Email</label>
                                 <input type="email" id="email" required>
                             </div>
                             <p id="problem"></p>

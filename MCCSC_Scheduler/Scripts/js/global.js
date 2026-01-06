@@ -508,7 +508,7 @@ let reservationModalEl =
     "<input type='text' id='eventName' class='form-control mb-2' placeholder='Input Event Title'>" +
 
     "<label for='eventDescription'>Event Description</label>" +
-    "<input type='text' id='eventDescription' class='form-control mb-3' placeholder='Input Event Description'>" +
+    "<textarea type='text' id='eventDescription' class='form-control mb-3' placeholder='Input Event Description'></textarea>" +
 
     "<div class='mb-3' >" +
     "<label class='form-label'>Suggestions</label>" +
